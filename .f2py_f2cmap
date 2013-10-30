@@ -1,0 +1,4 @@
+{'real':{'WP':'double', 'DP':'double', 'SP':'float'}, 'complex':{'WP':'complex_double'}}
+#{'real':{'WP':'float', 'DP':'double', 'SP':'float'}, 'complex':{'WP':'complex_float'}}
+#{'real':{'REAL64':'double', 'REAL32':'float'}, 'complex':{'REAL64':'complex_double', 'REAL32':'complex_float'}}
+#{'real':{'WP':'float', 'DP':'double', 'SP':'float', 'REAL64':'double', 'REAL32':'float'}, 'complex':{'WP':'complex_double', 'REAL64':'complex_double', 'REAL32':'complex_float'}}
