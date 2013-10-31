@@ -13,11 +13,15 @@ cdef extern from "complex.h" nogil:
 
 import cython
 
-import numpy as np
+from cython.parallel import prange, parallel
 
+cimport openmp
+
+import numpy as np
 cimport numpy as np
 
 from libc.math cimport exp, sin, cos
+from libc.stdlib cimport malloc, free
 
 # under mingw32, it seems that complex functions are not implemented, so 
 # synthesize them from real functions
@@ -93,9 +97,9 @@ cdef inline complex dot_product_complex_real(int length, complex* a, double* b) 
 @cython.wraparound(False)
 #cdef source_integral_plane_wave(float[:, :] xi_eta_o, float[:] weights_o, 
 #                               float[:, :] nodes_o, complex[::1] jk_inc, complex[:] e_inc):
-cdef source_integral_plane_wave(double[:, :] xi_eta_o, double[:] weights_o, 
+cdef void source_integral_plane_wave(double[:, :] xi_eta_o, double[:] weights_o, 
                                double[:, :] nodes_o, complex[::1] jk_inc, 
-                               complex[:] e_inc, complex[:] I):
+                               complex[:] e_inc, complex[:] I) nogil:
     """ Inner product of source field with testing function to give source "voltage"
     !
     ! xi_eta_s/o - list of coordinate pairs in source/observer triangle
@@ -129,7 +133,7 @@ cdef source_integral_plane_wave(double[:, :] xi_eta_o, double[:] weights_o,
 
         # Cartesian coordinates of the observer
         for index_a in range(3):
-            r_o[index_a] = xi_o*nodes_o[index_a, 0] + eta_o*nodes_o[index_a, 1] + zeta_o*nodes_o[index_a, 2]
+            r_o[index_a] = xi_o*nodes_o[0, index_a] + eta_o*nodes_o[1, index_a] + zeta_o*nodes_o[2, index_a]
 #        r_o[:] = xi_o*nodes_o[:, 0] + eta_o*nodes_o[:, 2] + zeta_o*nodes_o[:, 3]
 
         # Vector rho within the observer triangle
@@ -138,19 +142,19 @@ cdef source_integral_plane_wave(double[:, :] xi_eta_o, double[:] weights_o,
                 rho_o[index_a][index_b] = r_o[index_b] - nodes_o[index_a, index_b]
 
         #jkr = jk_inc[0]*r_o[0]+jk_inc[1]*r_o[1]+jk_inc[2]*r_o[2]
-        #jkr = dot_product_complex_real(jk_inc, r_o[:])
         jkr = dot_product_complex_real(3, &jk_inc[0], &r_o[0])
 
         # calculate the incident electric field
         exp_jkr = cexp(-jkr)
         for index_a in range(3):
             e_r[index_a] = exp_jkr*e_inc[index_a]
+            #e_r[index_a] = e_inc[index_a]
 
 
         #forall (uu=1:3) I(uu) = I(uu) + dot_product(rho_o(uu, :), e_r)*w_o
         for index_a in range(3):
-            #I[index_a] += dot_product_complex_real(e_r, rho_o[index_a])*w_o
             I[index_a] += dot_product_complex_real(3, &e_r[0], &rho_o[index_a][0])*w_o
+            #I[index_a] += (e_r[0]*rho_o[index_a][0]+e_r[1]*rho_o[index_a][1]+e_r[2]*rho_o[index_a][2])*w_o
 
     #return I
     
@@ -172,6 +176,7 @@ def voltage_plane_wave(double[:, :] nodes, int[:, :] triangle_nodes,
     !
     ! Note that this assumes a free-space background
 
+    Currently this routine is ~20x slower than the corresponding fortran routine
 
     integer, intent(in) :: num_nodes, num_triangles, num_basis, num_integration
 
@@ -197,7 +202,7 @@ def voltage_plane_wave(double[:, :] nodes, int[:, :] triangle_nodes,
     cdef int num_basis = basis_tri_p.shape[0]
     #cdef view.array nodes_p
     #cdef int[3] which_nodes
-    cdef int which_nodes
+    cdef int which_node
     #cdef float nodes_p[3][3]
 
     #cdef complex [::1] V = np.zeros(num_basis, dtype=np.complex128) 
@@ -207,35 +212,61 @@ def voltage_plane_wave(double[:, :] nodes, int[:, :] triangle_nodes,
     #cdef np.ndarray[complex_t, ndim=2] V_face = np.zeros((num_triangles, 3), dtype=np.complex128) 
     cdef complex [:, ::1] V_face = np.zeros((num_triangles, 3), dtype=np.complex128) 
     #cdef np.ndarray[float, ndim=2] nodes_p = np.zeros((3, 3), dtype=np.int)
-    #cdef float nodes_p_storage[3][3] # statically allocate the storage - any point?
-    #cdef float [:, :] nodes_p = nodes_p_storage # assigning the view is always expensive
-    cdef double [:, ::1] nodes_p = np.empty((3, 3), dtype=np.float64) 
+    #cdef double thread_storage[openmp.omp_get_num_threads()][3][3] # statically allocate the storage - any point?
+    #cdef double nodes_p_storage[3][3] # statically allocate the storage - any point?
+    cdef double* nodes_p_storage # statically allocate the storage - any point?
+    cdef double [:, :, :] nodes_p #= nodes_p_storage # assigning the view is always expensive
+    #cdef double [:, ::1] nodes_p = np.empty((3, 3), dtype=np.float64) 
     #cdef view.array nodes_p = np.zeros((3, 3), dtype=np.int) 
 
     cdef int p, p_p, p_m, ip_p, ip_m, m, q
+    cdef int n_threads = openmp.omp_get_max_threads()
+    cdef int thread_id
+
+
+    #with nogil, parallel():
+
+    #nodes_p_storage = <double*>malloc(3*3*sizeof(double))
+
+    #nodes_p = nodes_p_storage
+
+    #with gil:
+
+    nodes_p_storage = <double*>malloc(n_threads*3*3*sizeof(double))
+    nodes_p = <double[:n_threads,:3,:3]> nodes_p_storage
+
 
     # calculate all the integrations for each face pair
     #$OMP PARALLEL DO SCHEDULE(DYNAMIC) DEFAULT(SHARED) &
     #$OMP PRIVATE (p, nodes_p)
-    for p in range(num_triangles): # p is the index of the observer face:
-        for m in range(3):
-            #which_nodes[m] = triangle_nodes[p, m]
-            which_nodes = triangle_nodes[p, m]
-            for q in range(3):
-                nodes_p[m, q] = nodes[which_nodes, m]
-            
-        # perform testing of the incident field
-        #V_face[p, :] = source_integral_plane_wave(xi_eta_eval, weights, nodes_p, jk_inc, e_inc)
-        source_integral_plane_wave(xi_eta_eval, weights, nodes_p, jk_inc, e_inc, V_face[p, :])
+    #for p in range(num_triangles): # p is the index of the observer face:
+    with nogil, parallel():
+        thread_id = openmp.omp_get_thread_num()
+        for p in prange(num_triangles, schedule='dynamic'): # p is the index of the observer face:
+            for m in range(3): # m is the index of the observer face's nodes
+                #which_nodes[m] = triangle_nodes[p, m]
+                #which_node = triangle_nodes[p, m]
+                for q in range(3): # index of the cartesian component
+                    #nodes_p[m, q] = nodes[which_node, q]
+                    nodes_p[thread_id, m, q] = nodes[triangle_nodes[p, m], q]
+                
+            # perform testing of the incident field
+            #V_face[p, :] = source_integral_plane_wave(xi_eta_eval, weights, nodes_p, jk_inc, e_inc)
+            source_integral_plane_wave(xi_eta_eval, weights, nodes_p[thread_id, :, :], jk_inc, e_inc, V_face[p, :])
 
-    # now build up the source vector in terms of the basis vectors
-    for m in range(num_basis): # m is the index of the observer edge
-        p_p = basis_tri_p[m]
-        p_m = basis_tri_m[m] # observer triangles
+        # now build up the source vector in terms of the basis vectors
+        for m in prange(num_basis): # m is the index of the observer edge
+            p_p = basis_tri_p[m]
+            p_m = basis_tri_m[m] # observer triangles
+    
+            ip_p = basis_node_p[m]
+            ip_m = basis_node_m[m] # observer unshared nodes
+    
+            #V[m] = (V_face[ip_p, p_p]-V_face[ip_m, p_m])
+            V[m] = (V_face[p_p, ip_p]-V_face[p_m, ip_m])
 
-        ip_p = basis_node_p[m]
-        ip_m = basis_node_m[m] # observer unshared nodes
+    free(nodes_p_storage)    
 
-        V[m] = (V_face[ip_p, p_p]-V_face[ip_m, p_m])
+
 
     return V

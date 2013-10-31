@@ -55,16 +55,26 @@ os.environ['CXX'] = 'gcc'
 from Cython.Build import cythonize
 
 #numpy_include = r"C:\Programs-non-installed\numpy-1.7.1\numpy\core\include"
-import numpy
+#import numpy
 #cython_modules = cythonize("core_cython.pyx", include_path = [numpy.get_include()]
 #)
 
 cython_modules = [
-        Extension(name = "core_cython", 
-                  sources = ["core_cython.pyx"],
-                  include_dirs = [numpy.get_include()],
-                  libraries=['m']
-                  )]
+#        Extension(name = "core_cython", 
+#                  sources = ["core_cython.pyx"],
+#                  include_dirs = [numpy.get_include()],
+#                  libraries=['m'],
+#                  extra_compile_args=['-fopenmp'],
+#                  extra_link_args=['-fopenmp']
+#                  )
+                  
+        Extension(name = "wrap_test", 
+                  sources = ["wrapped.pyx", "core_for.f90"],
+                libraries=openmp_libraries, 
+                f2py_options=["only:","mag", ":"],
+                extra_f90_compile_args=extra_f90_compile_args
+                  )                  
+                  ]
 
 setup(name = 'openmodes',
       description       = "Find the electromagnetic modes of open structures using the method of moments",

@@ -11,6 +11,7 @@ end module
 module core_for
 
     use constants
+    use iso_c_binding
     implicit none
 
     real(DP), parameter :: c = 299792458.0_DP
@@ -91,6 +92,15 @@ module core_for
 
         end subroutine
 
+    
+
+!        subroutine test_wrapped(a) bind(c)
+!            use constants
+!            use iso_c_binding
+!              
+!            complex(c_double_complex), intent(in) :: a
+!        
+!        end subroutine
 
 
     end interface
@@ -100,6 +110,22 @@ contains
 
 
 end module core_for
+
+
+!use iso_c_binding
+
+subroutine test_wrapped(a) bind(c, name='test_wrapped_')
+    use constants
+    use iso_c_binding
+      
+    implicit none
+	
+    complex(c_float_complex), value, intent(in) :: a
+	
+    print *, "input value is ", a
+
+end subroutine
+
 
 pure function cross_product(a, b)
     use constants
