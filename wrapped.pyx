@@ -9,8 +9,8 @@ import numpy as np
 #cimport "complex.h"
 # this defines the external function's interface.  Why the out needs
 # to be defined as 'int *out' and not 'int **out' I do not know...
-cdef extern:
-    void test_wrapped(float complex a) nogil
+cdef extern nogil:
+    void test_wrapped(float complex a)
 
 def test(complex a):
     test_wrapped(a)

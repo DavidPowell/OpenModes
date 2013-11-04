@@ -24,7 +24,7 @@ import numpy as np
 import scipy.linalg as la
 from utils import fortran_real_type, SingularSparse
 
-from scipy.constants import epsilon_0, mu_0
+from scipy.constants import epsilon_0, mu_0, c
      
 f_real = fortran_real_type#()
 
@@ -53,7 +53,6 @@ class Triangles(object):
         self.nodes = np.empty((N_tri, 3), np.int32, order="F")
         self.area = np.empty(N_tri, f_real, order="F")    # area of triangle
         self.lens = np.empty((N_tri, 3), f_real, order="F") # lengths of opposite edges
-        #self.mid = np.empty((N_tri, 3), f_real, order="F") # mid-point of triangle
         
     def __len__(self):
         return self.N_tri
@@ -375,7 +374,8 @@ class LibraryPart(object):
                     # calculate neighbour integrals semi-numerically
                     nodes_q = self.nodes[triangles.nodes[q]]
                     #result_objects[(p,q)] = pool.apply_async(face_integrals_hanninen, (nodes_q, xi_eta_eval, weights, nodes_p))
-                    singular_terms[p, q] = core_for.face_integrals_hanninen(nodes_q, xi_eta_eval, weights, nodes_p)
+                    singular_terms[p, q] = core_for.face_integrals_hanninen(
+                                        nodes_q, xi_eta_eval, weights, nodes_p)
         
         #pool.close()
         # all the results have been asynchronously started
@@ -554,7 +554,6 @@ class SimulationPart(object):
     modified"""
 
     def __init__(self, library_part, notify_function):
-        #observable.__init__(self)
 
         self.library_part = library_part
         self.notify_function = notify_function
@@ -590,7 +589,7 @@ class SimulationPart(object):
 
     @property
     def nodes(self):
-        "The nodes of this part"
+        "The nodes of this part after all transformations have been applied"
         return np.dot(self.transformation_matrix[:3, :3], self.library_part.nodes.T).T + self.transformation_matrix[:3, 3]
         
     def get_dipole_moments(self, I, omega, loop_star = True, electric_order=1,
@@ -603,13 +602,14 @@ class SimulationPart(object):
         
         # transformations currently disabled        
         
-        return self.library_part.get_dipole_moments(I, omega, loop_star, electric_order, magnetic_order) 
+        return self.library_part.get_dipole_moments(I, omega, loop_star, 
+                                                electric_order, magnetic_order) 
         
         #p, m = self.parent.get_dipole_moments(I, omega)
         #return np.dot(self.transformation_matrix[:3, :3], p), np.dot(self.transformation_matrix[:3, :3], m)
 
     def translate(self, offset_vector):
-        """Translate an object by an arbitrary offset vector
+        """Translate a part by an arbitrary offset vector
         
         Care needs to be take if this puts an object in a different layer
         """
@@ -665,7 +665,7 @@ class SimulationPart(object):
 
     def shear(self):
         raise NotImplementedError
-        # non-affine transform, will cause problems
+        # non-affine transform, will cause MAJOR problems
  
  
 class Simulation(object):
@@ -752,8 +752,6 @@ class Simulation(object):
                     
         else:
             return [slice(a, b) for a, b in self.combined_mesh['objs'].basis]
-        
-
 
 
     def object_triangles(self):
@@ -865,30 +863,21 @@ class Simulation(object):
 
             # Store the parts of the combined mesh which don't depend on the loop
             # star basis functions being defined
-            self._combined_mesh = {'nodes' : nodes, 'tri' : tri, 'basis' : basis, 
-                                  'objs' : objs, 'max_distance' : max_distance,
-                                  'shortest_edge' : shortest_edge}
+            self._combined_mesh = {'nodes' : nodes, 'tri' : tri, 
+                                   'basis' : basis, 'objs' : objs, 
+                                   'max_distance' : max_distance,
+                                   'shortest_edge' : shortest_edge}
 
-
-            # calculate the matrix which converts triangles to RWG basis functions
-            #tri_to_rwg = sp.lil_matrix((N_basis, 3*N_tri), dtype=np.float64)
-            tri_to_rwg = np.zeros((N_basis, 3*N_tri), dtype=np.float64)
-            for rwg_count in xrange(N_basis):
-                tri_to_rwg[rwg_count, basis.tri_p[rwg_count]*3 + basis.node_p[rwg_count]] = 1
-                tri_to_rwg[rwg_count, basis.tri_m[rwg_count]*3 + basis.node_m[rwg_count]] = -1
-            #tri_to_rwg = sp.csr_matrix(tri_to_rwg)
-                
-            self._combined_mesh['tri_to_rwg'] =  tri_to_rwg
-
-                
             # only keep loop and star basis if all children have it
             if len(loop_basis) != N_objs or len(star_basis) != N_objs:
                 #loop_basis = None
                 #star_basis = None
                 pass
             else:
-                n_loop = np.hstack(([0], np.cumsum([l.shape[0] for l in loop_basis])))
-                n_J = np.hstack(([0], np.cumsum([l.shape[1] for l in loop_basis])))
+                n_loop = np.hstack(([0], 
+                                np.cumsum([l.shape[0] for l in loop_basis])))
+                n_J = np.hstack(([0], 
+                                 np.cumsum([l.shape[1] for l in loop_basis])))
                 
                 # scipy sparse matrices cannot have zero dimensions        
                 if n_loop[-1] == 0:
@@ -897,7 +886,8 @@ class Simulation(object):
                     loop_basis_comb = np.zeros((n_loop[-1], n_J[-1]), np.float32)
                     #loop_basis_comb = sp.lil_matrix((n_loop[-1], N_basis), dtype=np.float64)
                     for index, sub_matrix in enumerate(loop_basis):
-                        loop_basis_comb[n_loop[index]:n_loop[index+1], n_J[index]:n_J[index+1]] = sub_matrix
+                        loop_basis_comb[n_loop[index]:n_loop[index+1], 
+                                        n_J[index]:n_J[index+1]] = sub_matrix
     
                     # loop_basis_comb = loop_basis_comb.tocsr()
 
@@ -905,7 +895,8 @@ class Simulation(object):
                 star_basis_comb = np.zeros((n_star[-1], n_J[-1]), np.float32)
                 #star_basis_comb = sp.lil_matrix((n_star[-1], N_basis), dtype=np.float64)
                 for index, sub_matrix in enumerate(star_basis):
-                    star_basis_comb[n_star[index]:n_star[index+1], n_J[index]:n_J[index+1]] = sub_matrix
+                    star_basis_comb[n_star[index]:n_star[index+1], 
+                                    n_J[index]:n_J[index+1]] = sub_matrix
                 
                 #star_basis_comb = star_basis_comb.tocsr()
 
@@ -915,8 +906,6 @@ class Simulation(object):
                 else:
                     #loop_star_transform = sp.vstack((loop_basis, star_basis)).tocsr()
                     loop_star_transform = np.vstack((loop_basis_comb, star_basis_comb))
-
-        
                 
                 self._combined_mesh['loop_star_transform'] = loop_star_transform 
                 self._combined_mesh['n_loop'] = n_loop[-1]
@@ -1021,10 +1010,14 @@ class Simulation(object):
    
         A_faces, phi_faces = core_for.z_efie_faces(nodes, tri.nodes, s, 
            xi_eta_eval, weights, I_phi_sing, I_A_sing, index_sing, indptr_sing)
+
+#        A_faces, phi_faces = Z_EFIE_faces(nodes, tri.nodes, s, 
+#           xi_eta_eval, weights, I_phi_sing, I_A_sing, index_sing, indptr_sing)
+
         
-        import core_cython
-        L, S = core_cython.triangle_face_to_rwg(basis.tri_p, basis.tri_m, basis.node_p, 
-                                    basis.node_m, A_faces, phi_faces)
+        #import core_cython
+        L, S = core_for.triangle_face_to_rwg(basis.tri_p, basis.tri_m, 
+                                basis.node_p, basis.node_m, A_faces, phi_faces)
         
         L *= mu_0/(4*np.pi)
         S *= 1/(np.pi*epsilon_0)
@@ -1115,75 +1108,6 @@ class Simulation(object):
 
         return incident
 
-
-#    def face_currents_and_charges(self, I, for_integration=False, 
-#                                  len_scale=False):
-#        """Calculate the charges and currents at the centre of each face
-#        
-#        Note that the charge is actually scaled by a factor of -1j*omega
-#        
-#        Parameters
-#        ----------                
-#        I : ndarray
-#            current solution vector, in RWG basis
-#        for_integration : boolean, optional
-#            if True, then the current and charge effectively multiplied 
-#            by surface area
-#
-#        Returns
-#        -------
-#        rmid : ndarray
-#            triangle mid-points
-#        face_currents : ndarray
-#            current at each mid point
-#        face_charges : ndarray
-#            total charge on each triangle
-#        """
-#        
-#        nodes = self.nodes
-#        tri = self.tri
-#        basis = self.basis
-#    
-#        num_basis = len(basis)
-#        num_triangles = len(tri)
-#    
-#        face_currents = np.zeros((num_triangles, 3), np.complex128)
-#        face_charges = np.zeros((num_triangles), np.complex128)
-#        
-#        # calculate the centre of each triangle        
-#        rmid = np.sum(nodes[tri.nodes], axis=1)/3.0
-#    
-#        if len_scale:
-#            lens = basis.len
-#        else:
-#            lens = np.ones_like(basis.len)
-#    
-#        for count in xrange(num_basis):
-#            # positive contribution from edges
-#            which_face = basis.tri_p[count]
-#            if for_integration:
-#                face_currents[which_face] += basis.rho_cp[count]*I[count]/2
-#                face_charges[which_face] += I[count]
-#
-#            else:
-#                area = tri.area[which_face]
-#                face_currents[which_face] += basis.rho_cp[count]*lens[count]*I[count]/(2*area)
-#                face_charges[which_face] += lens[count]*I[count]/area
-#                
-#        
-#            # negative contribution from edges
-#            which_face = basis.tri_m[count]
-#            if for_integration:
-#                face_currents[which_face] += basis.rho_cm[count]*I[count]/2
-#                face_charges[which_face] -= I[count]
-#
-#            else:
-#                area = tri.area[which_face]
-#                face_currents[which_face] += basis.rho_cm[count]*lens[count]*I[count]/(2*area)
-#                face_charges[which_face] -= lens[count]*I[count]/area
-#    
-#        return rmid, face_currents, face_charges
-
     def linearised_eig(self, L, S, n_modes, which_obj = None):
         """Solves a linearised approximation to the eigenvalue problem from
         the impedance calculated at some fixed frequency.
@@ -1227,7 +1151,8 @@ class Simulation(object):
         if no_loops:
             L_red = L[star_range, star_range]
         else:
-            L_conv = la.solve(L[loop_range, loop_range], L[loop_range, star_range])
+            L_conv = la.solve(L[loop_range, loop_range], 
+                              L[loop_range, star_range])
             L_red = L[star_range, star_range] - np.dot(L[star_range, loop_range], L_conv)
 
         # find eigenvalues, and star part of eigenvectors, for LS combined modes
@@ -1245,4 +1170,107 @@ class Simulation(object):
         
         return np.sqrt(w[which_modes]), vr[:, which_modes]
 
+def Z_EFIE_faces(nodes, triangle_nodes, s, xi_eta_eval, weights, phi_precalc, 
+                 A_precalc, indices_precalc, indptr_precalc):
+    """
+    ! Calculate the face to face interaction terms used to build the impedance matrix
+    !
+    ! As per Rao, Wilton, Glisson, IEEE Trans AP-30, 409 (1982)
+    ! Uses impedance extraction techqnique of Hanninen, precalculated
+    !
+    ! nodes - position of all the triangle nodes
+    ! basis_tri_p/m - the positive and negative triangles for each basis function
+    ! basis_node_p/m - the free nodes for each basis function
+    ! omega - evaulation frequency in rad/s
+    ! s - complex frequency
+    ! xi_eta_eval, weights - quadrature rule over the triangle (weights normalised to 0.5)
+    ! A_precalc, phi_precalc - precalculated 1/R singular terms
+
+    use core_for
+    implicit none
+
+    integer, intent(in) :: num_nodes, num_triangles, num_integration, num_singular
+    ! f2py intent(hide) :: num_nodes, num_triangles, num_integration, num_singular
+
+    real(WP), intent(in), dimension(0:num_nodes-1, 0:2) :: nodes
+    integer, intent(in), dimension(0:num_triangles-1, 0:2) :: triangle_nodes
+
+    complex(WP), intent(in) :: s
+
+    real(WP), intent(in), dimension(0:num_integration-1, 0:1) :: xi_eta_eval
+    real(WP), intent(in), dimension(0:num_integration-1) :: weights
+
+    real(WP), intent(in), dimension(0:num_singular-1) :: phi_precalc
+    real(WP), intent(in), dimension(0:num_singular-1, 3, 3) :: A_precalc
+    integer, intent(in), dimension(0:num_singular-1) :: indices_precalc
+    integer, intent(in), dimension(0:num_triangles) :: indptr_precalc
+    """
+
+#    complex(WP), intent(out), dimension(0:num_triangles-1, 0:num_triangles-1, 0:2, 0:2) :: A_face
+#    complex(WP), intent(out), dimension(0:num_triangles-1, 0:num_triangles-1) :: phi_face
+#    
+#    
+#    complex(WP) :: jk_0 
+#    
+#    real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
+#    complex(WP) :: A_part, phi_part
+#    complex(WP), dimension(3, 3) :: I_A
+#    complex(WP) :: I_phi
+#
+#    integer :: p, q, q_p, q_m, p_p, p_m, ip_p, ip_m, iq_p, iq_m, m, n, index_singular
+
+    num_triangles = triangle_nodes.shape[0]
+    num_integration = weights.shape[0]
+
+    jk_0 = s/c
+
+    A_face = np.empty((num_triangles, num_triangles, 3, 3), np.complex128)
+    phi_face = np.empty((num_triangles, num_triangles), np.complex128)
+
+    # calculate all the integrations for each face pair
+    for p in xrange(num_triangles): # p is the index of the observer face:
+        nodes_p = nodes[triangle_nodes[p, :], :]
+        for q in xrange(p): # q is the index of the source face, need for elements below diagonal
+
+            nodes_q = nodes[triangle_nodes[q, :], :]
+            if (any(triangle_nodes[p, :] == triangle_nodes[q, :])):
+                # triangles have one or more common nodes, perform singularity extraction
+                I_A, I_phi = core_for.face_integrals_smooth_complex(xi_eta_eval[None, :, :], weights, nodes_q, 
+                                    xi_eta_eval, weights, nodes_p, jk_0)
         
+                # the singular 1/R components are pre-calculated
+                index_singular = scr_index(p, q, indices_precalc, indptr_precalc)
+
+                I_A = I_A + A_precalc[index_singular, :, :]
+                I_phi = I_phi + phi_precalc[index_singular]
+        
+            else:
+                # just perform regular integration
+                # As per RWG, triangle area must be cancelled in the integration
+                # for non-singular terms the weights are unity and we DON't want to scale to triangle area
+                I_A, I_phi = core_for.face_integrals_complex(xi_eta_eval, weights, nodes_q,
+                                    xi_eta_eval, weights, nodes_p, jk_0)
+
+            # by symmetry of Galerkin procedure, transposed components are identical (but transposed node indices)
+            A_face[p, q, :, :] = I_A
+            A_face[q, p, :, :] = I_A.T
+            phi_face[p, q] = I_phi
+            phi_face[q, p] = I_phi
+
+
+    return A_face, phi_face
+
+def scr_index(row, col, indices, indptr):
+    """
+    ! Convert compressed sparse row notation into an index within an array
+    ! row, col - row and column into the sparse array
+    ! indices, indptr - arrays of indices and index pointers
+    ! NB: everything is assumed ZERO BASED!!
+    ! Indices are not assumed to be sorted within the column
+    """
+
+    for n in xrange(indptr[row],indptr[row+1]):
+        if indices[n]==col:
+           return n
+    return None # value not found, so return an error code
+

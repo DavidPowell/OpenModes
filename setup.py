@@ -4,81 +4,128 @@ Created on Mon May 14 19:13:54 2012
 
 @author: dap124
 
-Requires numpy 1.6.2+ for the extra_compile_args option
-
 #TODO: add copyright
 """
 
 from numpy.distutils.core import Extension, setup
-import numpy.distutils.fcompiler
 
-#from distutils.core import setup
+ccompiler_dependent_options = {
+    'mingw32' : {
+    #    'extra_link_args' : ['-static']
+    }
+}
 
-fcompiler = numpy.distutils.fcompiler.get_default_fcompiler()
-
-if fcompiler == "gnu95":
-    print "Compiling with GNU Fortran"
-    openmp_libraries=["gomp"]
-    lapack_libraries = ["lapack"]
-    extra_f90_compile_args=["-g", "-fimplicit-none",  "-fopenmp", "-O3"] #"-O0", "-fbounds-check", -fstack-arrays , "-frecursive" ,
-elif fcompiler in ("intel", "intelem"):
-    print "Compiling with Intel Fortran"
-    if fcompiler == "intel":
-        lapack_libraries = ["mkl_intel", "mkl_intel_thread", "mkl_core", "iomp5", "pthread"]
-    else:
-        lapack_libraries = ["mkl_intel_lp64", "mkl_intel_thread", "mkl_core", "iomp5", "pthread"]
-
-    openmp_libraries=["iomp5"]
-    extra_f90_compile_args=["-g"] # ifortran defaults to -O2 -xhost -openmp #"-ip", #, "-check", "all", "-traceback"    
-else:
-    raise ValueError("Unknown compiler %s" % fcompiler)
+fcompiler_dependent_options = {
+    'gnu95' : {
+        'extra_f90_compile_args' : ["-g", "-fimplicit-none",  "-fopenmp", "-O3"],
+        'libraries' : ["gomp"]
+     },
+        
+    'intel' : {
+        'libraries' : ["iomp5"], 
+        # libraries for MKL would be 
+        # ["mkl_intel", "mkl_intel_thread", "mkl_core", "iomp5", "pthread"] 
+    },
+    
+    'intelem' : {
+        'libraries' : ["iomp5"], 
+        # libraries for MKL would be         
+        # "mkl_intel_lp64", "mkl_intel_thread", "mkl_core", "iomp5", "pthread" 
+    } 
+}
 
 core_for = Extension(name = 'core_for',
                  sources = ['core_for.f90'], 
                  f2py_options=["only:","face_integrals_hanninen",
+                               "triangle_face_to_rwg", 
+                               #"face_integrals_complex", "scr_index",
+                               #"face_integrals_smooth_complex",
                                "impedance_core_hanninen", "z_efie_faces",
                                "arcioni_singular", "voltage_plane_wave", 
                                "set_threads", "get_threads", "face_to_rwg", ":"],
-                               
-                libraries=openmp_libraries, 
-                extra_f90_compile_args=extra_f90_compile_args
                 )
 
-dunavant = Extension(name = 'dunavant', sources=['dunavant.f90']
-                 #,extra_link_args=["-static"]
-)
+dunavant = Extension(name = 'dunavant', sources=['dunavant.f90'])
 
+#from Cython.Build import cythonize
+#
+#cython_modules = [
+##        Extension(name = "core_cython", 
+##                  sources = ["core_cython.pyx"],
+##                  include_dirs = [numpy.get_include()],
+##                  libraries=['m'],
+##                  extra_compile_args=['-fopenmp'],
+##                  extra_link_args=['-fopenmp']
+##                  )            fcompiler = self._f77_compiler.compiler_type
+            
 
-import os
-os.environ['CXX'] = 'gcc'
+#                  
+#        Extension(name = "wrap_test", 
+#                  sources = ["wrapped.pyx", "core_for.f90"],
+#                libraries=openmp_libraries, 
+#                f2py_options=["only:","mag", ":"],
+#                extra_f90_compile_args=extra_f90_compile_args
+#                  )                  
+#                  ]
 
-from Cython.Build import cythonize
+from numpy.distutils.command.build_ext import build_ext
 
-#numpy_include = r"C:\Programs-non-installed\numpy-1.7.1\numpy\core\include"
-#import numpy
-#cython_modules = cythonize("core_cython.pyx", include_path = [numpy.get_include()]
-#)
+class compiler_dependent_build_ext( build_ext ):
+    """A build extension which allows compiler-dependent options for
+    compilation, linking etc. Options can depend on either the C or FORTRAN
+    compiler which is actually used (as distinct from the default compilers,
+    which are much easier to detect)
+    
+    Based on http://stackoverflow.com/a/5192738/482420
+    """
+    def build_extensions(self):
+        ccompiler = self.compiler.compiler_type
+        fcompiler = self._f77_compiler.compiler_type            
 
-cython_modules = [
-#        Extension(name = "core_cython", 
-#                  sources = ["core_cython.pyx"],
-#                  include_dirs = [numpy.get_include()],
-#                  libraries=['m'],
-#                  extra_compile_args=['-fopenmp'],
-#                  extra_link_args=['-fopenmp']
-#                  )
-                  
-        Extension(name = "wrap_test", 
-                  sources = ["wrapped.pyx", "core_for.f90"],
-                libraries=openmp_libraries, 
-                f2py_options=["only:","mag", ":"],
-                extra_f90_compile_args=extra_f90_compile_args
-                  )                  
-                  ]
+        # add the compiler dependent options to each extension
+        for extension in self.extensions:
+            try:        
+                modification = ccompiler_dependent_options[ccompiler]
+                for key, val in modification.iteritems():
+                    getattr(extension, key).extend(val)
+            except KeyError:
+                pass
+            
+            try:        
+                modification = fcompiler_dependent_options[fcompiler]
+                for key, val in modification.iteritems():
+                    getattr(extension, key).extend(val)
+            except KeyError:
+                pass        
+        
+        build_ext.build_extensions(self)
+
 
 setup(name = 'openmodes',
-      description       = "Find the electromagnetic modes of open structures using the method of moments",
-      author            = "David Powell",
-      #ext_modules = [dunavant, core_for]
-      ext_modules = cythonize(cython_modules)
-      )
+    description = "An eigenmode solver for open electromagnetic resonantors using the method of moments",
+    author = "David Powell",
+    author_email = 'david.a.powell@anu.edu.au',
+    url = '',
+    py_modules = ['openmodes'],
+    ext_modules = [dunavant, core_for],
+    version = '0.1dev',
+    install_requires = ['numpy >= 1.6.2', 'scipy'],
+    long_description=open('README.txt').read(),
+      #ext_modules = cythonize(cython_modules),
+    classifiers=[
+          #'Development Status :: 3 - Alpha',
+          'Development Status :: 4 - Beta',
+          'Environment :: Console',
+          'Environment :: Web Environment',
+          'Intended Audience :: Science/Research'
+          'Intended Audience :: Developers',
+          'License :: OSI Approved :: Python Software Foundation License',
+          'Operating System :: Microsoft :: Windows',
+          'Operating System :: POSIX',
+          'Programming Language :: Python :: 2.7',
+          'Programming Language :: Fortran',
+          'Topic :: Scientific/Engineering'
+          ],
+    cmdclass = {'build_ext': compiler_dependent_build_ext}
+    )
+

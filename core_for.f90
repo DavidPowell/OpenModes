@@ -92,17 +92,6 @@ module core_for
 
         end subroutine
 
-    
-
-!        subroutine test_wrapped(a) bind(c)
-!            use constants
-!            use iso_c_binding
-!              
-!            complex(c_double_complex), intent(in) :: a
-!        
-!        end subroutine
-
-
     end interface
 
 contains
@@ -112,20 +101,20 @@ contains
 end module core_for
 
 
-!use iso_c_binding
-
-subroutine test_wrapped(a) bind(c, name='test_wrapped_')
-    use constants
-    use iso_c_binding
-      
-    implicit none
-	
-    complex(c_float_complex), value, intent(in) :: a
-	
-    print *, "input value is ", a
-
-end subroutine
-
+!!use iso_c_binding
+!
+!subroutine test_wrapped(a) bind(c, name='test_wrapped_')
+!    use constants
+!    use iso_c_binding
+!      
+!    implicit none
+!	
+!    complex(c_float_complex), value, intent(in) :: a
+!	
+!    print *, "input value is ", a
+!
+!end subroutine
+!
 
 pure function cross_product(a, b)
     use constants
@@ -181,8 +170,6 @@ subroutine face_integrals_complex(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_
     !
     ! xi_eta_s/o - list of coordinate pairs in source/observer triangle
     ! weights_s/o - the integration weights of the source and observer
-    ! note that weights_s has an additional dimension, which will normally be of length one,
-    ! but for singular integrals will be equal to the number of observer integration points
     ! nodes_s/o - the nodes of the source and observer triangles
     ! jk_0 - *complex* free space wavenumber, j*k_0
     ! nodes - the position of the triangle nodes
@@ -263,14 +250,6 @@ subroutine face_integrals_complex(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_
     
             w_s = weights_s(count_s)
 
-!            xi_s = xi_eta_s(count_s, 1)
-!            eta_s = xi_eta_s(count_s, 2)
-!
-!            zeta_s = 1.0 - eta_s - xi_s
-!            r_s = xi_s*nodes_s(:, 1) + eta_s*nodes_s(:, 2) + zeta_s*nodes_s(:, 3)
-!
-!
-!            forall (uu=1:3) rho_s(:, uu) = r_s - nodes_s(:, uu)
             r_s = r_s_table(:, count_s)
             rho_s = rho_s_table(:, :, count_s)
               
@@ -281,8 +260,6 @@ subroutine face_integrals_complex(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_
 
             I_A_int = I_A_int + g*w_s*w_o*matmul(transpose(rho_o), rho_s)
 
-            !forall (uu=1:3, vv=1:3) I_A(uu, vv) = I_A(uu, vv) + g*dot_product(rho_o(:, uu), rho_s(:, vv))*w_s*w_o
-            !forall (uu=1:3, vv=1:3, ww=1:3) I_A(uu, vv) = I_A(uu, vv) + g*rho_o(ww, uu)*rho_s(ww, vv)*w_s*w_o
         end do
     end do
 
@@ -291,7 +268,8 @@ subroutine face_integrals_complex(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_
 
 end subroutine face_integrals_complex
 
-subroutine source_integral_plane_wave(n_o, xi_eta_o, weights_o, nodes_o, jk_inc, e_inc, I)
+subroutine source_integral_plane_wave(n_o, xi_eta_o, weights_o, nodes_o, &
+                                      jk_inc, e_inc, I)
     ! Inner product of source field with testing function to give source "voltage"
     !
     ! xi_eta_s/o - list of coordinate pairs in source/observer triangle
@@ -348,8 +326,15 @@ end subroutine source_integral_plane_wave
 
 
 subroutine arcioni_singular(nodes, I_A, I_phi)
-    ! Calculate singular 1/R term of the MOM integrals as per Arcioni, IEEE MTT 45 p436
-    ! Only works for the self term
+    ! Calculate singular 1/R term of the MOM integrals as per
+    ! P. Arcioni, M. Bressan, and L. Perregrini, 
+    ! IEEE Trans. Microw. Theory Tech. 45, 436 (1997).
+    !
+    ! Only works for the self impedance term on the same triangle
+    !
+    ! nodes - the three nodes of the triangle
+    ! I_A - (3x3) the integrated vector potential terms
+    ! I_phi - the integrated scalar potential
     use constants
     use core_for, only : cross_product, mag
     implicit none
@@ -423,8 +408,8 @@ subroutine arcioni_singular(nodes, I_A, I_phi)
 
 end subroutine
 
-pure subroutine face_integrals_smooth_complex(n_s, n_s2, xi_eta_s, weights_s, nodes_s, n_o, xi_eta_o, &
-                weights_o, nodes_o, jk_0, I_A, I_phi)
+pure subroutine face_integrals_smooth_complex(n_s, n_s2, xi_eta_s, weights_s, &
+                nodes_s, n_o, xi_eta_o, weights_o, nodes_o, jk_0, I_A, I_phi)
     ! Integrate the smooth part of the kernel, currently excludes only the 1/R part
     ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
     ! with the singular term(s) 1/R and R subtracted
@@ -432,11 +417,15 @@ pure subroutine face_integrals_smooth_complex(n_s, n_s2, xi_eta_s, weights_s, no
     !
     ! xi_eta_s/o - list of coordinate pairs in source/observer triangle
     ! weights_s/o - the integration weights of the source and observer
-    ! note that weights_s has an additional dimension, which will normally be of length one,
-    ! but for singular integrals will be equal to the number of observer integration points
     ! nodes_s/o - the nodes of the source and observer triangles
     ! k_0 - free space wavenumber
     ! nodes - the position of the triangle nodes
+    !
+    ! Note that weights_s has an additional dimension, which will normally be 
+    ! of length one, allowance is made for the use of the singularity 
+    ! technique, in which case the additional dimensions will be equal to the 
+    ! number of observer integration points. This feature is currently not
+    ! implemented 
 
     use constants
     implicit none
@@ -494,7 +483,8 @@ pure subroutine face_integrals_smooth_complex(n_s, n_s2, xi_eta_s, weights_s, no
               
             R = sqrt(sum((r_s - r_o)**2))
 
-            ! give the explicit limit for R=0 (use a Taylor expansion for small k_0*R?)
+            ! give the explicit limit for R=0 
+            ! (could use a Taylor expansion for small k_0*R?)
             if (abs(jk_0*R) < 1e-8) then
                 g = -jk_0
             else
@@ -619,9 +609,7 @@ subroutine Z_EFIE_faces(num_nodes, num_triangles, num_integration, num_singular,
             phi_face(p, q) = I_phi
             phi_face(q, p) = I_phi
 
-
         end do
-
     end do
     !$OMP END PARALLEL DO
 
@@ -668,7 +656,6 @@ subroutine voltage_plane_wave(num_nodes, num_triangles, num_basis, num_integrati
         nodes_p = nodes(triangle_nodes(p, :), :)
         ! perform testing of the incident field
         call source_integral_plane_wave(num_integration, xi_eta_eval, weights, nodes_p, jk_inc, e_inc, V_face(:, p))
-
     end do
     !$OMP END PARALLEL DO
 
@@ -736,8 +723,10 @@ subroutine face_to_rwg(num_triangles, num_basis, basis_tri_p, basis_tri_m, basis
 end subroutine face_to_rwg
 
 
-subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, nodes_o, I_A, I_phi)
-    ! Fully integrated over source and observer the singular part of the MOM for RWG basis functions
+subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
+                                   nodes_o, I_A, I_phi)
+    ! Fully integrated over source and observer the singular part of the MOM 
+    ! for RWG basis functions
     ! NB: includes the 1/4A**2 prefactor
     ! Use method from Hanninen PIER 63 243
     !
@@ -746,8 +735,6 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, nodes_o, I
     ! but for singular integrals will be equal to the number of observer integration points
     ! nodes_s/o - the nodes of the source and observer triangles
     ! nodes - the position of the triangle nodes
-    !
-    ! CURRENTLY assuming that the observer is in the plane of the source
     !
     ! Need to calculate I_S_m3, and h, giving a different formula for I_S_m1
     use core_for
@@ -855,3 +842,51 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, nodes_o, I
 
 end subroutine face_integrals_hanninen
 
+subroutine triangle_face_to_rwg(num_triangles, num_basis, basis_tri_p, basis_tri_m, basis_node_p, basis_node_m, &
+                        vector_face, scalar_face, vector_rwg, scalar_rwg)
+    ! take quantities which are defined as interaction between faces and convert them to rwg basis
+
+    use core_for
+    
+    integer, intent(in) :: num_triangles, num_basis
+    ! f2py intent(hide) :: num_triangles, num_basis
+    
+    integer, intent(in), dimension(0:num_basis-1) :: basis_tri_p
+    integer, intent(in), dimension(0:num_basis-1) :: basis_tri_m
+    integer, intent(in), dimension(0:num_basis-1) :: basis_node_p
+    integer, intent(in), dimension(0:num_basis-1) :: basis_node_m    
+
+    complex(WP), intent(in), dimension(0:num_triangles-1, 0:num_triangles-1, 0:2, 0:2) :: vector_face
+    complex(WP), intent(in), dimension(0:num_triangles-1, 0:num_triangles-1) :: scalar_face
+    
+    complex(WP), intent(out), dimension(0:num_basis-1, 0:num_basis-1) :: vector_rwg, scalar_rwg
+
+ 
+    integer m, n, p_p, p_m, q_p, q_m, ip_p, ip_m, iq_p, iq_m
+
+    do m=0,num_basis-1 ! m is the index of the observer edge
+        p_p = basis_tri_p(m)
+        p_m = basis_tri_m(m) ! observer triangles
+
+        ip_p = basis_node_p(m)
+        ip_m = basis_node_m(m) ! observer unshared nodes
+        
+        do n = 0,num_basis-1 ! n is the index of the source
+            q_p = basis_tri_p(n)
+            q_m = basis_tri_m(n) ! source triangles
+            
+            iq_p = basis_node_p(n)
+            iq_m = basis_node_m(n) ! source unshared nodes
+
+            vector_rwg(m, n) = ( &
+                  vector_face(p_p, q_p, ip_p, iq_p) - vector_face(p_p, q_m, ip_p, iq_m) &
+                - vector_face(p_m, q_p, ip_m, iq_p) + vector_face(p_m, q_m, ip_m, iq_m))
+                
+            scalar_rwg(m, n) = ( &
+                - scalar_face(p_m, q_p) + scalar_face(p_m, q_m) &
+                + scalar_face(p_p, q_p) - scalar_face(p_p, q_m))
+
+        end do
+    end do
+
+end subroutine triangle_face_to_rwg
