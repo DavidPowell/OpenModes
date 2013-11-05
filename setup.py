@@ -7,13 +7,19 @@ Created on Mon May 14 19:13:54 2012
 #TODO: add copyright
 """
 
+import setuptools
+from os.path import join
+
 from numpy.distutils.core import Extension, setup
 
 ccompiler_dependent_options = {
     'mingw32' : {
-    #    'extra_link_args' : ['-static']
+        'extra_link_args' : ['-static']
     }
 }
+
+# The following options are required to enable openmp to be used in the fortran
+# code, which is entirely compiler dependent
 
 fcompiler_dependent_options = {
     'gnu95' : {
@@ -23,19 +29,15 @@ fcompiler_dependent_options = {
         
     'intel' : {
         'libraries' : ["iomp5"], 
-        # libraries for MKL would be 
-        # ["mkl_intel", "mkl_intel_thread", "mkl_core", "iomp5", "pthread"] 
     },
     
     'intelem' : {
         'libraries' : ["iomp5"], 
-        # libraries for MKL would be         
-        # "mkl_intel_lp64", "mkl_intel_thread", "mkl_core", "iomp5", "pthread" 
     } 
 }
 
 core_for = Extension(name = 'core_for',
-                 sources = ['core_for.f90'], 
+                 sources = [join('src', 'core_for.f90')], 
                  f2py_options=["only:","face_integrals_hanninen",
                                "triangle_face_to_rwg", 
                                #"face_integrals_complex", "scr_index",
@@ -45,28 +47,7 @@ core_for = Extension(name = 'core_for',
                                "set_threads", "get_threads", "face_to_rwg", ":"],
                 )
 
-dunavant = Extension(name = 'dunavant', sources=['dunavant.f90'])
-
-#from Cython.Build import cythonize
-#
-#cython_modules = [
-##        Extension(name = "core_cython", 
-##                  sources = ["core_cython.pyx"],
-##                  include_dirs = [numpy.get_include()],
-##                  libraries=['m'],
-##                  extra_compile_args=['-fopenmp'],
-##                  extra_link_args=['-fopenmp']
-##                  )            fcompiler = self._f77_compiler.compiler_type
-            
-
-#                  
-#        Extension(name = "wrap_test", 
-#                  sources = ["wrapped.pyx", "core_for.f90"],
-#                libraries=openmp_libraries, 
-#                f2py_options=["only:","mag", ":"],
-#                extra_f90_compile_args=extra_f90_compile_args
-#                  )                  
-#                  ]
+dunavant = Extension(name = 'dunavant', sources=[join('src', 'dunavant.f90')])
 
 from numpy.distutils.command.build_ext import build_ext
 
@@ -100,20 +81,18 @@ class compiler_dependent_build_ext( build_ext ):
         
         build_ext.build_extensions(self)
 
-
 setup(name = 'openmodes',
     description = "An eigenmode solver for open electromagnetic resonantors using the method of moments",
     author = "David Powell",
     author_email = 'david.a.powell@anu.edu.au',
     url = '',
-    py_modules = ['openmodes'],
+    packages = ['openmodes'],
     ext_modules = [dunavant, core_for],
     version = '0.1dev',
     install_requires = ['numpy >= 1.6.2', 'scipy'],
     long_description=open('README.txt').read(),
-      #ext_modules = cythonize(cython_modules),
+    platforms = "Unix, Windows (mingw)",
     classifiers=[
-          #'Development Status :: 3 - Alpha',
           'Development Status :: 4 - Beta',
           'Environment :: Console',
           'Environment :: Web Environment',
