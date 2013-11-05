@@ -7,14 +7,16 @@ Created on Mon May 14 19:13:54 2012
 #TODO: add copyright
 """
 
-import setuptools
+import ez_setup
+ez_setup.use_setuptools()
+
 from os.path import join
 
 from numpy.distutils.core import Extension, setup
 
 ccompiler_dependent_options = {
     'mingw32' : {
-        'extra_link_args' : ['-static']
+    #    'extra_link_args' : ['-static']
     }
 }
 
@@ -22,15 +24,18 @@ ccompiler_dependent_options = {
 # code, which is entirely compiler dependent
 
 fcompiler_dependent_options = {
+    # gnu gfortran (including under mingw)
     'gnu95' : {
         'extra_f90_compile_args' : ["-g", "-fimplicit-none",  "-fopenmp", "-O3"],
         'libraries' : ["gomp"]
      },
         
+    # intel x86 fortran
     'intel' : {
         'libraries' : ["iomp5"], 
     },
     
+    # intel x86_64 fortran
     'intelem' : {
         'libraries' : ["iomp5"], 
     } 
@@ -81,17 +86,21 @@ class compiler_dependent_build_ext( build_ext ):
         
         build_ext.build_extensions(self)
 
-setup(name = 'openmodes',
+with open('README.txt') as file:
+    long_description = file.read()
+
+setup(name = 'OpenModes',
     description = "An eigenmode solver for open electromagnetic resonantors using the method of moments",
     author = "David Powell",
     author_email = 'david.a.powell@anu.edu.au',
+    license ='',
     url = '',
     packages = ['openmodes'],
     ext_modules = [dunavant, core_for],
     version = '0.1dev',
     install_requires = ['numpy >= 1.6.2', 'scipy'],
-    long_description=open('README.txt').read(),
-    platforms = "Unix, Windows (mingw)",
+    long_description=long_description,
+    platforms = "Unix, Windows",
     classifiers=[
           'Development Status :: 4 - Beta',
           'Environment :: Console',

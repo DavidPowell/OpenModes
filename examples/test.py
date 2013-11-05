@@ -6,7 +6,7 @@ Created on Mon Oct 28 16:14:29 2013
 """
 
 import openmodes
-import gmsh
+#from openmodeimport gmsh
 import numpy as np
 import scipy.linalg as la
 import os.path as osp

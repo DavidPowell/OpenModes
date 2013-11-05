@@ -19,6 +19,15 @@ often looks like this::
 Paragraphs are separated by blank lines. *Italics*, **bold**,
 and ``monospace`` look like this.
 
+Requirements
+============
+- numpy
+- scipy
+
+Strongly recommended
+- matplotlib
+- IPython
+
 
 Thanks to
 =========
