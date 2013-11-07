@@ -1,7 +1,25 @@
 # -*- coding: utf-8 -*-
 """
-OpenModes
-=========
+OpenModes - An eigenmode solver for open electromagnetic resonantors
+Copyright (C) 2013 David Powell
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
+
+"""
+*OpenModes*
 
 A Method of Moments (Boundary Element Method) code designed to find the modes
 of open resonators such as meta-atoms, (nano) antennas, scattering particles
@@ -16,20 +34,24 @@ Copyright 2013 David Powell
 TODO: License to go here
 """
 
-import gmsh
-import os.path as osp
-from openmodes.parts import LibraryPart
 from openmodes.solver import Simulation
+
+import os.path as osp
+
+#from openmodes.parts import LibraryPart
+from openmodes.mesh import TriangularSurfaceMesh
+from openmodes import gmsh
 
 def load_parts(filename, mesh_tol=None, force_tuple = False):
     """
-    Open a gmsh geometry or mesh file into the relevant parts
+    Open a geometry file and mesh it (or directly open a mesh file), then
+    convert it into a mesh object.
     
     Parameters
     ----------
     filename : string
-        The name of the file to open. Can be a gmsh .msh file, or a geometry
-        file, which will be meshed first
+        The name of the file to open. Can be a gmsh .msh file, or a gmsh 
+        geometry file, which will be meshed first
     mesh_tol : float, optional
         If opening a geometry file, it will be meshed with this tolerance
     force_tuple : boolean, optional
@@ -41,6 +63,8 @@ def load_parts(filename, mesh_tol=None, force_tuple = False):
     parts : tuple
         A tuple of `SimulationParts`, one for each separate geometric entity
         found in the gmsh file
+        
+    Currently only `TriangularSurfaceMesh` objects are created
     """
     
     if osp.splitext(osp.basename(filename))[1] == ".msh":
@@ -50,13 +74,12 @@ def load_parts(filename, mesh_tol=None, force_tuple = False):
         # assume that this is a gmsh geometry file, so mesh it first
         meshed_name = gmsh.mesh_geometry(filename, mesh_tol)
 
-    node_tri_pairs = gmsh.read_mesh(meshed_name)
+    raw_mesh = gmsh.read_mesh(meshed_name)
     
-    parts = tuple(LibraryPart(nodes, triangles) for (nodes, triangles) in node_tri_pairs)
+    parts = tuple(TriangularSurfaceMesh(sub_mesh) for sub_mesh in raw_mesh)
     if len(parts) == 1 and not force_tuple:
         return parts[0]
     else:
         return parts
-
-__all__ = [Simulation, load_parts]
+#__all__ = [Simulation, load_parts]
 

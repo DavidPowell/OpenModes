@@ -1,0 +1,30 @@
+Documentation of modules
+========================
+
+
+``openmodes``
+-------------
+
+.. automodule:: openmodes
+    :members:
+
+
+``openmodes.solver``
+--------------------
+
+.. automodule:: openmodes.solver
+    :members:
+
+
+``openmodes.visualise``
+-----------------------
+
+.. automodule:: openmodes.visualise
+    :members:
+
+
+``openmodes.parts``
+-------------------
+
+.. automodule:: openmodes.parts
+    :members:

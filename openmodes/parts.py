@@ -1,20 +1,33 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Nov 05 12:26:42 2013
+OpenModes - An eigenmode solver for open electromagnetic resonantors
+Copyright (C) 2013 David Powell
 
-@author: dap124
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+
 
 import numpy as np
 
 from utils import SingularSparse
 import core_for
 
+# a constant, indicating that this material is a perfect electric conductor
+PecMaterial = "Perfect electric conductor"
+
 class Triangles(object):
     """A class for storing triangles of a surface mesh
-    
-    Should be largely compatible with a recordarray, but avoids array
-    copy operations when passing to fortran subroutines
     """
     
     def __init__(self, N_tri):
@@ -303,19 +316,9 @@ class LibraryPart(object):
         
         if hasattr(self, "singular_terms"):
             return self.singular_terms                
-                
-        
-        #if self.parent_precalc_link:
-        #    return self.parent.precalc_singular(quadrature_rule)
-        
+
         xi_eta_eval, weights = quadrature_rule        
         
-        # TODO: parallelism should not just be within each object ??
-        #pool = multiprocessing.Pool()    
-
-        # this object holds all the asynchronous results
-        #result_objects = {}        
-    
         # Precalculate the singular integration rules for faces, which depend
         # on the observation point    
         triangles = self.tri
@@ -336,27 +339,15 @@ class LibraryPart(object):
             for q in sharing_triangles:
                 if q == p:
                     # calculate the self term using the exact formula
-                    #result_objects[(p, p)] = pool.apply_async(arcioni_singular, (nodes_p,))
                     singular_terms[p, p] = core_for.arcioni_singular(nodes_p,)
                 else:
                     # at least one node is shared
                     # calculate neighbour integrals semi-numerically
                     nodes_q = self.nodes[triangles.nodes[q]]
-                    #result_objects[(p,q)] = pool.apply_async(face_integrals_hanninen, (nodes_q, xi_eta_eval, weights, nodes_p))
                     singular_terms[p, q] = core_for.face_integrals_hanninen(
                                         nodes_q, xi_eta_eval, weights, nodes_p)
         
-        #pool.close()
-        # all the results have been asynchronously started
-        # now fetch them sequentially and add to the sparse matrix
-        #for (p, q), result in result_objects.iteritems():
-        #    singular_terms[p, q] = result.get()
-         
-        #pool.join()            
-
         self.singular_terms = singular_terms
-        #self.self_precalc_valid = True
-
         return singular_terms
 
     @property
@@ -429,57 +420,111 @@ class LibraryPart(object):
                 face_charges[which_face] -= basis.len[count]*I[count]/area
     
         return rmid, face_currents, face_charges
+    
+class SimulationPart(object):
+    """A part which has been placed into the simulation, and which can be
+    modified"""
+
+    def __init__(self, mesh, notify_function, material=PecMaterial,
+                 location = None):
+
+        self.mesh = mesh
+        self.material = material
+        self.notify = notify_function
+
+        self.initial_location = location
+        self.reset()
+        #self.transformation_matrix = np.eye(4)
+        #if location is not None:
+        #    self.translate(location)
+
+    #def notify(self):
+    #    """Notify that this part has been changed"""
+    #    self.notify_function()
         
-    def get_dipole_moments(self, I, omega, loop_star = True, electric_order = 1, 
-                           magnetic_order=1):
-        """Calculate the electric and magnetic multipole moments up to the
-        specified order
+    def reset(self):
+        """Reset this part to the default values of the original `LibraryPart`
+        from which this `SimulationPart` was created
+        """
+        
+        self.transformation_matrix = np.eye(4)
+        if self.initial_location is not None:
+            self.translate(self.initial_location)
+        else:
+            self.notify()
+
+    @property
+    def nodes(self):
+        "The nodes of this part after all transformations have been applied"
+        return np.dot(self.transformation_matrix[:3, :3], 
+              self.library_part.nodes.T).T + self.transformation_matrix[:3, 3]
+        
+    def translate(self, offset_vector):
+        """Translate a part by an arbitrary offset vector
+        
+        Care needs to be take if this puts an object in a different layer
+        """
+        # does not break relationship with parent
+        #self.nodes = self.nodes+np.array(offset_vector)
+         
+        translation = np.eye(4)
+        translation[:3, 3] = offset_vector
+         
+        self.transformation_matrix = np.dot(translation, self.transformation_matrix)
+         
+        self.notify() # reset any combined mesh this is a part of
+           
+    def rotate(self, axis, angle):
+        """
+        Rotate about an arbitrary axis        
         
         Parameters
         ----------
-        I : ndarray
-            the current vector of the relevant mode or excitation
-
-        Returns
-        -------
-        p : ndarray
-            electric dipole moment
-        m : ndarray
-            magnetic dipole moment
-            
-        Moments are calculated relative to zero coordinate - does not affect
-        the electric dipole, but will affect the magnetic dipole moment and
-        any other higher-order multipoles
+        axis : ndarray
+            the vector about which to rotate
+        angle : number
+            angle of rotation in degrees
         
-        The moments are 'primitive moments' as defined by Raab and de Lange
+        Algorithm taken from
+        http://en.wikipedia.org/wiki/Euler%E2%80%93Rodrigues_parameters
         """
-        rmid, face_currents, face_charges = self.face_currents_and_charges(I, 
-                                    for_integration=True, loop_star=loop_star)
-        
-        electric_moments = []
-        magnetic_moments = []
-        
-        # electric dipole moment
-        if electric_order >= 1:
-            electric_moments.append(np.sum(rmid[:, :]*face_charges[:, None], 
-                                           axis=0)/(1j*omega))
-        
-        # electric quadrupole moment
-        if electric_order >= 2:        
-            quad = np.empty((3, 3), np.complex128)
-            for i in xrange(3):
-                for j in xrange(3):
-                    quad[i, j] = np.sum(rmid[:, i]*rmid[:, j]*face_charges[:])
-            electric_moments.append(quad/(1j*omega))
-                    
-        if magnetic_order >= 1:
-            magnetic_moments.append(0.5*np.sum(np.cross(rmid[:, :], 
-                                                face_currents[:, :]), axis=0))
-        
-        return electric_moments, magnetic_moments
 
+        # TODO: enable rotation about arbitrary coordinates, and about the
+        # centre of the object        
+        
+        axis = np.array(axis)
+        axis /= np.sqrt(np.dot(axis, axis))
+        
+        angle *= np.pi/180.0        
+        
+        a = np.cos(0.5*angle)
+        b, c, d = axis*np.sin(0.5*angle)
+        
+        matrix = np.array([[a**2 + b**2 - c**2 - d**2, 2*(b*c - a*d), 2*(b*d + a*c), 0],
+                           [2*(b*c + a*d), a**2 + c**2 - b**2 - d**2, 2*(c*d - a*b), 0],
+                           [2*(b*d - a*c), 2*(c*d + a*b), a**2 + d**2 - b**2 - c**2, 0],
+                           [0, 0, 0, 1]])
+        
+        self.transformation_matrix = np.dot(matrix, self.transformation_matrix)
+        self.notify()
 
-class SimulationPart(object):
+    def scale(self, scale_factor):
+        raise NotImplementedError
+        # non-affine transform, will cause problems
+
+        # TODO: work out how scale factor affects pre-calculated 1/R terms
+        # and scale them accordingly (or record them if possible for scaling
+        # at some future point)
+
+        # also, not clear what would happen to dipole moment
+
+    def shear(self):
+        raise NotImplementedError
+        # non-affine transform, will cause MAJOR problems
+ 
+
+    
+class SimulationPart2(object):
     """A part which has been placed into the simulation, and which can be
     modified"""
 
@@ -520,24 +565,9 @@ class SimulationPart(object):
     @property
     def nodes(self):
         "The nodes of this part after all transformations have been applied"
-        return np.dot(self.transformation_matrix[:3, :3], self.library_part.nodes.T).T + self.transformation_matrix[:3, 3]
+        return np.dot(self.transformation_matrix[:3, :3], 
+              self.library_part.nodes.T).T + self.transformation_matrix[:3, 3]
         
-    def get_dipole_moments(self, I, omega, loop_star = True, electric_order=1,
-                           magnetic_order=1):
-        """Calculate the dipole moments
-        
-        They are transformed versions of the parent's assuming that only
-        affine transformation have been performed
-        """
-        
-        # transformations currently disabled        
-        
-        return self.library_part.get_dipole_moments(I, omega, loop_star, 
-                                                electric_order, magnetic_order) 
-        
-        #p, m = self.parent.get_dipole_moments(I, omega)
-        #return np.dot(self.transformation_matrix[:3, :3], p), np.dot(self.transformation_matrix[:3, :3], m)
-
     def translate(self, offset_vector):
         """Translate a part by an arbitrary offset vector
         

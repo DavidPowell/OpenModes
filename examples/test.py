@@ -1,11 +1,25 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Oct 28 16:14:29 2013
+OpenModes - An eigenmode solver for open electromagnetic resonantors
+Copyright (C) 2013 David Powell
 
-@author: dap124
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import openmodes
+from openmodes.visualise import plot_parts
+
 #from openmodeimport gmsh
 import numpy as np
 import scipy.linalg as la
@@ -17,24 +31,25 @@ def loop_star_linear_eigenmodes():
     """"Solve the linearised eigenvalue problem in a loop-star basis.
     """
     
-    filename = osp.join("geometry", "asymmetric_ring.geo")
-    mesh_tol = 1e-3
+    #filename = osp.join("geometry", "asymmetric_ring.geo")
+    #mesh_tol = 1e-3
     
-    meshed_name = gmsh.mesh_geometry(filename, mesh_tol)
-    (nodes1, triangles1), (nodes2, triangles2) = gmsh.read_mesh(meshed_name, split_geometry=True)
-    ring1 = openmodes.sim_object(nodes1, triangles1)
-    ring2 = openmodes.sim_object(nodes2, triangles2)
+    #meshed_name = gmsh.mesh_geometry(filename, mesh_tol)
+    #(nodes1, triangles1), (nodes2, triangles2) = gmsh.read_mesh(meshed_name, split_geometry=True)
+    #ring1 = openmodes.sim_object(nodes1, triangles1)
+    #ring2 = openmodes.sim_object(nodes2, triangles2)
+    ring1, ring2 = openmodes.load_parts(osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
     
-    sim = openmodes.MOM_simulation(integration_rule = 10)
-    sim.add_object(ring1)
-    sim.add_object(ring2)
+    sim = openmodes.Simulation(integration_rule = 10)
+    sim.place_part(ring1)
+    sim.place_part(ring2)
    
     freq = 7e9
     omega = 2*np.pi*freq
     s = 1j*omega
 
     L, S = sim.impedance_matrix(s)
-    V = sim.source_term(omega, [0, 1, 0], [0, 0, 0])
+    V = sim.source_term(np.array([0, 1, 0]), np.array([0, 0, 0]))
 
     I = la.solve(s*L + S/s, V)
 
@@ -210,7 +225,7 @@ def srr_extinction():
     plt.show()
 
 
-def plot_parts():
+def test_plotting():
 
     filename = osp.join("geometry", "SRR.geo")
 
@@ -225,8 +240,8 @@ def plot_parts():
     srr2.translate(separation)
 
 
-    import visualise
-    visualise.plot_parts(sim._parts)
+    #set([srr1])
+    plot_parts(sim.parts, view_angles=(40, 70))
 
     
 def compare_source_terms():
@@ -267,11 +282,62 @@ def compare_source_terms():
     plt.plot(incident2.imag, '--')
     plt.show()
     
+#def test_rwg():
+#from openmodes.mesh import TriangularSurfaceMesh
+#from openmodes.basis import DivRwgBasis
+#from openmodes import gmsh
+from openmodes import load_parts, Simulation
+#from openmodes.operator import EfieOperator
+#from openmodes import integration
 
+filename = osp.join("geometry", "SRR.geo")
+
+mesh_tol = 0.5e-3
+#meshed_name = gmsh.mesh_geometry(filename, mesh_tol)
+#
+#raw_mesh = gmsh.read_mesh(meshed_name)
+#
+#mesh = TriangularSurfaceMesh(raw_mesh[0])
+
+mesh = load_parts(filename, mesh_tol)
+
+#plot_parts([mesh], view_angles=(40, 70))
+
+sim = Simulation()    
+
+part = sim.place_part(mesh)
+
+#op = EfieOperator([part], integration.get_dunavant_rule(5))
+
+freqs = np.linspace(2e9, 20e9, 501)
+
+e_inc = np.array([1, 1, 0], dtype=np.complex128)
+k_hat = np.array([0, 0, 1], dtype=np.complex128)
+    
+extinction = np.zeros(len(freqs), np.complex128)
+
+for freq_count, freq in enumerate(freqs):
+    s = 2j*np.pi*freq
+    jk_inc = s/c*k_hat
+    
+    L, S = sim.impedance_matrix(s)
+    V = sim.operator.plane_wave_source(sim.parts[0], s, e_inc, jk_inc)
+
+    extinction[freq_count] = np.dot(V.conj(), la.solve(s*L + S/s, V))
+   
+plt.figure()
+plt.plot(freqs*1e-9, extinction.real)
+plt.plot(freqs*1e-9, extinction.imag)
+plt.show()
+
+#basis = DivRwgBasis(mesh)
+#mes
+        
 
 
 #loop_star_linear_eigenmodes()
 #srr_coupling()
-srr_extinction()
-#plot_parts()
+#srr_extinction()
+#test_plotting()
 #compare_source_terms()
+#test_rwg()

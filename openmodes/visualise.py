@@ -5,29 +5,41 @@ Created on Tue Oct 29 12:17:16 2013
 @author: dap124
 """
 
-import numpy as np
-
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 #import matplotlib.tri as mtri
 
 def plot_parts(parts, figsize=(10, 4), view_angles = (20, 90)):
+    """Create a simple 3D plot to show the location of loaded parts in space
+    
+    Parameters
+    ----------
+    parts : list of LibraryPart or SimulationPart
+        The parts to plot
+    figsize : tuple, optional
+        The figsize (in inches) which will be passed to matplotlib
+    viewangles : tuple, optional
+        The viewing angle of the 3D plot in degrees, will be passed to 
+        matplotlib
+    """
+    
     fig = plt.figure(figsize=figsize)
     ax = fig.add_subplot(111, projection='3d')
     
     for part in parts:
-        ax.scatter(part.nodes[:, 0], part.nodes[:, 1], part.nodes[:, 2], marker='x')
-        #mtri.Triangulation(
+        for edge in part.get_edges():
+            nodes = part.nodes[edge]
+            ax.plot(nodes[:, 0], nodes[:, 1], nodes[:, 2], 'k')
+        #ax.scatter(part.nodes[:, 0], part.nodes[:, 1], part.nodes[:, 2], marker='x')
      
     ax.view_init(*view_angles)
+    ax.autoscale()
     plt.show()
  
 
-from scipy.constants import mu_0, epsilon_0  
-eta_0 = np.sqrt(mu_0/epsilon_0)
-
+from openmodes.constants import eta_0 
      
-def write_vtk(self, filename, I=None, scale_coords = 1, 
+def write_vtk(part, filename, I=None, scale_coords = 1, 
               scale_current = eta_0, scale_charge = 1):
     """Write the mesh and solution data to a VTK file
     
@@ -46,12 +58,12 @@ def write_vtk(self, filename, I=None, scale_coords = 1,
     
     from pyvtk import PolyData, VtkData, Scalars, CellData, Vectors
     
-    poly = [[int(j) for j in i] for i in self.tri.nodes]    
-    struct = PolyData(points=self.nodes*scale_coords, polygons=poly)
+    poly = [[int(j) for j in i] for i in part.tri.nodes]    
+    struct = PolyData(points=part.nodes*scale_coords, polygons=poly)
 
     if I is not None:
 
-        rmid, currents, charges = self.face_currents_and_charges(I)
+        rmid, currents, charges = part.face_currents_and_charges(I)
 
         cell_data = CellData(
                     Vectors((currents.real*scale_current), name="Jr"), 

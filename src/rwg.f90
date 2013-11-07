@@ -1,17 +1,23 @@
-
-module constants
-    implicit none
-	
-    integer, parameter :: WP = 8 ! working precision, can be 4 or 8
-    ! when adjusting working precision, need to change line in file .f2py_f2cmap
-    integer, parameter :: DP = 8
-    integer, parameter :: SP = 4	
-end module
+! OpenModes - An eigenmode solver for open electromagnetic resonantors
+! Copyright (C) 2013 David Powell
+!
+! This program is free software: you can redistribute it and/or modify
+! it under the terms of the GNU General Public License as published by
+! the Free Software Foundation, either version 3 of the License, or
+! (at your option) any later version.
+!
+! This program is distributed in the hope that it will be useful,
+! but WITHOUT ANY WARRANTY; without even the implied warranty of
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+! GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License
+! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 module core_for
 
     use constants
-    use iso_c_binding
+    !use iso_c_binding
     implicit none
 
     real(DP), parameter :: c = 299792458.0_DP
@@ -27,30 +33,15 @@ module core_for
             complex(WP), dimension(3) :: e_source
         end function
 
-        subroutine arcioni_singular(nodes, I_A, I_phi)
-            ! Calculate singular MOM integrals as per Arcioni, IEEE MTT 45 p436
-            use constants
-            implicit none
-        
-            real(WP), dimension(3, 3), intent(in) :: nodes
-            real(WP), intent(out) :: I_phi
-            real(WP), dimension(3, 3), intent(out) :: I_A  
-        end subroutine
-
-        pure function cross_product(a, b)
-            use constants
-            implicit none
-            real(WP), intent(in), dimension(:) :: a, b
-            real(WP), dimension(3) :: cross_product
-        end function
-
-        pure function mag(vector)
-            use constants
-            implicit none
-        
-            real(WP), intent(in), dimension(:) :: vector
-            real(WP) :: mag
-        end function
+!        subroutine arcioni_singular(nodes, I_A, I_phi)
+!            ! Calculate singular MOM integrals as per Arcioni, IEEE MTT 45 p436
+!            use constants
+!            implicit none
+!        
+!            real(WP), dimension(3, 3), intent(in) :: nodes
+!            real(WP), intent(out) :: I_phi
+!            real(WP), dimension(3, 3), intent(out) :: I_A  
+!        end subroutine
 
         pure function scr_index(row, col, indices, indptr)
             ! Convert compressed sparse row notation into an index within an array
@@ -99,44 +90,6 @@ contains
 
 
 end module core_for
-
-
-!!use iso_c_binding
-!
-!subroutine test_wrapped(a) bind(c, name='test_wrapped_')
-!    use constants
-!    use iso_c_binding
-!      
-!    implicit none
-!	
-!    complex(c_float_complex), value, intent(in) :: a
-!	
-!    print *, "input value is ", a
-!
-!end subroutine
-!
-
-pure function cross_product(a, b)
-    use constants
-    implicit none
-    real(WP), intent(in), dimension(:) :: a, b
-    real(WP), dimension(3) :: cross_product
-
-    cross_product(1) = a(2)*b(3) - a(3)*b(2)
-    cross_product(2) = a(3)*b(1) - a(1)*b(3)
-    cross_product(3) = a(1)*b(2) - a(2)*b(1)
-
-end function
-
-pure function mag(vector)
-    use constants
-    implicit none
-
-    real(WP), intent(in), dimension(:) :: vector
-    real(WP) :: mag
-
-    mag = sqrt(dot_product(vector, vector))
-end function
 
 pure function scr_index(row, col, indices, indptr)
     ! Convert compressed sparse row notation into an index within an array
@@ -336,7 +289,7 @@ subroutine arcioni_singular(nodes, I_A, I_phi)
     ! I_A - (3x3) the integrated vector potential terms
     ! I_phi - the integrated scalar potential
     use constants
-    use core_for, only : cross_product, mag
+    use vectors, only : cross_product, mag
     implicit none
 
     real(WP), dimension(3, 3), intent(in) :: nodes
@@ -500,32 +453,6 @@ pure subroutine face_integrals_smooth_complex(n_s, n_s2, xi_eta_s, weights_s, &
 end subroutine face_integrals_smooth_complex
 
 
-subroutine set_threads(n)
-    ! Set the number of openmp threads
-    ! -1 signifies to have as many threads as CPUs
-    use omp_lib
-    !use mkl_service
-    implicit none
-
-    integer, intent(in) :: n
-
-    if (n == -1) then
-        call omp_set_num_threads(omp_get_num_procs())
-    else
-        call omp_set_num_threads(n)
-    end if
-end subroutine
-    
-subroutine get_threads(n)
-    ! Get the number of openmp threads
-    use omp_lib
-    implicit none
-
-    integer, intent(out) :: n
-
-    n = omp_get_max_threads()
-end subroutine
-
 subroutine Z_EFIE_faces(num_nodes, num_triangles, num_integration, num_singular, nodes, triangle_nodes, &
                                 s, xi_eta_eval, weights, phi_precalc, A_precalc, indices_precalc, indptr_precalc, &
                                 A_face, phi_face)
@@ -673,56 +600,6 @@ subroutine voltage_plane_wave(num_nodes, num_triangles, num_basis, num_integrati
 
 end subroutine
 
-subroutine face_to_rwg(num_triangles, num_basis, basis_tri_p, basis_tri_m, basis_node_p, basis_node_m, &
-                        vector_face, scalar_face, vector_rwg, scalar_rwg)
-    ! take quantities which are defined as interaction between faces and convert them to rwg basis
-
-    use core_for
-    
-    integer, intent(in) :: num_triangles, num_basis
-    ! f2py intent(hide) :: num_triangles, num_basis
-    
-    integer, intent(in), dimension(0:num_basis-1) :: basis_tri_p
-    integer, intent(in), dimension(0:num_basis-1) :: basis_tri_m
-    integer, intent(in), dimension(0:num_basis-1) :: basis_node_p
-    integer, intent(in), dimension(0:num_basis-1) :: basis_node_m    
-
-    complex(WP), intent(in), dimension(0:num_triangles-1, 0:num_triangles-1, 0:2, 0:2) :: vector_face
-    complex(WP), intent(in), dimension(0:num_triangles-1, 0:num_triangles-1) :: scalar_face
-    
-    complex(WP), intent(out), dimension(0:num_basis-1, 0:num_basis-1) :: vector_rwg, scalar_rwg
-
- 
-    integer m, n, p_p, p_m, q_p, q_m, ip_p, ip_m, iq_p, iq_m
-
-    do m=0,num_basis-1 ! m is the index of the observer edge
-        p_p = basis_tri_p(m)
-        p_m = basis_tri_m(m) ! observer triangles
-
-        ip_p = basis_node_p(m)
-        ip_m = basis_node_m(m) ! observer unshared nodes
-        
-        do n = 0,num_basis-1 ! n is the index of the source
-            q_p = basis_tri_p(n)
-            q_m = basis_tri_m(n) ! source triangles
-            
-            iq_p = basis_node_p(n)
-            iq_m = basis_node_m(n) ! source unshared nodes
-
-            vector_rwg(m, n) = ( &
-                  vector_face(p_p, q_p, ip_p, iq_p) - vector_face(p_p, q_m, ip_p, iq_m) &
-                - vector_face(p_m, q_p, ip_m, iq_p) + vector_face(p_m, q_m, ip_m, iq_m))
-                
-            scalar_rwg(m, n) = ( &
-                - scalar_face(p_m, q_p) + scalar_face(p_m, q_m) &
-                + scalar_face(p_p, q_p) - scalar_face(p_p, q_m))
-
-        end do
-    end do
-
-end subroutine face_to_rwg
-
-
 subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
                                    nodes_o, I_A, I_phi)
     ! Fully integrated over source and observer the singular part of the MOM 
@@ -737,7 +614,8 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
     ! nodes - the position of the triangle nodes
     !
     ! Need to calculate I_S_m3, and h, giving a different formula for I_S_m1
-    use core_for
+    use constants
+    use vectors, only : cross_product, mag
     implicit none
 
     integer, intent(in) :: n_o

@@ -13,7 +13,7 @@ import tempfile
 import os.path as osp
 import struct
 import numpy as np
-import collections
+from collections import defaultdict
 
 # the minimum version of gmsh required
 min_version = (2, 5, 0)
@@ -68,42 +68,45 @@ def mesh_geometry(filename, mesh_tol=None, binary=True, dirname=None):
     #print stdouttxt, stderrtxt
     return meshname
 
-# the number of nodes in different gmsh element types which may be encountered
-gmsh_element_nodes = {1: 2, 2: 3, 15: 1}
 
+edge_type = 1
 triangle_type = 2
+point_type = 15
+# the number of nodes in different gmsh element types which may be encountered
+gmsh_element_nodes = {edge_type: 2, triangle_type: 3, point_type: 1}
 
-def read_mesh(filename, split_geometry=True):
-    """Read a gmsh mesh file
-    
-    Will only read in triangle elements
+element_name_mapping = {"edges" : edge_type, "triangles" : triangle_type,
+                        "points" : point_type}
+
+def read_mesh(filename, returned_elements = ("edges", "triangles")):
+    """Read a gmsh binary mesh file
     
     Parameters
     ----------
     filename : string
         the full name of the gmesh meshed file
-    split_geometry : boolean, optional
-        whether to split the geometry
+    returned_elements : tuple, optional
+        A tuple of string saying which types of elements are desired
         
     Returns
     -------
-    nodes : ndarray
-        all nodes (may include some which are not referenced)
-    triangles : ndarray
-        the indices of nodes belonging to each triangle
+    raw_mesh : dict
+        Containing the following
+        nodes : ndarray
+            all nodes referred to by this geometric entity
+        triangles : ndarray
+            the indices of nodes belonging to each triangle
+        edges : ndarray
     
-    If the geometry is split, then nodes and triangles will be repeated for
-    each geometric object within the mesh file, e.g.
-    `((nodes1, triangles1), (nodes2, triangles2), ...)`
-
-    
-    All nodes are included, even if unused
-    Assumes that the default geometric tags are used.
     Node references are set to be zero based indexing as per python standard 
     
     Currently assumes gmsh binary format 2.2, little endian
+    as defined in http://www.geuz.org/gmsh/doc/texinfo/#MSH-binary-file-format    
     
     """
+    
+    wanted_element_types = set(element_name_mapping[n] for n in returned_elements)
+    
     with open(filename, "rb") as f:
         
         # check the header version
@@ -133,72 +136,73 @@ def read_mesh(filename, split_geometry=True):
         assert(f.readline().strip() == "$Elements")
         num_elements = int(f.readline())
 
-        # allocate the maximum number of triangles which there could be,
-        # later we will resize to reduce this
-        triangles = np.empty((num_elements, 3), np.int32)
-
-        element_type_count = collections.defaultdict(int)
+        #element_count = defaultdict(int)
         
-        triangle_count = 0        
-        
-        object_triangles = collections.defaultdict(list)
-        object_nodes = collections.defaultdict(set)
+        object_nodes = defaultdict(set)
+        object_elements = defaultdict(lambda : defaultdict(list))
+        #elements = defaultdict(list)
         
         # currently we are only interested in the triangle elements
         # so skip over all others
         for _ in xrange(num_elements):
-            element_type, num_element_type, num_tags = struct.unpack('=iii', f.read(12))
-            assert(num_tags >= 2) # need to have the elementary geometry tag
-            element_type_count[element_type] += num_element_type
+            element_type, num_elem_in_group, num_tags = struct.unpack('=iii', f.read(12))
             
-            element_bytes = 4*(1 + num_tags + gmsh_element_nodes[element_type])
-            elem_format = "=i" + "i"*num_tags + "iii"
+            num_nodes_in_elem = gmsh_element_nodes[element_type]
+            assert(num_tags >= 2) # need to have the elementary geometry tag
+            
+            element_bytes = 4*(1 + num_tags + num_nodes_in_elem)
 
-            element_data = f.read(num_element_type*element_bytes)
-            if element_type == triangle_type:
-                # iterate over all elements within the same header block
-                for these_elements_count in xrange(num_element_type):
-                    this_triangle = struct.unpack(elem_format, 
-                        element_data[these_elements_count*element_bytes:(these_elements_count+1)*element_bytes])
-                        
-                    # NB: conversion to python 0-based indexing is done here
-                    triangle_nodes = np.array(this_triangle[-3:])-1
-                    triangles[triangle_count] = triangle_nodes
+            elem_format = "=i" + "i"*num_tags + "i"*num_nodes_in_elem
 
-                    # assumes that the default tags are used, ie the elementary
-                    # geometric object is the second tag
-                    object_triangles[this_triangle[2]].append(triangle_count)
-                    object_nodes[this_triangle[2]].update(triangle_nodes)
+            element_data = f.read(num_elem_in_group*element_bytes)
+
+            # Avoid reading in unwanted element types. This is important for
+            # getting rid of nodes which are not a part of any triangle
+            if element_type not in wanted_element_types:
+                continue
+            
+            # iterate over all elements within the same header block
+            for these_elements_count in xrange(num_elem_in_group):
+                this_element = struct.unpack(elem_format, 
+                    element_data[these_elements_count*element_bytes:(these_elements_count+1)*element_bytes])
                     
-                    triangle_count += 1
-        
-        triangles.resize((element_type_count[triangle_type], 3))
+                # assumes that the required default tags are used
+                physical_entity = this_element[1]
+                #geometric_entity = this_element[2]
+                #print physical_entity, geometric_entity
+                    
+                # NB: conversion to python 0-based indexing is done here
+                element_nodes = np.array(this_element[-num_nodes_in_elem:])-1
+                #elements[element_type].append(element_nodes)
 
+                #object_elements[physical_entity][element_type].append(element_count[element_type])
+                object_elements[physical_entity][element_type].append(element_nodes)
+                object_nodes[physical_entity].update(element_nodes)
+        
         f.readline()
         assert(f.readline().strip() == "$EndElements")
         
-    if split_geometry:
-        # for the split geometry, return ((nodes1, triangles1),
-        # (nodes2, triangles2) ...)
+    return_vals = []        
+    
+    # Go through each entity, and work out which nodes belong to it. Nodes are
+    # renumbered, so elements are updated to reflect new numbering
+    for obj_nodes, obj_elements in zip(object_nodes.itervalues(), 
+                                        object_elements.itervalues()):
+        orig_nodes = np.sort(list(obj_nodes))
+        new_nodes = np.zeros(len(nodes), np.int)
+        for node_count, node in enumerate(orig_nodes):
+            new_nodes[node] = node_count
         
-        return_vals = []        
+        this_part = {'nodes': nodes[orig_nodes]}
         
-        # Go through each sub-object, and work out which nodes and triangles
-        # belong to it. Nodes will be renumbered, so update triangles
-        # accordingly
-        for obj_nodes, obj_triangles in zip(object_nodes.itervalues(), 
-                                            object_triangles.itervalues()):
-            orig_nodes = np.sort(list(obj_nodes))
-            new_nodes = np.zeros(len(nodes), np.int)
-            for node_count, node in enumerate(orig_nodes):
-                new_nodes[node] = node_count
+        for elem_name in returned_elements:
+            returned_type = element_name_mapping[elem_name]
+            which_elems = new_nodes[np.array(obj_elements[returned_type])]
+            this_part[elem_name] = which_elems
             
-            which_triangles = new_nodes[triangles[np.sort(obj_triangles)]]
-            return_vals.append((nodes[orig_nodes], which_triangles))
+        return_vals.append(this_part)
         
-        return tuple(return_vals)
-    else:
-        return nodes, triangles
+    return tuple(return_vals)
 
 def check_installed():
     "Check if a supported version of gmsh is installed"

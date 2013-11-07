@@ -34,3 +34,5 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+doc/_build/
+examples/.ipynb_checkpoints/

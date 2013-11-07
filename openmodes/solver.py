@@ -1,44 +1,47 @@
 # -*- coding: utf-8 -*-
 """
-OpenModes
----------
+OpenModes - An eigenmode solver for open electromagnetic resonantors
+Copyright (C) 2013 David Powell
 
-A Method of Moments (Boundary Element Method) code designed to find the modes
-of open resonators such as meta-atoms, (nano) antennas, scattering particles
-etc.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-Using these modes, broadband models of these elements can be created, enabling
-excitation, coupling between them and scattering to be solved easily, and
-broadband models to be created
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-Copyright 2013 David Powell
-
-TODO: License to go here
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+
 from __future__ import division, print_function
 
 # numpy and scipy
 import numpy as np
-import scipy.linalg as la
-from scipy.constants import epsilon_0, mu_0
+import numpy.linalg as la
+from openmodes.constants import epsilon_0, mu_0
      
 from openmodes.utils import SingularSparse
 from openmodes import integration
 from openmodes.parts import SimulationPart, Triangles, RwgBasis
 
+from openmodes.basis import DivRwgBasis
+from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
+
 # compiled fortran libraries
 import core_for
  
 class Simulation(object):
-    """A class representing the method of moments solver and data structures
-    
-    The object can be pickled (e.g. for parallel simulations). However, the
-    unpickled copies will break the change watching machinery. This is not
-    a problem if the geometry is not changed in the parallel engines (which
-    would make no sense anyway)
+    """This object controls everything within the simluation. It contains all
+    the parts which have been placed, and the operator equation which is
+    used to solve the scattering problem.
     """
 
-    def __init__(self, integration_rule = 5):
+    def __init__(self, integration_rule = 5, basis_class = DivRwgBasis,
+                 operator_class = EfieOperator, greens_function=FreeSpaceGreensFunction()):
         """       
         Parameters
         ----------
@@ -52,14 +55,22 @@ class Simulation(object):
         self.singular_integrals = {}
                
         self._parts = []
+        
+        self.basis_class = basis_class
+        self.operator = operator_class(quadrature_rule=self.quadrature_rule,
+                                                 basis_class=basis_class, 
+                                                 greens_function=greens_function)
 
-    def place_part(self, library_part):
+    def place_part(self, library_part, location=None):
         """Add a part to the simulation domain
         
         Parameters
         ----------
         library_part : LibraryPart
             The part to place
+        location : array, optional
+            If specified, place the part at a given location, otherwise it will
+            be placed at the origin
             
         Returns
         -------
@@ -73,14 +84,19 @@ class Simulation(object):
         conductor
         """
         
-        sim_part = SimulationPart(library_part, self.parts_modified)
+        sim_part = SimulationPart(library_part, self.parts_modified, 
+                                  location=location)
         self._parts.append(sim_part)
 
         #sim_part.add_observer(self.objects_changed)
         #self.objects_changed()
-        self.parts_modified()
+        #self.parts_modified()
         return sim_part
-        
+    
+    @property
+    def parts(self):
+        return self._parts
+    
     def parts_modified(self):
         """Called when any parts have been modified, invalidating the combined 
         mesh and precalculated impedance terms"""
@@ -333,11 +349,36 @@ class Simulation(object):
 
     @property
     def triangle_to_rwg(self):
-        """The sparse matrix which converts from triangle to RWG basis"""
+        """The matrix which converts from triangle to RWG basis"""
         return self.combined_mesh['triangle_to_rwg']
 
-  
     def impedance_matrix(self, s, serial_interpolation = False, 
+                         loop_star = True):
+        """Evaluate the impedances matrices
+        
+        Parameters
+        ----------        
+        s : number
+            complex frequency at which to calculate impedance (in rad/s)
+        serial_interpolation : boolean, optional
+            do interpolation of Green's function serially
+            which is slower, but easier to debug
+        loop_star : boolean, optional
+            transform impedance from RWG to loop-star basis
+        
+        This version assumes that the mesh is associated with each object,
+        which is then used to build a single global mesh        
+        
+        Returns
+        -------
+        L, S : ndarray
+            the inductance and susceptance matrices
+         
+        """
+        return self.operator.self_impedance_matrix(self._parts[0], s)
+
+  
+    def impedance_matrix2(self, s, serial_interpolation = False, 
                          loop_star = True):
         """Evaluate the impedances matrices
         
