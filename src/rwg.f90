@@ -14,6 +14,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 module core_for
 
     use constants
@@ -26,12 +27,12 @@ module core_for
     !real(DP), parameter :: pi = 3.1415926535897931_DP
 
     interface
-        pure function e_source(r)
-            use constants
-            implicit none
-            real(WP), dimension(3), intent(in) :: r
-            complex(WP), dimension(3) :: e_source
-        end function
+!        pure function e_source(r)
+!            use constants
+!            implicit none
+!            real(WP), dimension(3), intent(in) :: r
+!            complex(WP), dimension(3) :: e_source
+!        end function
 
 !        subroutine arcioni_singular(nodes, I_A, I_phi)
 !            ! Calculate singular MOM integrals as per Arcioni, IEEE MTT 45 p436
@@ -83,6 +84,28 @@ module core_for
 
         end subroutine
 
+        pure subroutine face_integrals_smooth_complex(n_s, n_s2, xi_eta_s, weights_s, &
+                        nodes_s, n_o, xi_eta_o, weights_o, nodes_o, jk_0, I_A, I_phi)
+            use constants
+            implicit none
+        
+            integer, intent(in) :: n_s, n_s2, n_o
+            ! f2py intent(hide) :: n_s, n_s2, n_o
+            real(WP), dimension(3, 3), intent(in) :: nodes_s, nodes_o
+            complex(WP), intent(in) :: jk_0
+        
+            real(WP), intent(in), dimension(0:n_s2-1, 0:n_s-1, 2) :: xi_eta_s
+            real(WP), intent(in), dimension(0:n_s2-1, 0:n_s-1) :: weights_s
+        
+            real(WP), intent(in), dimension(0:n_o-1, 2) :: xi_eta_o
+            real(WP), intent(in), dimension(0:n_o-1) :: weights_o
+        
+            complex(WP), intent(out), dimension(3, 3) :: I_A
+            complex(WP), intent(out) :: I_phi
+        end subroutine
+
+
+
     end interface
 
 contains
@@ -90,6 +113,7 @@ contains
 
 
 end module core_for
+
 
 pure function scr_index(row, col, indices, indptr)
     ! Convert compressed sparse row notation into an index within an array
@@ -148,7 +172,7 @@ subroutine face_integrals_complex(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_
     real(WP), dimension(3) :: r_s, r_o
     real(WP), dimension(3, 3) :: rho_s, rho_o
     complex(WP) :: g
-    integer :: count_s, count_o, uu, vv !, ww
+    integer :: count_s, count_o, uu!, vv !, ww
     real(WP), dimension(3, 3) :: nodes_s, nodes_o
 
     real(WP), dimension(3, 0:n_s-1) :: r_s_table
@@ -289,7 +313,8 @@ subroutine arcioni_singular(nodes, I_A, I_phi)
     ! I_A - (3x3) the integrated vector potential terms
     ! I_phi - the integrated scalar potential
     use constants
-    use vectors, only : cross_product, mag
+    use vectors!, only : cross_product, mag
+    !use core_for
     implicit none
 
     real(WP), dimension(3, 3), intent(in) :: nodes
@@ -495,11 +520,11 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
     complex(WP) :: jk_0 
     
     real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
-    complex(WP) :: A_part, phi_part
+    !complex(WP) :: A_part, phi_part
     complex(WP), dimension(3, 3) :: I_A
     complex(WP) :: I_phi
 
-    integer :: p, q, index_singular !q_p, q_m, p_p, p_m, ip_p, ip_m, iq_p, iq_m, m, n, 
+    integer :: p, q, index_singular!, q_p, q_m, p_p, p_m, ip_p, ip_m, iq_p, iq_m, m, n
 
     jk_0 = s/c
 
@@ -542,76 +567,76 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
 
 end subroutine Z_EFIE_faces_self
 
-subroutine Z_EFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_triangles_s, &
-                               num_integration, nodes_o, triangle_nodes_o, nodes_s, triangle_nodes_s, &
-                                s, xi_eta_eval, weights, &
-                                A_face, phi_face)
-    ! Calculate the face to face interaction terms used to build the impedance matrix
-    ! For mutual coupling terms between different parts
-    !
-    ! As per Rao, Wilton, Glisson, IEEE Trans AP-30, 409 (1982)
-    ! Uses impedance extraction techqnique of Hanninen, precalculated
-    !
-    ! nodes - position of all the triangle nodes
-    ! basis_tri_p/m - the positive and negative triangles for each basis function
-    ! basis_node_p/m - the free nodes for each basis function
-    ! omega - evaulation frequency in rad/s
-    ! s - complex frequency
-    ! xi_eta_eval, weights - quadrature rule over the triangle (weights normalised to 0.5)
-    ! A_precalc, phi_precalc - precalculated 1/R singular terms
-
-    use core_for
-    implicit none
-
-    integer, intent(in) :: num_nodes_o, num_triangles_o, num_nodes_s, num_triangles_s, num_integration
-
-    real(WP), intent(in), dimension(0:num_nodes_o-1, 0:2) :: nodes_o
-    integer, intent(in), dimension(0:num_triangles_o-1, 0:2) :: triangle_nodes_o
-    real(WP), intent(in), dimension(0:num_nodes_s-1, 0:2) :: nodes_s
-    integer, intent(in), dimension(0:num_triangles_s-1, 0:2) :: triangle_nodes_s
-
-    complex(WP), intent(in) :: s
-
-    real(WP), intent(in), dimension(0:num_integration-1, 0:1) :: xi_eta_eval
-    real(WP), intent(in), dimension(0:num_integration-1) :: weights
-
-    complex(WP), intent(out), dimension(0:num_triangles_o-1, 0:num_triangles_s-1, 0:2, 0:2) :: A_face
-    complex(WP), intent(out), dimension(0:num_triangles_o-1, 0:num_triangles_s-1) :: phi_face
-    
-    
-    complex(WP) :: jk_0 
-    
-    real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
-    complex(WP) :: A_part, phi_part
-    complex(WP), dimension(3, 3) :: I_A
-    complex(WP) :: I_phi
-
-    integer :: p, q !, q_p, q_m, p_p, p_m, ip_p, ip_m, iq_p, iq_m !, m, n
-
-    jk_0 = s/c
-
-    ! calculate all the integrations for each face pair
-    !$OMP PARALLEL DO SCHEDULE(DYNAMIC) DEFAULT(SHARED) &
-    !$OMP PRIVATE (p, q, nodes_p, nodes_q, I_A, I_phi)
-    do p = 0,num_triangles_o-1 ! p is the index of the observer face:
-        nodes_p = nodes_o(triangle_nodes_o(p, :), :)
-        do q = 0,num_triangles_o ! q is the index of the source face
-
-            nodes_q = nodes_s(triangle_nodes_s(q, :), :)
-            ! just perform regular integration
-            ! As per RWG, triangle area must be cancelled in the integration
-            ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
-            call face_integrals_complex(num_integration, xi_eta_eval, weights, nodes_q, &
-                                num_integration, xi_eta_eval, weights, nodes_p, jk_0, I_A, I_phi)
-            ! by symmetry of Galerkin procedure, transposed components are identical (but transposed node indices)
-            A_face(p, q, :, :) = I_A
-            phi_face(p, q) = I_phi
-
-        end do
-    end do
-    !$OMP END PARALLEL DO
-
-end subroutine Z_EFIE_faces_mutual
+!subroutine Z_EFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_triangles_s, &
+!                               num_integration, nodes_o, triangle_nodes_o, nodes_s, triangle_nodes_s, &
+!                                s, xi_eta_eval, weights, &
+!                                A_face, phi_face)
+!    ! Calculate the face to face interaction terms used to build the impedance matrix
+!    ! For mutual coupling terms between different parts
+!    !
+!    ! As per Rao, Wilton, Glisson, IEEE Trans AP-30, 409 (1982)
+!    ! Uses impedance extraction techqnique of Hanninen, precalculated
+!    !
+!    ! nodes - position of all the triangle nodes
+!    ! basis_tri_p/m - the positive and negative triangles for each basis function
+!    ! basis_node_p/m - the free nodes for each basis function
+!    ! omega - evaulation frequency in rad/s
+!    ! s - complex frequency
+!    ! xi_eta_eval, weights - quadrature rule over the triangle (weights normalised to 0.5)
+!    ! A_precalc, phi_precalc - precalculated 1/R singular terms
+!
+!    use core_for
+!    implicit none
+!
+!    integer, intent(in) :: num_nodes_o, num_triangles_o, num_nodes_s, num_triangles_s, num_integration
+!
+!    real(WP), intent(in), dimension(0:num_nodes_o-1, 0:2) :: nodes_o
+!    integer, intent(in), dimension(0:num_triangles_o-1, 0:2) :: triangle_nodes_o
+!    real(WP), intent(in), dimension(0:num_nodes_s-1, 0:2) :: nodes_s
+!    integer, intent(in), dimension(0:num_triangles_s-1, 0:2) :: triangle_nodes_s
+!
+!    complex(WP), intent(in) :: s
+!
+!    real(WP), intent(in), dimension(0:num_integration-1, 0:1) :: xi_eta_eval
+!    real(WP), intent(in), dimension(0:num_integration-1) :: weights
+!
+!    complex(WP), intent(out), dimension(0:num_triangles_o-1, 0:num_triangles_s-1, 0:2, 0:2) :: A_face
+!    complex(WP), intent(out), dimension(0:num_triangles_o-1, 0:num_triangles_s-1) :: phi_face
+!    
+!    
+!    complex(WP) :: jk_0 
+!    
+!    real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
+!    complex(WP) :: A_part, phi_part
+!    complex(WP), dimension(3, 3) :: I_A
+!    complex(WP) :: I_phi
+!
+!    integer :: p, q !, q_p, q_m, p_p, p_m, ip_p, ip_m, iq_p, iq_m !, m, n
+!
+!    jk_0 = s/c
+!
+!    ! calculate all the integrations for each face pair
+!    !$OMP PARALLEL DO SCHEDULE(DYNAMIC) DEFAULT(SHARED) &
+!    !$OMP PRIVATE (p, q, nodes_p, nodes_q, I_A, I_phi)
+!    do p = 0,num_triangles_o-1 ! p is the index of the observer face:
+!        nodes_p = nodes_o(triangle_nodes_o(p, :), :)
+!        do q = 0,num_triangles_o ! q is the index of the source face
+!
+!            nodes_q = nodes_s(triangle_nodes_s(q, :), :)
+!            ! just perform regular integration
+!            ! As per RWG, triangle area must be cancelled in the integration
+!            ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
+!            call face_integrals_complex(num_integration, xi_eta_eval, weights, nodes_q, &
+!                                num_integration, xi_eta_eval, weights, nodes_p, jk_0, I_A, I_phi)
+!            ! by symmetry of Galerkin procedure, transposed components are identical (but transposed node indices)
+!            A_face(p, q, :, :) = I_A
+!            phi_face(p, q) = I_phi
+!
+!        end do
+!    end do
+!    !$OMP END PARALLEL DO
+!
+!end subroutine Z_EFIE_faces_mutual
 
 
 
@@ -644,7 +669,7 @@ subroutine voltage_plane_wave(num_nodes, num_triangles, num_basis, num_integrati
 
     complex(WP), intent(out), dimension(0:num_basis-1) :: V
 
-    real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
+    real(WP), dimension(0:2, 0:2) :: nodes_p!, nodes_q
     complex(WP), dimension(0:2, 0:num_triangles-1) :: V_face
 
     integer :: p, p_p, p_m, ip_p, ip_m, m
@@ -688,7 +713,8 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
     !
     ! Need to calculate I_S_m3, and h, giving a different formula for I_S_m1
     use constants
-    use vectors, only : cross_product, mag
+    use vectors!, only : cross_product, mag
+    !use core_for
     implicit none
 
     integer, intent(in) :: n_o

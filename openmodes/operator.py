@@ -128,12 +128,12 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
             for q in sharing_triangles:
                 if q == p:
                     # calculate the self term using the exact formula
-                    singular_terms[p, p] = core_for.arcioni_singular(nodes_p,)
+                    singular_terms[p, p] = openmodes_core.arcioni_singular(nodes_p,)
                 else:
                     # at least one node is shared
                     # calculate neighbour integrals semi-numerically
                     nodes_q = nodes[triangle_nodes[q]]
-                    singular_terms[p, q] = core_for.face_integrals_hanninen(
+                    singular_terms[p, q] = openmodes_core.face_integrals_hanninen(
                                         nodes_q, xi_eta_eval, weights, nodes_p)
         
         res = singular_terms.to_csr()
@@ -197,7 +197,7 @@ def self_impedance_rwg_efie_free_space(basis, nodes, s, quadrature_rule):
 
     (I_A_sing, I_phi_sing, index_sing, indptr_sing) = singular_terms
    
-    A_faces, phi_faces = openmodes_core.z_efie_self(nodes, basis.mesh.triangle_nodes, s, 
+    A_faces, phi_faces = openmodes_core.z_efie_faces_self(nodes, basis.mesh.triangle_nodes, s, 
        xi_eta_eval, weights, I_phi_sing, I_A_sing, index_sing, indptr_sing)
 
     L, S = openmodes_core.triangle_face_to_rwg(basis.tri_p, basis.tri_m, 
@@ -215,7 +215,7 @@ def mutual_impedance_rwg_efie_free_space(basis_o, nodes_o, basis_s, nodes_s, s, 
                             basis_o.mesh.triangle_nodes, nodes_s, 
                             basis_s.mesh.triangle_nodes, s, xi_eta_eval, weights)
 
-    L, S = core_for.triangle_face_to_rwg(basis.tri_p, basis.tri_m, 
+    L, S = openmodes_core.triangle_face_to_rwg(basis.tri_p, basis.tri_m, 
                             basis.node_p, basis.node_m, A_faces, phi_faces)
     
     L *= mu_0/(4*pi)
@@ -275,7 +275,7 @@ class EfieOperator(object):
 
             xi_eta_eval, weights = self.quadrature_rule
             
-            incident = core_for.voltage_plane_wave(part.nodes, 
+            incident = openmodes_core.voltage_plane_wave(part.nodes, 
                             basis.mesh.triangle_nodes, basis.tri_p, 
                             basis.tri_m, basis.node_p, basis.node_m, 
                             xi_eta_eval, weights, e_inc, jk_inc)

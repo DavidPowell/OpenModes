@@ -22,17 +22,17 @@ from __future__ import division, print_function
 # numpy and scipy
 import numpy as np
 import numpy.linalg as la
-from openmodes.constants import epsilon_0, mu_0
-     
+
+from openmodes.constants import epsilon_0, mu_0    
 from openmodes.utils import SingularSparse
 from openmodes import integration
-from openmodes.parts import SimulationPart, Triangles, RwgBasis
+from openmodes.parts import SimulationPart#, Triangles, RwgBasis
 
 from openmodes.basis import DivRwgBasis
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
 
 # compiled fortran libraries
-import core_for
+#import core_for
  
 class Simulation(object):
     """This object controls everything within the simluation. It contains all

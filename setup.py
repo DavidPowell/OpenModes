@@ -16,6 +16,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+#f2py -m openmodes_core -h signature.pyf src/rwg.f90 --overwrite-signature only: 
+# set_threads, get_threads, face_integrals_hanninen, triangle_face_to_rwg, face_integrals_complex, scr_index,
+#face_integrals_smooth_complex, impedance_core_hanninen, z_efie_faces_self, z_efie_faces_mutual,arcioni_singular,
+#voltage_plane_wave, face_to_rwg:
 
 import ez_setup
 ez_setup.use_setuptools()
@@ -68,16 +72,21 @@ fcompiler_dependent_options = {
 }
 
 core_for = Extension(name = 'openmodes_core',
-                 sources = [join('src', 'common.f90'), join('src', 'rwg.f90')], 
-                 f2py_options=["only:","set_threads", "get_threads", 
-                                "face_integrals_hanninen",
-                               "triangle_face_to_rwg", 
-                               #"face_integrals_complex", "scr_index",
-                               #"face_integrals_smooth_complex",
-                               "impedance_core_hanninen", "z_efie_faces_self",
-                               "z_efie_faces_mutual",
-                               "arcioni_singular", "voltage_plane_wave", 
-                               "face_to_rwg", ":"],
+                 sources = [join('src', 'common.f90'),
+                            #'signature.pyf',
+                            join('src', 'rwg.f90')], 
+#                 f2py_options=["only:",#"set_threads", "get_threads", 
+#                                "face_integrals_hanninen",
+#                               "triangle_face_to_rwg", 
+#                               #"face_integrals_complex", "scr_index",
+#                               #"face_integrals_smooth_complex",
+#                               "impedance_core_hanninen", "z_efie_faces_self",
+#                               #"z_efie_faces_mutual",
+#                               "arcioni_singular", "voltage_plane_wave", 
+#                               "face_to_rwg", ":",
+#                               
+#                                "skip:", "vectors", ":"                               
+#                               ],
                 )
 
 dunavant = Extension(name = 'dunavant', sources=[join('src', 'dunavant.f90')])
