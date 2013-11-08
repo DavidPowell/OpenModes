@@ -140,52 +140,76 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
         cached_singular_terms[unique_id] = res
         return res
 
-#def triangle_face_to_rwg():
-#subroutine triangle_face_to_rwg(num_triangles, num_basis, basis_tri_p, basis_tri_m, basis_node_p, basis_node_m, &
-#                        vector_face, scalar_face, vector_rwg, scalar_rwg)
-#    ! take quantities which are defined as interaction between faces and convert them to rwg basis
-#
-#    use core_for
-#    
-#    integer, intent(in) :: num_triangles, num_basis
-#    ! f2py intent(hide) :: num_triangles, num_basis
-#    
-#    integer, intent(in), dimension(0:num_basis-1) :: basis_tri_p
-#    integer, intent(in), dimension(0:num_basis-1) :: basis_tri_m
-#    integer, intent(in), dimension(0:num_basis-1) :: basis_node_p
-#    integer, intent(in), dimension(0:num_basis-1) :: basis_node_m    
-#
-#    complex(WP), intent(in), dimension(0:num_triangles-1, 0:num_triangles-1, 0:2, 0:2) :: vector_face
-#    complex(WP), intent(in), dimension(0:num_triangles-1, 0:num_triangles-1) :: scalar_face
-#    
-#    complex(WP), intent(out), dimension(0:num_basis-1, 0:num_basis-1) :: vector_rwg, scalar_rwg
-#
-# 
-#    integer m, n, p_p, p_m, q_p, q_m, ip_p, ip_m, iq_p, iq_m
-#
-#    do m=0,num_basis-1 ! m is the index of the observer edge
-#
-#        p_p = basis_tri_p(m)
-#        p_m = basis_tri_m(m) ! observer triangles
-#
-#        ip_p = basis_node_p(m)
-#        ip_m = basis_node_m(m) ! observer unshared nodes
-#        
-#        do n = 0,num_basis-1 ! n is the index of the source
-#            q_p = basis_tri_p(n)
-#            q_m = basis_tri_m(n) ! source triangles
-#            
-#            iq_p = basis_node_p(n)
-#            iq_m = basis_node_m(n) ! source unshared nodes
-#
-#            vector_rwg(m, n) = ( &
-#                  vector_face(p_p, q_p, ip_p, iq_p) - vector_face(p_p, q_m, ip_p, iq_m) &
-#                - vector_face(p_m, q_p, ip_m, iq_p) + vector_face(p_m, q_m, ip_m, iq_m))
-#                
-#            scalar_rwg(m, n) = ( &
-#                - scalar_face(p_m, q_p) + scalar_face(p_m, q_m) &
-#                + scalar_face(p_p, q_p) - scalar_face(p_p, q_m))
+def triangle_face_to_rwg(face_val, basis_o, basis_s = None):
+    """Take quantities which are defined as interaction between faces and 
+    convert them to rwg basis
+    
+    Parameters
+    ----------
+    face_val : ndarray
+        The function, which can be either a vector or scalar defined over faces
+    basis_o : RwgDivBasis
+        The RWG basis functions of the observer
+    basis_s : RwgDivBasis
+        The RWG basis functions of the source. This is not required if the
+        desired function is a vector rather than a matrix
 
+    Returns
+    -------
+    rwg_val : ndarray
+        Either a 1D or 2D array, collected over RWG basis functions
+    """
+ 
+#    if basis_s is None:
+#        basis_s = basis
+ 
+#    rwg_val = np.empty((len(basis_o), len(basis_s)), face_val.dtype)
+    if len(face_val.shape) == 4:
+        # transforming a matrix of vector functions
+#        for m, (p_p, p_m, ip_p, ip_m) in enumerate(basis_o):
+#            for n, (q_p, q_m, iq_p, iq_m) in enumerate(basis_s):
+#                rwg_val[m, n] = ( 
+#                      face_val[p_p, q_p, ip_p, iq_p] - face_val[p_p, q_m, ip_p, iq_m]
+#                    - face_val[p_m, q_p, ip_m, iq_p] + face_val[p_m, q_m, ip_m, iq_m])
+
+        p_p = basis_o.tri_p
+        p_m = basis_o.tri_m
+        ip_p = basis_o.node_p
+        ip_m = basis_o.node_m
+
+        q_p = basis_s.tri_p
+        q_m = basis_s.tri_m
+        iq_p = basis_s.node_p
+        iq_m = basis_s.node_m
+
+        rwg_val = ( 
+              face_val[p_p[:, None], q_p[None, :], ip_p[:, None], iq_p[None, :]] - face_val[p_p[:, None], q_m[None, :], ip_p[:, None], iq_m[None, :]]
+            - face_val[p_m[:, None], q_p[None, :], ip_m[:, None], iq_p[None, :]] + face_val[p_m[:, None], q_m[None, :], ip_m[:, None], iq_m[None, :]])
+
+
+    elif len(face_val.shape) == 2:
+        # transforming a matrix of scalar functions                
+#        for m, (p_p, p_m, ip_p, ip_m) in enumerate(basis_o):
+#            for n, (q_p, q_m, iq_p, iq_m) in enumerate(basis_s):
+#                rwg_val[m, n] = ( 
+#                      face_val[p_p, q_p] - face_val[p_p, q_m]
+#                    - face_val[p_m, q_p] + face_val[p_m, q_m])
+
+        p_p = basis_o.tri_p
+        p_m = basis_o.tri_m
+
+        q_p = basis_s.tri_p
+        q_m = basis_s.tri_m
+
+        rwg_val = ( 
+              face_val[p_p[:, None], q_p[None, :]] - face_val[p_p[:, None], q_m[None, :]]
+            - face_val[p_m[:, None], q_p[None, :]] + face_val[p_m[:, None], q_m[None, :]])
+
+
+    else:
+        raise ValueError("Don't know how to convert his function to RWG basis")
+
+    return rwg_val
 
 
 def self_impedance_rwg_efie_free_space(basis, nodes, s, quadrature_rule):
@@ -200,8 +224,11 @@ def self_impedance_rwg_efie_free_space(basis, nodes, s, quadrature_rule):
     A_faces, phi_faces = openmodes_core.z_efie_faces_self(nodes, basis.mesh.triangle_nodes, s, 
        xi_eta_eval, weights, I_phi_sing, I_A_sing, index_sing, indptr_sing)
 
-    L, S = openmodes_core.triangle_face_to_rwg(basis.tri_p, basis.tri_m, 
-                            basis.node_p, basis.node_m, A_faces, phi_faces)
+    L = triangle_face_to_rwg(A_faces, basis, basis)
+    S = triangle_face_to_rwg(phi_faces, basis, basis)
+
+#    L, S = openmodes_core.triangle_face_to_rwg(basis.tri_p, basis.tri_m, 
+#                            basis.node_p, basis.node_m, A_faces, phi_faces)
     
     L *= mu_0/(4*pi)
     S *= 1/(pi*epsilon_0)
