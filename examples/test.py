@@ -17,15 +17,18 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import openmodes
-from openmodes.visualise import plot_parts
+import os.path as osp
 
 #from openmodeimport gmsh
 import numpy as np
-import scipy.linalg as la
-import os.path as osp
 import matplotlib.pyplot as plt
-from scipy.constants import c
+import scipy.linalg as la
+
+import openmodes
+from openmodes.visualise import plot_parts
+from openmodes.constants import c
+
+
 
 def loop_star_linear_eigenmodes():
     """"Solve the linearised eigenvalue problem in a loop-star basis.
@@ -321,7 +324,8 @@ for freq_count, freq in enumerate(freqs):
     jk_inc = s/c*k_hat
     
     L, S = sim.impedance_matrix(s)
-    V = sim.operator.plane_wave_source(sim.parts[0], s, e_inc, jk_inc)
+    #V = sim.operator.plane_wave_source(sim.parts[0], s, e_inc, jk_inc)
+    V = sim.source_term(e_inc, jk_inc)
 
     extinction[freq_count] = np.dot(V.conj(), la.solve(s*L + S/s, V))
    

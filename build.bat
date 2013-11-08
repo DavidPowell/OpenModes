@@ -1,4 +1,5 @@
 del build /q /s
-rm -Rf build
+del *.pyd
+rem rm -Rf build
 python setup.py build_ext --inplace -c mingw32
 

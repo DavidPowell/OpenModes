@@ -11,7 +11,13 @@ Contents:
 .. toctree::
    :maxdepth: 3
 
+   install
+
+   technical
+
    modules
+
+
 
 Indices and tables
 ==================

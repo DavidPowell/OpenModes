@@ -1,0 +1,66 @@
+Installation Instructions
+=========================
+
+OpenModes is written in the `Python <http://www.python.org/>`_ language, and
+utilises the program gmsh to mesh the structure geometries.
+
+Windows Quick Install
+---------------------
+
+The simplest way to get started is to download `Python(x,y) 
+<https://code.google.com/p/pythonxy/>`_, which includes all the required python 
+libraries. 
+
+Then install `gmsh <http://geuz.org/gmsh/>`_, and make sure that the gmsh
+executable is added to the windows PATH environment variable.
+
+Download the OpenModes executable package from ??? and install it.
+
+Requirements
+------------
+The following software packages are the absolute minimum to run OpenModes:
+
+- python 2.7 (3.x not currently supported)
+- numpy (1.6.2 or later)
+- gmsh
+- matplotlib (to plot the results)
+
+Strongly recommended packages
+
+- IPython (the notebook is used by many of the examples)
+
+Other packages which may be useful
+
+- spyder (a GUI for editing python)
+- scipy (contains many useful computational python routines)
+- ViSit or ParaView (3D plotting software)
+
+OpenModes contains some core routines which are optimised using fortran.
+Therefore, on platforms where a binary package of OpenModes is not provided,
+a fortran compiler is required.
+
+
+For windows users, there are several choices of scientific python distribution
+which may also be suitable
+
+- WinPython (known to work)
+- Anaconda
+- Enthought Python Distribution
+
+Due to the lack of good free fortran compilers for windows, you will need to
+install a 32 bit version of any of these distributions
+
+Ubuntu Linux
+------------
+
+For ubuntu users, the appropriate packages can be installed using the following
+command
+
+``sudo apt-get install python python-numpy python-matplotlib gmsh gfortran
+ipython python-dev``
+
+Mac OSX
+-------
+
+This code has not been tested for Mac OSX, but there is no known reason why it should
+not work. All required packages are available from the MacPorts project. 

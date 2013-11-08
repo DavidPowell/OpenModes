@@ -1,5 +1,3 @@
-! create module with f2py -c -m dunavant dunavant.f90 
-
 subroutine dunavant_degree ( rule, degree )
 
 !*****************************************************************************80

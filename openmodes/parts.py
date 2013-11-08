@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import numpy as np
 
 from utils import SingularSparse
-import core_for
+#import core_for
 
 # a constant, indicating that this material is a perfect electric conductor
 PecMaterial = "Perfect electric conductor"
@@ -457,7 +457,7 @@ class SimulationPart(object):
     def nodes(self):
         "The nodes of this part after all transformations have been applied"
         return np.dot(self.transformation_matrix[:3, :3], 
-              self.library_part.nodes.T).T + self.transformation_matrix[:3, 3]
+              self.mesh.nodes.T).T + self.transformation_matrix[:3, 3]
         
     def translate(self, offset_vector):
         """Translate a part by an arbitrary offset vector
@@ -492,111 +492,6 @@ class SimulationPart(object):
         # TODO: enable rotation about arbitrary coordinates, and about the
         # centre of the object        
         
-        axis = np.array(axis)
-        axis /= np.sqrt(np.dot(axis, axis))
-        
-        angle *= np.pi/180.0        
-        
-        a = np.cos(0.5*angle)
-        b, c, d = axis*np.sin(0.5*angle)
-        
-        matrix = np.array([[a**2 + b**2 - c**2 - d**2, 2*(b*c - a*d), 2*(b*d + a*c), 0],
-                           [2*(b*c + a*d), a**2 + c**2 - b**2 - d**2, 2*(c*d - a*b), 0],
-                           [2*(b*d - a*c), 2*(c*d + a*b), a**2 + d**2 - b**2 - c**2, 0],
-                           [0, 0, 0, 1]])
-        
-        self.transformation_matrix = np.dot(matrix, self.transformation_matrix)
-        self.notify()
-
-    def scale(self, scale_factor):
-        raise NotImplementedError
-        # non-affine transform, will cause problems
-
-        # TODO: work out how scale factor affects pre-calculated 1/R terms
-        # and scale them accordingly (or record them if possible for scaling
-        # at some future point)
-
-        # also, not clear what would happen to dipole moment
-
-    def shear(self):
-        raise NotImplementedError
-        # non-affine transform, will cause MAJOR problems
- 
-
-    
-class SimulationPart2(object):
-    """A part which has been placed into the simulation, and which can be
-    modified"""
-
-    def __init__(self, library_part, notify_function):
-
-        self.library_part = library_part
-        self.notify_function = notify_function
-        self.reset()
-
-    def notify(self):
-        """Notify that this part has been changed"""
-        self.notify_function()
-        
-    def precalc_singular(self, quadrature_rule):
-        #TODO: if layered geometry is used, precalculation cannot simply rely
-        # on the parent object
-        return self.library_part.precalc_singular(quadrature_rule)
-
-    def reset(self):
-        """Reset this part to the default values of the original `LibraryPart`
-        from which this `SimulationPart` was created
-        """
-        
-        self.tri = self.library_part.tri
-        self.basis = self.library_part.basis
-
-        self.transformation_matrix = np.eye(4)
-        self.shortest_edge = self.library_part.shortest_edge
-
-        # copy the loop and star basis conversion if the parent has them
-        if (hasattr(self.library_part, "loop_basis") and 
-            hasattr(self.library_part, "star_basis")):
-            self.loop_basis = self.library_part.loop_basis
-            self.star_basis = self.library_part.star_basis
-            
-        self.notify()
-
-    @property
-    def nodes(self):
-        "The nodes of this part after all transformations have been applied"
-        return np.dot(self.transformation_matrix[:3, :3], 
-              self.library_part.nodes.T).T + self.transformation_matrix[:3, 3]
-        
-    def translate(self, offset_vector):
-        """Translate a part by an arbitrary offset vector
-        
-        Care needs to be take if this puts an object in a different layer
-        """
-        # does not break relationship with parent
-        #self.nodes = self.nodes+np.array(offset_vector)
-         
-        translation = np.eye(4)
-        translation[:3, 3] = offset_vector
-         
-        self.transformation_matrix = np.dot(translation, self.transformation_matrix)
-         
-        self.notify() # reset any combined mesh this is a part of
-           
-    def rotate(self, axis, angle):
-        """
-        Rotate about an arbitrary axis        
-        
-        Parameters
-        ----------
-        axis : ndarray
-            the vector about which to rotate
-        angle : number
-            angle of rotation in degrees
-        
-        Algorithm taken from
-        http://en.wikipedia.org/wiki/Euler%E2%80%93Rodrigues_parameters
-        """
         axis = np.array(axis)
         axis /= np.sqrt(np.dot(axis, axis))
         

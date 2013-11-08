@@ -495,6 +495,9 @@ class Simulation(object):
             the source "voltage" vector
         """
 
+        return self.operator.plane_wave_source(self._parts[0], e_inc, jk_inc)
+        
+
         xi_eta_eval, weights = self.quadrature_rule
         
         nodes = self.nodes
