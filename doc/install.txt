@@ -64,3 +64,15 @@ Mac OSX
 
 This code has not been tested for Mac OSX, but there is no known reason why it should
 not work. All required packages are available from the MacPorts project. 
+
+Manual Install for Windows
+--------------------------
+
+Manual installation under windows is difficult, as it requires the use of 
+mingw compilers.
+
+MingW 4.8 has a bug which causes the fortran extensions to randomly generate
+NaNs in the returned arrays.
+
+The windows binaries were successfully built under the mingw-64 
+x32-4.8.1-posix-dwarf-rev5 compiler.

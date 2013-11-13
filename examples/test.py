@@ -299,7 +299,7 @@ from openmodes import load_parts, Simulation
 
 filename = osp.join("geometry", "SRR.geo")
 
-mesh_tol = 0.5e-3
+mesh_tol = 0.25e-3
 #meshed_name = gmsh.mesh_geometry(filename, mesh_tol)
 #
 #raw_mesh = gmsh.read_mesh(meshed_name)
@@ -337,7 +337,7 @@ for freq_count, freq in enumerate(freqs):
 #plt.plot(freqs*1e-9, extinction.real)
 #plt.plot(freqs*1e-9, extinction.imag)
 #plt.show()
-#    
+    
     #basis = DivRwgBasis(mesh)
     #mes
         

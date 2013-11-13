@@ -154,11 +154,11 @@ def self_impedance_rwg_efie_free_space(basis, nodes, s, quadrature_rule):
 
     assert(np.sum(np.isnan(A_faces)) == 0)
 
-    L = triangle_face_to_rwg(A_faces, basis.rwg, basis.rwg)
-    S = triangle_face_to_rwg(phi_faces, basis.rwg, basis.rwg)
+    #L = triangle_face_to_rwg(A_faces, basis.rwg, basis.rwg)
+    #S = triangle_face_to_rwg(phi_faces, basis.rwg, basis.rwg)
 
-    #L, S = openmodes_core.triangle_face_to_rwg(basis.rwg.tri_p, basis.rwg.tri_m,
-    #                                           basis.rwg.node_p, basis.rwg.node_m, A_faces, phi_faces)
+    L, S = openmodes_core.triangle_face_to_rwg(basis.rwg.tri_p, basis.rwg.tri_m,
+                                               basis.rwg.node_p, basis.rwg.node_m, A_faces, phi_faces)
 
     L *= mu_0/(4*pi)
     S *= 1/(pi*epsilon_0)

@@ -135,6 +135,8 @@ class compiler_dependent_build_ext( build_ext ):
 with open('README.txt') as file:
     long_description = file.read()
 
+"-ffixed-form -fno-second-underscore -mno-cygwin -O2 -funroll-loops"
+
 setup(name = 'OpenModes',
     description = "An eigenmode solver for open electromagnetic resonantors using the method of moments",
     author = "David Powell",
@@ -164,6 +166,6 @@ setup(name = 'OpenModes',
 
     # This is a horrible workaround, the dll files will be included for all
     # operating systems.
-    data_files = [('', ['libgomp-1.dll', 'libgfortran-3.dll', 'libgcc_s_dw2-1.dll'])]
+    #data_files = [('', ['libgomp-1.dll', 'libgfortran-3.dll', 'libgcc_s_dw2-1.dll'])]
     )
 
