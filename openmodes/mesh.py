@@ -72,6 +72,8 @@ class TriangularSurfaceMesh(object):
             each edge is a frozenset containing the incides of the nodes
         triangles_shared_by_edges : list of lists
             the triangles that share each edge, indexed by the edges
+        edges_of_triangles : list of lists
+            the edges of each triangle
         """
         
         all_edges = set()
@@ -80,7 +82,7 @@ class TriangularSurfaceMesh(object):
         
         for count, t_nodes in enumerate(self.triangle_nodes):    
     
-            # edges are represented as sets to avoid ambiguity of order                
+            # edges are represented as sets to avoid ambiguity of order
             triangle_edges = [frozenset((t_nodes[0], t_nodes[1])), 
                               frozenset((t_nodes[0], t_nodes[2])), 
                               frozenset((t_nodes[1], t_nodes[2]))]
@@ -128,7 +130,7 @@ class TriangularSurfaceMesh(object):
     @property
     def triangle_areas(self):
         """The area of each triangle in the mesh"""
-        areas = np.empty(self.N_tri, np.float64)#, order="F")
+        areas = np.empty(len(self.triangle_nodes), np.float64)
 
         # calculate all the edges in the mesh
         for count, t_nodes in enumerate(self.triangle_nodes):    

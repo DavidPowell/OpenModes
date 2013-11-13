@@ -41,7 +41,8 @@ class Simulation(object):
     """
 
     def __init__(self, integration_rule = 5, basis_class = DivRwgBasis,
-                 operator_class = EfieOperator, greens_function=FreeSpaceGreensFunction()):
+                 operator_class = EfieOperator, 
+                 greens_function=FreeSpaceGreensFunction()):
         """       
         Parameters
         ----------
@@ -58,8 +59,8 @@ class Simulation(object):
         
         self.basis_class = basis_class
         self.operator = operator_class(quadrature_rule=self.quadrature_rule,
-                                                 basis_class=basis_class, 
-                                                 greens_function=greens_function)
+                                       basis_class=basis_class, 
+                                       greens_function=greens_function)
 
     def place_part(self, library_part, location=None):
         """Add a part to the simulation domain

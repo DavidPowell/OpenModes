@@ -23,10 +23,7 @@ import numpy as np
 import openmodes_core
 
 from openmodes.constants import epsilon_0, mu_0, pi
-#import openmodes.basis
-from openmodes.basis import DivRwgBasis, generate_basis_functions
-#from openmodes.utils import SingularSparse
-
+from openmodes.basis import DivRwgBasis, generate_basis_functions, triangle_face_to_rwg
 
 class FreeSpaceGreensFunction(object):
     "Green's function in Free Space"
@@ -140,76 +137,6 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
         cached_singular_terms[unique_id] = res
         return res
 
-def triangle_face_to_rwg(face_val, basis_o, basis_s = None):
-    """Take quantities which are defined as interaction between faces and 
-    convert them to rwg basis
-    
-    Parameters
-    ----------
-    face_val : ndarray
-        The function, which can be either a vector or scalar defined over faces
-    basis_o : RwgDivBasis
-        The RWG basis functions of the observer
-    basis_s : RwgDivBasis
-        The RWG basis functions of the source. This is not required if the
-        desired function is a vector rather than a matrix
-
-    Returns
-    -------
-    rwg_val : ndarray
-        Either a 1D or 2D array, collected over RWG basis functions
-    """
- 
-#    if basis_s is None:
-#        basis_s = basis
- 
-#    rwg_val = np.empty((len(basis_o), len(basis_s)), face_val.dtype)
-    if len(face_val.shape) == 4:
-        # transforming a matrix of vector functions
-#        for m, (p_p, p_m, ip_p, ip_m) in enumerate(basis_o):
-#            for n, (q_p, q_m, iq_p, iq_m) in enumerate(basis_s):
-#                rwg_val[m, n] = ( 
-#                      face_val[p_p, q_p, ip_p, iq_p] - face_val[p_p, q_m, ip_p, iq_m]
-#                    - face_val[p_m, q_p, ip_m, iq_p] + face_val[p_m, q_m, ip_m, iq_m])
-
-        p_p = basis_o.tri_p
-        p_m = basis_o.tri_m
-        ip_p = basis_o.node_p
-        ip_m = basis_o.node_m
-
-        q_p = basis_s.tri_p
-        q_m = basis_s.tri_m
-        iq_p = basis_s.node_p
-        iq_m = basis_s.node_m
-
-        rwg_val = ( 
-              face_val[p_p[:, None], q_p[None, :], ip_p[:, None], iq_p[None, :]] - face_val[p_p[:, None], q_m[None, :], ip_p[:, None], iq_m[None, :]]
-            - face_val[p_m[:, None], q_p[None, :], ip_m[:, None], iq_p[None, :]] + face_val[p_m[:, None], q_m[None, :], ip_m[:, None], iq_m[None, :]])
-
-
-    elif len(face_val.shape) == 2:
-        # transforming a matrix of scalar functions                
-#        for m, (p_p, p_m, ip_p, ip_m) in enumerate(basis_o):
-#            for n, (q_p, q_m, iq_p, iq_m) in enumerate(basis_s):
-#                rwg_val[m, n] = ( 
-#                      face_val[p_p, q_p] - face_val[p_p, q_m]
-#                    - face_val[p_m, q_p] + face_val[p_m, q_m])
-
-        p_p = basis_o.tri_p
-        p_m = basis_o.tri_m
-
-        q_p = basis_s.tri_p
-        q_m = basis_s.tri_m
-
-        rwg_val = ( 
-              face_val[p_p[:, None], q_p[None, :]] - face_val[p_p[:, None], q_m[None, :]]
-            - face_val[p_m[:, None], q_p[None, :]] + face_val[p_m[:, None], q_m[None, :]])
-
-
-    else:
-        raise ValueError("Don't know how to convert his function to RWG basis")
-
-    return rwg_val
 
 
 def self_impedance_rwg_efie_free_space(basis, nodes, s, quadrature_rule):
@@ -221,15 +148,18 @@ def self_impedance_rwg_efie_free_space(basis, nodes, s, quadrature_rule):
 
     (I_A_sing, I_phi_sing, index_sing, indptr_sing) = singular_terms
    
-    A_faces, phi_faces = openmodes_core.z_efie_faces_self(nodes, basis.mesh.triangle_nodes, s, 
+    A_faces, phi_faces = openmodes_core.z_efie_faces_self(nodes, 
+                                          basis.mesh.triangle_nodes, s, 
        xi_eta_eval, weights, I_phi_sing, I_A_sing, index_sing, indptr_sing)
 
-    L = triangle_face_to_rwg(A_faces, basis, basis)
-    S = triangle_face_to_rwg(phi_faces, basis, basis)
+    assert(np.sum(np.isnan(A_faces)) == 0)
 
-#    L, S = openmodes_core.triangle_face_to_rwg(basis.tri_p, basis.tri_m, 
-#                            basis.node_p, basis.node_m, A_faces, phi_faces)
-    
+    L = triangle_face_to_rwg(A_faces, basis.rwg, basis.rwg)
+    S = triangle_face_to_rwg(phi_faces, basis.rwg, basis.rwg)
+
+    #L, S = openmodes_core.triangle_face_to_rwg(basis.rwg.tri_p, basis.rwg.tri_m,
+    #                                           basis.rwg.node_p, basis.rwg.node_m, A_faces, phi_faces)
+
     L *= mu_0/(4*pi)
     S *= 1/(pi*epsilon_0)
     return L, S
@@ -242,14 +172,14 @@ def mutual_impedance_rwg_efie_free_space(basis_o, nodes_o, basis_s, nodes_s, s, 
                             basis_o.mesh.triangle_nodes, nodes_s, 
                             basis_s.mesh.triangle_nodes, s, xi_eta_eval, weights)
 
-    L, S = openmodes_core.triangle_face_to_rwg(basis.tri_p, basis.tri_m, 
-                            basis.node_p, basis.node_m, A_faces, phi_faces)
+    L = triangle_face_to_rwg(A_faces, basis_o.rwg, basis_s.rwg)
+    S = triangle_face_to_rwg(phi_faces, basis_o.rwg, basis_s.rwg)
+#    L, S = openmodes_core.triangle_face_to_rwg(basis.tri_p, basis.tri_m, 
+#                            basis.node_p, basis.node_m, A_faces, phi_faces)
     
     L *= mu_0/(4*pi)
     S *= 1/(pi*epsilon_0)
     return L, S
-
-
 
 class EfieOperator(object):
     """An operator for the electric field integral equation, discretised with
@@ -303,8 +233,8 @@ class EfieOperator(object):
             xi_eta_eval, weights = self.quadrature_rule
             
             incident = openmodes_core.voltage_plane_wave(part.nodes, 
-                            basis.mesh.triangle_nodes, basis.tri_p, 
-                            basis.tri_m, basis.node_p, basis.node_m, 
+                            basis.mesh.triangle_nodes, basis.rwg.tri_p, 
+                            basis.rwg.tri_m, basis.rwg.node_p, basis.rwg.node_m, 
                             xi_eta_eval, weights, e_inc, jk_inc)
                                            
             return incident

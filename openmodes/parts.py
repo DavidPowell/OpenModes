@@ -21,7 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import numpy as np
 
 from utils import SingularSparse
-#import core_for
 
 # a constant, indicating that this material is a perfect electric conductor
 PecMaterial = "Perfect electric conductor"
@@ -38,27 +37,6 @@ class Triangles(object):
         
     def __len__(self):
         return self.N_tri
-
-#class RwgBasis(object):
-#    """A class for storing RWG basis functions
-#    
-#    The basis functions are coordinate indepedent, so they are not changed
-#    by any operations performed on the object (except maybe scale and shear???)
-#    """
-#    
-#    def __init__(self, N_basis):
-#        self.N_basis = N_basis
-#        self.tri_p = np.empty(N_basis, np.int32) # index of T+
-#        self.tri_m = np.empty(N_basis, np.int32) # index of T-
-#        self.node_p = np.empty(N_basis, np.int32) # internal index of free node of T+
-#        self.node_m = np.empty(N_basis, np.int32) # internal index of free node of T-
-#        self.rho_cp = np.empty((N_basis, 3), np.float64, order="F") # centre of T+
-#        self.rho_cm = np.empty((N_basis, 3), np.float64, order="F") # centre of T-
-#        self.len = np.empty(N_basis, np.float64) # length of shared edge (fairly redundant)
-#
-#    def __len__(self):
-#        return self.N_basis
-
 
 class LibraryPart(object):
     """A physical part available to be placed within the simulation

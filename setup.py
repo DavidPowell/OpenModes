@@ -72,8 +72,8 @@ fcompiler_dependent_options = {
 }
 
 core_for = Extension(name = 'openmodes_core',
-                 sources = [join('src', 'common.f90'),
-                            #'signature.pyf',
+                 sources = [join('src', 'openmodes_core.pyf'),
+                            join('src', 'common.f90'),
                             join('src', 'rwg.f90')], 
 #                 f2py_options=["only:",#"set_threads", "get_threads", 
 #                                "face_integrals_hanninen",

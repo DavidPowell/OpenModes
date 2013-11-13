@@ -41,7 +41,8 @@ def loop_star_linear_eigenmodes():
     #(nodes1, triangles1), (nodes2, triangles2) = gmsh.read_mesh(meshed_name, split_geometry=True)
     #ring1 = openmodes.sim_object(nodes1, triangles1)
     #ring2 = openmodes.sim_object(nodes2, triangles2)
-    ring1, ring2 = openmodes.load_parts(osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
+    ring1, ring2 = openmodes.load_parts(
+                    osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
     
     sim = openmodes.Simulation(integration_rule = 10)
     sim.place_part(ring1)
@@ -196,10 +197,11 @@ def srr_extinction():
     
     sim = openmodes.Simulation()    
     srr1 = sim.place_part(srr)
-    srr2 = sim.place_part(srr)    
+
+    separation = [20e-3, 0e-3, 0]
+    srr2 = sim.place_part(srr, separation)    
     
     #separation = [500e-3, 0e-3, 0]
-    separation = [20e-3, 0e-3, 0]
     #separation = [0e-3, 150e-3, 0]
     #separation = [150e-3, 0e-3, 0]
     #separation = [15e-3, 15e-3, 0]
@@ -275,7 +277,9 @@ def compare_source_terms():
         
     
     
-    incident = core_for.voltage_plane_wave(nodes, tri.nodes, basis.tri_p, basis.tri_m, basis.node_p, basis.node_m, xi_eta_eval, weights, e_inc, jk_inc)
+    incident = core_for.voltage_plane_wave(nodes, tri.nodes, basis.tri_p, 
+                       basis.tri_m, basis.node_p, basis.node_m, 
+                       xi_eta_eval, weights, e_inc, jk_inc)
     #incident2 = core_cython.voltage_plane_wave(nodes, tri.nodes, basis.tri_p, basis.tri_m, basis.node_p, basis.node_m, xi_eta_eval, weights[0], e_inc, jk_inc)
     
     plt.figure()
@@ -308,7 +312,7 @@ mesh = load_parts(filename, mesh_tol)
 
 sim = Simulation()    
 
-part = sim.place_part(mesh)
+sim.place_part(mesh)
 
 #op = EfieOperator([part], integration.get_dunavant_rule(5))
 
@@ -329,13 +333,13 @@ for freq_count, freq in enumerate(freqs):
 
     extinction[freq_count] = np.dot(V.conj(), la.solve(s*L + S/s, V))
    
-plt.figure()
-plt.plot(freqs*1e-9, extinction.real)
-plt.plot(freqs*1e-9, extinction.imag)
-plt.show()
-
-#basis = DivRwgBasis(mesh)
-#mes
+#plt.figure()
+#plt.plot(freqs*1e-9, extinction.real)
+#plt.plot(freqs*1e-9, extinction.imag)
+#plt.show()
+#    
+    #basis = DivRwgBasis(mesh)
+    #mes
         
 
 
