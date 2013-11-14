@@ -17,52 +17,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+#import openmodes.solver
+#import openmodes.mesh
+
 from openmodes.solver import Simulation
+from openmodes.mesh import load_mesh
 
-import os.path as osp
-
-#from openmodes.parts import LibraryPart
-from openmodes.mesh import TriangularSurfaceMesh
-from openmodes import gmsh
-
-def load_parts(filename, mesh_tol=None, force_tuple = False):
-    """
-    Open a geometry file and mesh it (or directly open a mesh file), then
-    convert it into a mesh object.
-    
-    Parameters
-    ----------
-    filename : string
-        The name of the file to open. Can be a gmsh .msh file, or a gmsh 
-        geometry file, which will be meshed first
-    mesh_tol : float, optional
-        If opening a geometry file, it will be meshed with this tolerance
-    force_tuple : boolean, optional
-        Ensure that a tuple is always returned, even if only a single part
-        is found in the file
-
-    Returns
-    -------
-    parts : tuple
-        A tuple of `SimulationParts`, one for each separate geometric entity
-        found in the gmsh file
-        
-    Currently only `TriangularSurfaceMesh` objects are created
-    """
-    
-    if osp.splitext(osp.basename(filename))[1] == ".msh":
-        # assume that this is a binary mesh already generate by gmsh
-        meshed_name = filename
-    else:
-        # assume that this is a gmsh geometry file, so mesh it first
-        meshed_name = gmsh.mesh_geometry(filename, mesh_tol)
-
-    raw_mesh = gmsh.read_mesh(meshed_name)
-    
-    parts = tuple(TriangularSurfaceMesh(sub_mesh) for sub_mesh in raw_mesh)
-    if len(parts) == 1 and not force_tuple:
-        return parts[0]
-    else:
-        return parts
-#__all__ = [Simulation, load_parts]
+#__all__ = [openmodes.solver.Simulation, openmodes.mesh.load_mesh]
 

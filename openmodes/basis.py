@@ -21,47 +21,13 @@ import numpy as np
 
 from collections import namedtuple
 
+from openmodes.mesh import nodes_not_in_edge, shared_nodes
+
 # A named tuple for holding the positive and negative triangles and nodes
 # which are used by both RWG and loop-star basis functions
 RWG = namedtuple('RWG', ('tri_p', 'tri_m', 'node_p', 'node_m'))
 
 # TODO: interpolation needs to account for factor 1/(2A)
-
-def nodes_not_in_edge(nodes, edge):
-    """Given a list of nodes numbers, return the indices of those which do 
-    not belong to the specified edge
-    
-    Parameters
-    ----------
-    nodes : array or list
-        The list of node numbers
-    edge: array or list
-        The edge, defined by two (or more) node number
-    
-    Return
-    ------
-    non_member_nodes : list
-        The nodes which are not a member of the given edge
-    """
-    return [node_index for node_index, node_num in enumerate(nodes)
-                if node_num not in edge]
-                    
-def shared_nodes(nodes1, nodes2):
-    """Return all the nodes shared by two polyhedra
-    
-    Parameters
-    ----------
-    nodes1 : array/list
-        A list of node numbers
-    nodes2 : array/list
-        A list of node numbers
-    
-    Returns
-    -------
-    common_nodes : list
-        A list of nodes found in both lists
-    """
-    return [node for node in nodes1 if node in nodes2]
 
 def interpolate_triangle(nodes, edge_vals, xi_eta):
     """Interpolate a function over a triangle using first order interpolation
@@ -408,8 +374,6 @@ def construct_loop(loop_triangles, triangle_nodes):
 
     node_p.append(free_current)
     node_m.append(free_next)
-
-
 
     return RWG(tri_p, tri_m, node_p, node_m)
 

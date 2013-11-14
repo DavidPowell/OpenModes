@@ -18,6 +18,45 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import numpy as np
+import os.path as osp
+
+from openmodes import gmsh
+
+def nodes_not_in_edge(nodes, edge):
+    """Given a list of nodes numbers, return the indices of those which do 
+    not belong to the specified edge
+    
+    Parameters
+    ----------
+    nodes : array or list
+        The list of node numbers
+    edge: array or list
+        The edge, defined by two (or more) node number
+    
+    Return
+    ------
+    non_member_nodes : list
+        The nodes which are not a member of the given edge
+    """
+    return [node_index for node_index, node_num in enumerate(nodes)
+                if node_num not in edge]
+                    
+def shared_nodes(nodes1, nodes2):
+    """Return all the nodes shared by two polyhedra
+    
+    Parameters
+    ----------
+    nodes1 : array/list
+        A list of node numbers
+    nodes2 : array/list
+        A list of node numbers
+    
+    Returns
+    -------
+    common_nodes : list
+        A list of nodes found in both lists
+    """
+    return [node for node in nodes1 if node in nodes2]
 
 class TriangularSurfaceMesh(object):
     """A physical part represented by a surface mesh
@@ -151,4 +190,44 @@ class TriangularSurfaceMesh(object):
         return np.sqrt(np.sum((np.roll(vertices, 1, axis=1) - 
                             np.roll(vertices, 2, axis=1))**2, axis=2))    
 
+
+def load_mesh(filename, mesh_tol=None, force_tuple = False):
+    """
+    Open a geometry file and mesh it (or directly open a mesh file), then
+    convert it into a mesh object.
+    
+    Parameters
+    ----------
+    filename : string
+        The name of the file to open. Can be a gmsh .msh file, or a gmsh 
+        geometry file, which will be meshed first
+    mesh_tol : float, optional
+        If opening a geometry file, it will be meshed with this tolerance
+    force_tuple : boolean, optional
+        Ensure that a tuple is always returned, even if only a single part
+        is found in the file
+
+    Returns
+    -------
+    parts : tuple
+        A tuple of `SimulationParts`, one for each separate geometric entity
+        found in the gmsh file
+        
+    Currently only `TriangularSurfaceMesh` objects are created
+    """
+    
+    if osp.splitext(osp.basename(filename))[1] == ".msh":
+        # assume that this is a binary mesh already generate by gmsh
+        meshed_name = filename
+    else:
+        # assume that this is a gmsh geometry file, so mesh it first
+        meshed_name = gmsh.mesh_geometry(filename, mesh_tol)
+
+    raw_mesh = gmsh.read_mesh(meshed_name)
+    
+    parts = tuple(TriangularSurfaceMesh(sub_mesh) for sub_mesh in raw_mesh)
+    if len(parts) == 1 and not force_tuple:
+        return parts[0]
+    else:
+        return parts
          

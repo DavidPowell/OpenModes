@@ -73,8 +73,8 @@ class SingularSparse(object):
             # regardless of whether the row exists, update the index pointer
             indptr.append(data_index)
             
-        return (np.array(A_data, dtype=np.float64, order="F"), 
-                np.array(phi_data, dtype=np.float64, order="F"),
+        return (np.array(phi_data, dtype=np.float64, order="F"),
+                np.array(A_data, dtype=np.float64, order="F"), 
                 np.array(indices, dtype=np.int32, order="F"), 
                 np.array(indptr, dtype=np.int32, order="F"))
 
@@ -129,56 +129,50 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
                 else:
                     # at least one node is shared
                     # calculate neighbour integrals semi-numerically
-                    nodes_q = nodes[triangle_nodes[q]]
+                    #nodes_q = 
                     singular_terms[p, q] = openmodes_core.face_integrals_hanninen(
-                                        nodes_q, xi_eta_eval, weights, nodes_p)
+                                        nodes[triangle_nodes[q]], xi_eta_eval, weights, nodes_p)
         
-        res = singular_terms.to_csr()
-        cached_singular_terms[unique_id] = res
-        return res
+        cached_singular_terms[unique_id] = singular_terms.to_csr()
+        return cached_singular_terms[unique_id]
 
 #import core_cython
 
+def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o, basis_s = None, nodes_s = None):
 
-def self_impedance_rwg_efie_free_space(basis, nodes, s, quadrature_rule):
+    xi_eta_eval, weights = quadrature_rule
 
-    singular_terms = singular_impedance_rwg_efie_homogeneous(basis, 
+    if (basis_s is None):
+        # calculate self impedance
+        
+        singular_terms = singular_impedance_rwg_efie_homogeneous(basis_o, 
                                                              quadrature_rule)
-    
-    xi_eta_eval, weights = quadrature_rule
 
-    (I_A_sing, I_phi_sing, index_sing, indptr_sing) = singular_terms
+        #(I_phi_sing, I_A_sing, index_sing, indptr_sing) = singular_terms
    
-    A_faces, phi_faces = openmodes_core.z_efie_faces_self(nodes, 
-                                          basis.mesh.triangle_nodes, s, 
-       xi_eta_eval, weights, I_phi_sing, I_A_sing, index_sing, indptr_sing)
+        A_faces, phi_faces = openmodes_core.z_efie_faces_self(nodes_o, 
+                                          basis_o.mesh.triangle_nodes, s, 
+                                          xi_eta_eval, weights, *singular_terms) #I_phi_sing, I_A_sing, index_sing, indptr_sing)
 
-    assert(np.sum(np.isnan(A_faces)) == 0)
-
-    #L = triangle_face_to_rwg(A_faces, basis.rwg, basis.rwg)
-    #S = triangle_face_to_rwg(phi_faces, basis.rwg, basis.rwg)
-
-    L, S = openmodes_core.triangle_face_to_rwg(basis.rwg.tri_p, basis.rwg.tri_m,
-                                               basis.rwg.node_p, basis.rwg.node_m, A_faces, phi_faces)
-
-    #L, S = core_cython.triangle_face_to_rwg(basis.rwg.tri_p, basis.rwg.tri_m,
-    #                                           basis.rwg.node_p, basis.rwg.node_m, A_faces, phi_faces)
+        #L = triangle_face_to_rwg(A_faces, basis.rwg, basis.rwg)
+        #S = triangle_face_to_rwg(phi_faces, basis.rwg, basis.rwg)
+    
+        L, S = openmodes_core.triangle_face_to_rwg(basis_o.rwg.tri_p, basis_o.rwg.tri_m,
+                                                   basis_o.rwg.node_p, basis_o.rwg.node_m, A_faces, phi_faces)
+    
+        #L, S = core_cython.triangle_face_to_rwg(basis.rwg.tri_p, basis.rwg.tri_m,
+        #                                           basis.rwg.node_p, basis.rwg.node_m, A_faces, phi_faces)
 
 
-    L *= mu_0/(4*pi)
-    S *= 1/(pi*epsilon_0)
-    return L, S
+    else:
+        # calculate mutual impedance
 
-def mutual_impedance_rwg_efie_free_space(basis_o, nodes_o, basis_s, nodes_s, s, quadrature_rule):
+        A_faces, phi_faces = openmodes_core.z_efie_faces_mutual(nodes_o, 
+                                basis_o.mesh.triangle_nodes, nodes_s, 
+                                basis_s.mesh.triangle_nodes, s, xi_eta_eval, weights)
 
-    xi_eta_eval, weights = quadrature_rule
-
-    A_faces, phi_faces = openmodes_core.z_efie_faces_mutual(nodes_o, 
-                            basis_o.mesh.triangle_nodes, nodes_s, 
-                            basis_s.mesh.triangle_nodes, s, xi_eta_eval, weights)
-
-    L = triangle_face_to_rwg(A_faces, basis_o.rwg, basis_s.rwg)
-    S = triangle_face_to_rwg(phi_faces, basis_o.rwg, basis_s.rwg)
+        L = triangle_face_to_rwg(A_faces, basis_o.rwg, basis_s.rwg)
+        S = triangle_face_to_rwg(phi_faces, basis_o.rwg, basis_s.rwg)
 #    L, S = openmodes_core.triangle_face_to_rwg(basis.tri_p, basis.tri_m, 
 #                            basis.node_p, basis.node_m, A_faces, phi_faces)
     
@@ -198,16 +192,25 @@ class EfieOperator(object):
         self.quadrature_rule = quadrature_rule
         self.greens_function = greens_function
         
-    def self_impedance_matrix(self, part, s):
+    def impedance_matrix(self, s, part_o, part_s=None):
         """Calculate the impedance matrix for a single part, at a given
         complex frequency s"""
         
-        basis = generate_basis_functions(part.mesh, self.basis_class)
+        basis_o = generate_basis_functions(part_o.mesh, self.basis_class)
+        
+        if part_s is None:
+            basis_s = None
+            nodes_s = None
+        else:
+            basis_s = generate_basis_functions(part_s.mesh, self.basis_class)
+            nodes_s = part_s.mesh
+            
         
         if isinstance(self.greens_function, FreeSpaceGreensFunction):
-            if isinstance(basis, DivRwgBasis):
-                return self_impedance_rwg_efie_free_space(basis, part.nodes, s, 
-                                                      self.quadrature_rule)
+            if isinstance(basis_o, DivRwgBasis):
+                return impedance_rwg_efie_free_space(s, self.quadrature_rule, 
+                                                     basis_o, part_o.nodes, 
+                                                     basis_s, nodes_s)
             else:
                 raise NotImplementedError
     

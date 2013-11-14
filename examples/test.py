@@ -293,26 +293,26 @@ def compare_source_terms():
 #from openmodes.mesh import TriangularSurfaceMesh
 #from openmodes.basis import DivRwgBasis
 #from openmodes import gmsh
-from openmodes import load_parts, Simulation
+from openmodes import load_mesh, Simulation
 #from openmodes.operator import EfieOperator
 #from openmodes import integration
 
 filename = osp.join("geometry", "SRR.geo")
 
-mesh_tol = 0.25e-3
+mesh_tol = 0.4e-3 #0.25e-3
 #meshed_name = gmsh.mesh_geometry(filename, mesh_tol)
 #
 #raw_mesh = gmsh.read_mesh(meshed_name)
 #
 #mesh = TriangularSurfaceMesh(raw_mesh[0])
 
-mesh = load_parts(filename, mesh_tol)
+mesh = load_mesh(filename, mesh_tol)
 
 #plot_parts([mesh], view_angles=(40, 70))
 
 sim = Simulation()    
 
-sim.place_part(mesh)
+srr = sim.place_part(mesh)
 
 #op = EfieOperator([part], integration.get_dunavant_rule(5))
 
@@ -327,16 +327,16 @@ for freq_count, freq in enumerate(freqs):
     s = 2j*np.pi*freq
     jk_inc = s/c*k_hat
     
-    L, S = sim.impedance_matrix(s)
+    L, S = sim.operator.impedance_matrix(s, srr)
     #V = sim.operator.plane_wave_source(sim.parts[0], s, e_inc, jk_inc)
-    V = sim.source_term(e_inc, jk_inc)
+    V = sim.operator.plane_wave_source(srr, e_inc, jk_inc)
 
     extinction[freq_count] = np.dot(V.conj(), la.solve(s*L + S/s, V))
    
-#plt.figure()
-#plt.plot(freqs*1e-9, extinction.real)
-#plt.plot(freqs*1e-9, extinction.imag)
-#plt.show()
+plt.figure()
+plt.plot(freqs*1e-9, extinction.real)
+plt.plot(freqs*1e-9, extinction.imag)
+plt.show()
     
     #basis = DivRwgBasis(mesh)
     #mes
