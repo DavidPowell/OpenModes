@@ -1,0 +1,93 @@
+"""Compare speed of different ways of converting interaction defined over
+faces to RWG basis functions
+
+Results obtained 2013-11-14
+
+cython (C order arrays)
+10 loops, best of 3: 123 ms per loop
+cython (Fortran order arrays)
+10 loops, best of 3: 193 ms per loop
+
+fortran (C order arrays)
+1 loops, best of 3: 502 ms per loop
+fortran (Fortran order arrays)
+1 loops, best of 3: 224 ms per loop
+
+python
+1 loops, best of 3: 1.09 s per loop
+
+reshaping array (from C order)
+10 loops, best of 3: 75.5 ms per loop
+reshaping array (from fortran order)
+10 loops, best of 3: 143 ms per loop
+
+dense transformation matrix (excluding reshaping)
+1 loops, best of 3: 2.41 s per loop
+sparse transformation matrix (excluding reshaping)
+1 loops, best of 3: 287 ms per loop
+
+"""
+
+
+import numpy as np
+from numpy import random #as np.random
+from scipy.sparse import csr_matrix
+import os.path as osp
+
+import openmodes_core
+import core_cython
+from openmodes.basis import triangle_face_to_rwg, DivRwgBasis
+from openmodes import load_parts
+
+mesh_tol = 0.5e-3
+mesh = load_parts(osp.join("..", "examples", "geometry", "square_plate.geo"), mesh_tol)
+
+basis = DivRwgBasis(mesh)
+#basis = LoopStarBasis(mesh)
+
+
+num_tri = len(mesh.triangle_nodes)
+num_basis = len(basis)
+
+triangle_vector = np.array(random.rand(num_tri, num_tri, 3, 3), dtype=np.complex128)
+triangle_scalar = np.array(random.rand(num_tri, num_tri), dtype=np.complex128)
+
+triangle_vector_f = np.asfortranarray(triangle_vector)
+triangle_scalar_f = np.asfortranarray(triangle_scalar)
+
+
+print "cython (C order arrays)"
+%timeit core_cython.triangle_face_to_rwg(basis.rwg.tri_p, basis.rwg.tri_m, basis.rwg.node_p, basis.rwg.node_m, triangle_vector, triangle_scalar)
+
+print "cython (Fortran order arrays)"
+%timeit core_cython.triangle_face_to_rwg(basis.rwg.tri_p, basis.rwg.tri_m, basis.rwg.node_p, basis.rwg.node_m, triangle_vector_f, triangle_scalar_f)
+
+print "fortran (C order arrays)"
+%timeit openmodes_core.triangle_face_to_rwg(basis.rwg.tri_p, basis.rwg.tri_m, basis.rwg.node_p, basis.rwg.node_m, triangle_vector, triangle_scalar)
+
+print "fortran (Fortran order arrays)"
+%timeit openmodes_core.triangle_face_to_rwg(basis.rwg.tri_p, basis.rwg.tri_m, basis.rwg.node_p, basis.rwg.node_m, triangle_vector_f, triangle_scalar_f)
+
+print "python"
+%timeit (triangle_face_to_rwg(triangle_vector, basis.rwg, basis.rwg),  triangle_face_to_rwg(triangle_scalar, basis.rwg, basis.rwg))
+
+print "reshaping array (from C order)"
+%timeit np.rollaxis(triangle_vector, 2, 1).reshape(num_tri*3, num_tri*3)
+
+print "reshaping array (from fortran order)"
+%timeit np.rollaxis(triangle_vector_f, 2, 1).reshape(num_tri*3, num_tri*3)
+
+
+triangle_vector = np.rollaxis(triangle_vector, 2, 1).reshape(num_tri*3, num_tri*3)
+
+vector_trans, scalar_trans = basis.transformation_matrix()
+
+print "dense transformation matrix (excluding reshaping)"
+%timeit (vector_trans.dot(vector_trans.dot(triangle_vector.T).T), scalar_trans.dot(scalar_trans.dot(triangle_scalar.T).T))
+
+vector_trans = csr_matrix(vector_trans)
+scalar_trans = csr_matrix(scalar_trans)
+
+print "sparse transformation matrix (excluding reshaping)"
+%timeit (vector_trans.dot(vector_trans.dot(triangle_vector.T).T), scalar_trans.dot(scalar_trans.dot(triangle_scalar.T).T))
+

@@ -71,7 +71,19 @@ fcompiler_dependent_options = {
     } 
 }
 
-core_for = Extension(name = 'openmodes_core',
+from Cython.Build import cythonize
+
+cython_modules = [
+        Extension(name = "core_cython", 
+                  sources = [join('src', 'core_cython.pyx')],
+                  include_dirs = [numpy.get_include()],
+                  #libraries=['m'],
+                  #extra_compile_args=['-z', '-fopenmp'],
+                  #extra_link_args=['-z']
+                  )]
+
+
+openmodes_core = Extension(name = 'openmodes_core',
                  sources = [join('src', 'openmodes_core.pyf'),
                             join('src', 'common.f90'),
                             join('src', 'rwg.f90')], 
@@ -144,7 +156,7 @@ setup(name = 'OpenModes',
     license ='',
     url = '',
     packages = ['openmodes'],
-    ext_modules = [dunavant, core_for],
+    ext_modules = [dunavant, openmodes_core]+cythonize(cython_modules),
     version = '0.1dev',
     #install_requires = ['numpy >= 1.6.2', 'scipy'],
     long_description=long_description,
