@@ -137,6 +137,7 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
         cached_singular_terms[unique_id] = res
         return res
 
+#import core_cython
 
 
 def self_impedance_rwg_efie_free_space(basis, nodes, s, quadrature_rule):
@@ -159,6 +160,10 @@ def self_impedance_rwg_efie_free_space(basis, nodes, s, quadrature_rule):
 
     L, S = openmodes_core.triangle_face_to_rwg(basis.rwg.tri_p, basis.rwg.tri_m,
                                                basis.rwg.node_p, basis.rwg.node_m, A_faces, phi_faces)
+
+    #L, S = core_cython.triangle_face_to_rwg(basis.rwg.tri_p, basis.rwg.tri_m,
+    #                                           basis.rwg.node_p, basis.rwg.node_m, A_faces, phi_faces)
+
 
     L *= mu_0/(4*pi)
     S *= 1/(pi*epsilon_0)
