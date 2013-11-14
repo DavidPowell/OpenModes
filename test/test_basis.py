@@ -49,36 +49,46 @@ def test_interpolate_rwg():
     #plt.plot(r[:, 0], r[:, 1], 'x')
     plt.show()
 
-#def test_interpolate_loop_star():
+def test_interpolate_loop_star():
+        
+    mesh_tol = 4e-3
+    mesh = load_parts(osp.join("..", "examples", "geometry", "square_plate.geo"), mesh_tol)
     
-mesh_tol = 4e-3
-srr = load_parts(osp.join("..", "examples", "geometry", "square_plate.geo"), mesh_tol)
+    #basis = DivRwgBasis(mesh)
+    basis = LoopStarBasis(mesh)
+    
+    which_basis = 22 #basis.num_loops+2
+    
+    ls_function = np.zeros(len(basis), np.float64)
+    ls_function[which_basis] = 1
+    
+    ls_function[4] = 1
+    
+    xi_eta, weights = get_dunavant_rule(10)
+    
+    
+    r, res = basis.interpolate_function(ls_function , xi_eta)
+    
+    the_basis = basis[which_basis]
+    
+    plus_nodes = mesh.nodes[basis.mesh.triangle_nodes[the_basis.tri_p, the_basis.node_p]]
+    minus_nodes = mesh.nodes[basis.mesh.triangle_nodes[the_basis.tri_m, the_basis.node_m]]
+    
+    plt.figure(figsize=(6, 6))
+    plt.quiver(r[:, 0], r[:, 1], res[:, 0], res[:, 1], scale=0.05, pivot='middle')
+    plt.plot(plus_nodes[:, 0], plus_nodes[:, 1], 'x')
+    plt.plot(minus_nodes[:, 0], minus_nodes[:, 1], '+')
+    #plt.plot(r[:, 0], r[:, 1], 'x')
+    plt.show()
 
-#basis = DivRwgBasis(srr)
-basis = LoopStarBasis(srr)
+from core_cython import IrregularIntArray
 
-which_basis = 22 #basis.num_loops+2
-
-ls_function = np.zeros(len(basis), np.float64)
-ls_function[which_basis] = 1
-
-ls_function[4] = 1
-
-xi_eta, weights = get_dunavant_rule(10)
-
-
-r, res = basis.interpolate_function(ls_function , xi_eta)
-
-the_basis = basis[which_basis]
-
-plus_nodes = srr.nodes[basis.mesh.triangle_nodes[the_basis.tri_p, the_basis.node_p]]
-minus_nodes = srr.nodes[basis.mesh.triangle_nodes[the_basis.tri_m, the_basis.node_m]]
-
-plt.figure(figsize=(6, 6))
-plt.quiver(r[:, 0], r[:, 1], res[:, 0], res[:, 1], scale=0.05, pivot='middle')
-plt.plot(plus_nodes[:, 0], plus_nodes[:, 1], 'x')
-plt.plot(minus_nodes[:, 0], minus_nodes[:, 1], '+')
-#plt.plot(r[:, 0], r[:, 1], 'x')
-plt.show()
+a = IrregularIntArray([[1, 2, 3], [4, 5], [6, 7, 8, 9]])
+print a[0, 1]
+#try:
+print a[4, 3]
+#except Exception as e:
+#    print e
+#prin
 
 #test_interpolate_rwg()

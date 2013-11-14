@@ -33,6 +33,98 @@ ctypedef np.int_t int_t
 ctypedef np.complex128_t complex_t
 ctypedef np.float64_t real_t
 
+cdef class IrregularIntArray:
+    """An array equivalent to a list of lists of integers
+    
+    This structure does not support adding or subtracting elements, so for the
+    creation process build a list of lists, then convert to IrregularIntArray
+    """
+    
+    cdef int total_length, num_lists
+    cdef int* item_storage
+    cdef int* offset_storage
+    
+    def __cinit__(self, list_of_lists):
+        cdef int item_counter, list_counter, offset
+        self.total_length = sum(len(l) for l in list_of_lists)
+        self.num_lists = len(list_of_lists)
+        
+        self.offset_storage = <int *>malloc((self.num_lists+1)*sizeof(int))
+        self.item_storage = <int *>malloc(self.total_length*sizeof(int))
+        
+        offset = 0
+        for list_counter, current_list in enumerate(list_of_lists):
+            self.offset_storage[list_counter] = offset
+            for item in current_list:
+                self.item_storage[offset] = item
+                offset += 1
+                
+        # put a reference beyond the array end to enable safe checking of offsets
+        self.offset_storage[self.num_lists+1] = self.total_length+1
+      
+    def __getitem__(self, item):
+        # does not check for negative indices
+        cdef int which_list, which_item, index
+        which_list, which_item = item
+        assert(which_list < self.num_lists) # "Invalid list number specified")
+        index = self.offset_storage[which_list] + which_item
+        assert(index < self.offset_storage[which_list+1])#, "Invalid list offset specified")
+        return self.item_storage[index]
+          
+    def __dealloc__(self):
+        free(<void*>self.item_storage)
+        free(<void*>self.offset_storage)
+                
+#@cython.boundscheck(False)
+#@cython.wraparound(False)
+#def triangle_face_to_loop_star(IrregularIntArray basis_tri_p, 
+#                               IrregularIntArray basis_tri_m, 
+#                               IrregularIntArray basis_node_p, 
+#                               IrregularIntArray basis_node_m, 
+#                         complex[:, :, :, :] vector_face,
+#                         complex[:, :] scalar_face):
+#    """Take interaction terms which are defined between triangle
+#    faces and convert them to a loop-star basis"""
+#
+#    cdef int m, n, p_p, p_m, q_p, q_m, ip_p, ip_m, iq_p, iq_m
+#
+#    cdef int num_triangles = vector_face.shape[0]
+#    cdef int num_basis = basis_tri_p.shape[0]
+#
+#    cdef np.ndarray[complex_t, ndim=2] vector_rwg = np.zeros([num_basis, num_basis], dtype=np.complex128) 
+#    #cdef complex[:, ::1] vector_rwg = np.empty([num_basis, num_basis], dtype=np.complex128) 
+#    cdef np.ndarray[complex_t, ndim=2] scalar_rwg = np.zeros([num_basis, num_basis], dtype=np.complex128)
+#    #cdef complex[:, ::1] scalar_rwg = np.empty([num_basis, num_basis], dtype=np.complex128)
+#
+#    with nogil:
+#        for m in range(num_basis): # m is the index of the observer edge
+#            # assume that there are an equal number of plus and minus triangles
+#            # within each loop or star element
+#            p_p = basis_tri_p[m]
+#            p_m = basis_tri_m[m] # observer triangles
+#    
+#            ip_p = basis_node_p[m]
+#            ip_m = basis_node_m[m] # observer unshared nodes
+#            
+#            for n in range(num_basis): # n is the index of the source
+#                q_p = basis_tri_p[n]
+#                q_m = basis_tri_m[n] # source triangles
+#                
+#                iq_p = basis_node_p[n]
+#                iq_m = basis_node_m[n] # source unshared nodes
+#    
+#                vector_rwg[m, n] = ( 
+#                      vector_face[p_p, q_p, ip_p, iq_p] - vector_face[p_p, q_m, ip_p, iq_m]
+#                    - vector_face[p_m, q_p, ip_m, iq_p] + vector_face[p_m, q_m, ip_m, iq_m])
+#                    
+#                scalar_rwg[m, n] = (
+#                    - scalar_face[p_m, q_p] + scalar_face[p_m, q_m] 
+#                    + scalar_face[p_p, q_p] - scalar_face[p_p, q_m])
+#
+#    return vector_rwg, scalar_rwg
+            
+
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def triangle_face_to_rwg(int[:] basis_tri_p, int[:] basis_tri_m, 
