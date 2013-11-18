@@ -255,9 +255,10 @@ class DivRwgBasis(object):
 
         return interpolate_triangle_mesh(self.mesh, tri_func, num_tri, xi_eta, flatten)
      
-    def transformation_matrix(self):
+    @property
+    def transformation_matrices(self):
         """Returns the (sparse???) transformation matrix to turn quantities
-        defined on faces to RWG basis
+        defined on faces to loop-star basis
         
         For vector quantities, assumes that the face-based quantity has been 
         packed to a 2D array of size (n_basis*3, n_basis*3)
@@ -267,19 +268,24 @@ class DivRwgBasis(object):
 
         """
         
-        num_basis = len(self)
-        num_tri = len(self.mesh.triangle_nodes)
-        scalar_transform = np.zeros((num_basis, num_tri), np.float64)
-        vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
+        try:
+            return self.vector_transform, self.scalar_transform
+        except AttributeError:
         
-        for basis_count, (tri_p, tri_m, node_p, node_m) in enumerate(self):
-            scalar_transform[basis_count, tri_p] = 1.0
-            scalar_transform[basis_count, tri_m] = -1.0
+            num_basis = len(self)
+            num_tri = len(self.mesh.triangle_nodes)
+            self.scalar_transform = np.zeros((num_basis, num_tri), np.float64)
+            self.vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
+            
+            for basis_count, (tri_p, tri_m, node_p, node_m) in enumerate(self):
+                self.scalar_transform[basis_count, tri_p] = 1.0
+                self.scalar_transform[basis_count, tri_m] = -1.0
+    
+                self.vector_transform[basis_count, tri_p*3+node_p] = 1.0
+                self.vector_transform[basis_count, tri_m*3+node_m] = -1.0
+    
+            return self.vector_transform, self.scalar_transform
 
-            vector_transform[basis_count, tri_p*3+node_p] = 1.0
-            vector_transform[basis_count, tri_m*3+node_m] = -1.0
-
-        return vector_transform, scalar_transform
             
      
     def __len__(self):
@@ -519,7 +525,8 @@ class LoopStarBasis(object):
             return RWG(self.rwg_loop.tri_p[index], self.rwg_loop.tri_m[index],
                     self.rwg_loop.node_p[index], self.rwg_loop.node_m[index])
 
-    def transformation_matrix(self):
+    @property
+    def transformation_matrices(self):
         """Returns the (sparse???) transformation matrix to turn quantities
         defined on faces to loop-star basis
         
@@ -531,19 +538,23 @@ class LoopStarBasis(object):
 
         """
         
-        num_basis = len(self)
-        num_tri = len(self.mesh.triangle_nodes)
-        scalar_transform = np.zeros((num_basis, num_tri), np.float64)
-        vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
+        try:
+            return self.vector_transform, self.scalar_transform
+        except AttributeError:
         
-        for basis_count, (tri_p, tri_m, node_p, node_m) in enumerate(self):
-            scalar_transform[basis_count, tri_p] = 1.0
-            scalar_transform[basis_count, tri_m] = -1.0
-
-            vector_transform[basis_count, tri_p*3+node_p] = 1.0
-            vector_transform[basis_count, tri_m*3+node_m] = -1.0
-
-        return vector_transform, scalar_transform
+            num_basis = len(self)
+            num_tri = len(self.mesh.triangle_nodes)
+            self.scalar_transform = np.zeros((num_basis, num_tri), np.float64)
+            self.vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
+            
+            for basis_count, (tri_p, tri_m, node_p, node_m) in enumerate(self):
+                self.scalar_transform[basis_count, tri_p] = 1.0
+                self.scalar_transform[basis_count, tri_m] = -1.0
+    
+                self.vector_transform[basis_count, tri_p*3+node_p] = 1.0
+                self.vector_transform[basis_count, tri_m*3+node_m] = -1.0
+    
+            return self.vector_transform, self.scalar_transform
             
 
 cached_basis_functions = {}      

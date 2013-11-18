@@ -513,95 +513,6 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
     integer, intent(in), dimension(0:num_singular-1) :: indices_precalc
     integer, intent(in), dimension(0:num_triangles) :: indptr_precalc
 
-    complex(WP), intent(out), dimension(0:num_triangles-1, 0:num_triangles-1, 0:2, 0:2) :: A_face
-    complex(WP), intent(out), dimension(0:num_triangles-1, 0:num_triangles-1) :: phi_face
-    
-    
-    complex(WP) :: jk_0 
-    
-    real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
-    !complex(WP) :: A_part, phi_part
-    complex(WP), dimension(3, 3) :: I_A
-    complex(WP) :: I_phi
-
-    integer :: p, q, index_singular!, q_p, q_m, p_p, p_m, ip_p, ip_m, iq_p, iq_m, m, n
-
-    jk_0 = s/c
-
-    ! calculate all the integrations for each face pair
-    !$OMP PARALLEL DO SCHEDULE(DYNAMIC) DEFAULT(SHARED) &
-    !$OMP PRIVATE (p, q, nodes_p, nodes_q, I_A, I_phi)
-    do p = 0,num_triangles-1 ! p is the index of the observer face:
-        nodes_p = nodes(triangle_nodes(p, :), :)
-        do q = 0,p ! q is the index of the source face, need for elements below diagonal
-
-            nodes_q = nodes(triangle_nodes(q, :), :)
-            if (any(triangle_nodes(p, :) == triangle_nodes(q, :))) then
-                ! triangles have one or more common nodes, perform singularity extraction
-                call face_integrals_smooth_complex(num_integration, 1, xi_eta_eval, weights, nodes_q, &
-                                    num_integration, xi_eta_eval, weights, nodes_p, jk_0, I_A, I_phi)
-        
-                ! the singular 1/R components are pre-calculated
-                index_singular = scr_index(p, q, indices_precalc, indptr_precalc)
-
-                I_A = I_A + A_precalc(index_singular, :, :)
-                I_phi = I_phi + phi_precalc(index_singular)
-        
-            else
-                ! just perform regular integration
-                ! As per RWG, triangle area must be cancelled in the integration
-                ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
-                call face_integrals_complex(num_integration, xi_eta_eval, weights, nodes_q, &
-                                    num_integration, xi_eta_eval, weights, nodes_p, jk_0, I_A, I_phi)
-            end if
-
-            ! by symmetry of Galerkin procedure, transposed components are identical (but transposed node indices)
-            A_face(p, q, :, :) = I_A
-            A_face(q, p, :, :) = transpose(I_A)
-            phi_face(p, q) = I_phi
-            phi_face(q, p) = I_phi
-
-        end do
-    end do
-    !$OMP END PARALLEL DO
-
-end subroutine Z_EFIE_faces_self
-
-subroutine Z_EFIE_faces_self_flat(num_nodes, num_triangles, num_integration, num_singular, nodes, triangle_nodes, &
-                                s, xi_eta_eval, weights, phi_precalc, A_precalc, indices_precalc, indptr_precalc, &
-                                A_face, phi_face)
-    ! Calculate the face to face interaction terms used to build the impedance matrix
-    !
-    ! As per Rao, Wilton, Glisson, IEEE Trans AP-30, 409 (1982)
-    ! Uses impedance extraction techqnique of Hanninen, precalculated
-    !
-    ! nodes - position of all the triangle nodes
-    ! basis_tri_p/m - the positive and negative triangles for each basis function
-    ! basis_node_p/m - the free nodes for each basis function
-    ! omega - evaulation frequency in rad/s
-    ! s - complex frequency
-    ! xi_eta_eval, weights - quadrature rule over the triangle (weights normalised to 0.5)
-    ! A_precalc, phi_precalc - precalculated 1/R singular terms
-
-    use core_for
-    implicit none
-
-    integer, intent(in) :: num_nodes, num_triangles, num_integration, num_singular
-    ! f2py intent(hide) :: num_nodes, num_triangles, num_integration, num_singular
-
-    real(WP), intent(in), dimension(0:num_nodes-1, 0:2) :: nodes
-    integer, intent(in), dimension(0:num_triangles-1, 0:2) :: triangle_nodes
-
-    complex(WP), intent(in) :: s
-
-    real(WP), intent(in), dimension(0:num_integration-1, 0:1) :: xi_eta_eval
-    real(WP), intent(in), dimension(0:num_integration-1) :: weights
-
-    real(WP), intent(in), dimension(0:num_singular-1) :: phi_precalc
-    real(WP), intent(in), dimension(0:num_singular-1, 3, 3) :: A_precalc
-    integer, intent(in), dimension(0:num_singular-1) :: indices_precalc
-    integer, intent(in), dimension(0:num_triangles) :: indptr_precalc
-
     complex(WP), intent(out), dimension(0:num_triangles-1, 0:2, 0:num_triangles-1, 0:2) :: A_face
     complex(WP), intent(out), dimension(0:num_triangles-1, 0:num_triangles-1) :: phi_face
     
@@ -654,7 +565,7 @@ subroutine Z_EFIE_faces_self_flat(num_nodes, num_triangles, num_integration, num
     end do
     !$OMP END PARALLEL DO
 
-end subroutine Z_EFIE_faces_self_flat
+end subroutine Z_EFIE_faces_self
 
 
 !subroutine Z_EFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_triangles_s, &
@@ -787,6 +698,48 @@ subroutine voltage_plane_wave(num_nodes, num_triangles, num_basis, num_integrati
     end do
 
 end subroutine
+
+subroutine V_EFIE_faces_plane_wave(num_nodes, num_triangles, num_integration, nodes, triangle_nodes, &                                
+                                xi_eta_eval, weights, e_inc, jk_inc, V_faces)
+    ! Calculate the voltage term, assuming a plane-wave incidence
+    !
+    ! Note that this assumes a free-space background
+
+
+    use core_for
+    implicit none
+
+    integer, intent(in) :: num_nodes, num_triangles, num_integration
+    ! f2py intent(hide) :: num_nodes, num_triangles, num_integration
+
+    real(WP), intent(in), dimension(0:num_nodes-1, 0:2) :: nodes
+    integer, intent(in), dimension(0:num_triangles-1, 0:2) :: triangle_nodes
+
+    real(WP), intent(in), dimension(0:num_integration-1, 0:1) :: xi_eta_eval
+    real(WP), intent(in), dimension(0:num_integration-1) :: weights
+
+    complex(WP), intent(in), dimension(3) :: jk_inc
+    complex(WP), intent(in), dimension(3) :: e_inc
+
+    complex(WP), intent(out), dimension(0:num_triangles-1, 0:2) :: V_faces
+
+
+    real(WP), dimension(0:2, 0:2) :: nodes_p!, nodes_q
+
+    integer :: p, p_p, p_m, ip_p, ip_m, m
+
+    ! calculate all the integrations for each face pair
+    !$OMP PARALLEL DO SCHEDULE(DYNAMIC) DEFAULT(SHARED) &
+    !$OMP PRIVATE (p, nodes_p)
+    do p = 0,num_triangles-1 ! p is the index of the observer face:
+        nodes_p = nodes(triangle_nodes(p, :), :)
+        ! perform testing of the incident field
+        call source_integral_plane_wave(num_integration, xi_eta_eval, weights, &
+                nodes_p, jk_inc, e_inc, V_faces(p, :))
+    end do
+    !$OMP END PARALLEL DO
+end subroutine V_EFIE_faces_plane_wave
+
 
 subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
                                    nodes_o, I_A, I_phi)

@@ -156,6 +156,8 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o, basis_s 
         #assert(sum(np.isnan(I_phi_sing)) == 0)
         #assert(sum(np.isnan(I_A_sing)) == 0)
    
+        #n_basis = len(basis_o)
+        n_faces = len(basis_o.mesh.triangle_nodes)
         A_faces, phi_faces = openmodes_core.z_efie_faces_self(nodes_o, 
                                           basis_o.mesh.triangle_nodes, s, 
                                           xi_eta_eval, weights, I_phi_sing, I_A_sing, index_sing, indptr_sing)
@@ -164,8 +166,15 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o, basis_s 
         #L = triangle_face_to_rwg(A_faces, basis.rwg, basis.rwg)
         #S = triangle_face_to_rwg(phi_faces, basis.rwg, basis.rwg)
     
-        L, S = openmodes_core.triangle_face_to_rwg(basis_o.rwg.tri_p, basis_o.rwg.tri_m,
-                                                   basis_o.rwg.node_p, basis_o.rwg.node_m, A_faces, phi_faces)
+        # needs to be cached
+        transform_L, transform_S = basis_o.transformation_matrices
+    
+        # A faces does not need to be transposed as it is symmetric
+        L = transform_L.dot(transform_L.dot(A_faces.reshape(n_faces*3, n_faces*3)).T)
+        S = transform_S.dot(transform_S.dot(phi_faces).T)
+    
+        #L, S = openmodes_core.triangle_face_to_rwg(basis_o.rwg.tri_p, basis_o.rwg.tri_m,
+        #                                           basis_o.rwg.node_p, basis_o.rwg.node_m, A_faces, phi_faces)
     
         #L, S = core_cython.triangle_face_to_rwg(basis.rwg.tri_p, basis.rwg.tri_m,
         #                                           basis.rwg.node_p, basis.rwg.node_m, A_faces, phi_faces)
@@ -246,7 +255,16 @@ class EfieOperator(object):
             isinstance(self.greens_function, FreeSpaceGreensFunction)):
 
             xi_eta_eval, weights = self.quadrature_rule
-            
+  
+            incident_faces = openmodes_core.v_efie_faces_plane_wave(part.nodes, 
+                                        basis.mesh.triangle_nodes, xi_eta_eval,
+                                        weights, e_inc, jk_inc)
+
+
+            transform_L, _ = basis.transformation_matrices
+
+            return transform_L.dot(incident_faces.flatten())
+          
 #            from core_cython import voltage_plane_wave_serial as voltage_plane_wave          
 #            incident = voltage_plane_wave(np.ascontiguousarray(part.nodes), 
 #                            np.ascontiguousarray(basis.mesh.triangle_nodes, dtype=np.int32), 
@@ -258,14 +276,14 @@ class EfieOperator(object):
 #                            np.ascontiguousarray(weights[0]), e_inc, jk_inc)
 
 
-            from openmodes_core import voltage_plane_wave
-            
-            incident = voltage_plane_wave(part.nodes, 
-                            basis.mesh.triangle_nodes, basis.rwg.tri_p, 
-                            basis.rwg.tri_m, basis.rwg.node_p, basis.rwg.node_m, 
-                            xi_eta_eval, weights, e_inc, jk_inc)
+#            from openmodes_core import voltage_plane_wave
+#            
+#            incident = voltage_plane_wave(part.nodes, 
+#                            basis.mesh.triangle_nodes, basis.rwg.tri_p, 
+#                            basis.rwg.tri_m, basis.rwg.node_p, basis.rwg.node_m, 
+#                            xi_eta_eval, weights, e_inc, jk_inc)
                                            
-            return incident
+            #return incident
         else:
             raise NotImplementedError
             

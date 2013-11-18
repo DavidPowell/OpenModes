@@ -8,8 +8,7 @@ Created on Fri Apr 27 09:57:42 2012
 """
 
 import numpy as np
-import scipy.special
-import scipy.linalg as la
+import numpy.linalg as la
 
 def get_dunavant_rule(tri_rule):
     """Calculate the symmetric quadrature rule over a triangle as given in
