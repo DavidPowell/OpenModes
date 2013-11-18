@@ -1,0 +1,20 @@
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+
+python module dunavant ! in 
+    interface  ! in :dunavant
+        subroutine dunavant_order_num(rule,order_num) ! in :dunavant:src/dunavant.f90
+            integer(kind=4) intent(in) :: rule
+            integer(kind=4) intent(out) :: order_num
+        end subroutine dunavant_order_num
+        subroutine dunavant_rule(rule,order_num,xy,w) ! in :dunavant:src/dunavant.f90
+            integer(kind=4) intent(in) :: rule
+            integer(kind=4) intent(in) :: order_num
+            real(kind=8) dimension(2,order_num),intent(out),depend(order_num) :: xy
+            real(kind=8) dimension(order_num),intent(out),depend(order_num) :: w
+        end subroutine dunavant_rule
+    end interface 
+end python module dunavant
+
+! This file was auto-generated with f2py (version:2).
+! See http://cens.ioc.ee/projects/f2py2e/

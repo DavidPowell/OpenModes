@@ -37,21 +37,6 @@ def get_dunavant_rule(tri_rule):
 
     return xi_eta_eval, weights
 
-
-#TODO: confirm copyright, rewrite or get rid of?
-#TODO: check that weighting is correct to 1/2
-def triangle_quadrature(n):
-    """Degree n quadrature points and weights on a triangle (0,0)-(1,0)-(0,1)"""
-  
-    x00,w00 = scipy.special.orthogonal.p_roots(n)
-    x01,w01 = scipy.special.orthogonal.j_roots(n,1,0)
-    x00s = (x00+1)/2
-    x01s = (x01+1)/2
-    w = np.outer(w01, w00).reshape(-1,1) / 8 # a factor of 2 for the legendres and 4 for the jacobi10
-    x = np.outer(x01s, np.ones(x00s.shape)).reshape(-1,1)
-    y = np.outer(1-x01s, x00s).reshape(-1,1)
-    return np.hstack((x, y)), w
-
 def cartesian_to_barycentric(r, nodes):
     """Convert cartesian coordinates to barycentric (area coordinates) in a triangle
     

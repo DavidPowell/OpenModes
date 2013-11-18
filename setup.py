@@ -104,7 +104,8 @@ openmodes_core = Extension(name = 'openmodes_core',
 #                               ],
                 )
 
-dunavant = Extension(name = 'dunavant', sources=[join('src', 'dunavant.f90')])
+dunavant = Extension(name = 'dunavant', sources=[join('src', 'dunavant.pyf'), 
+                                                 join('src', 'dunavant.f90')])
 
 from numpy.distutils.command.build_ext import build_ext
 
