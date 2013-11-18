@@ -56,7 +56,9 @@ ccompiler_dependent_options = {
 fcompiler_dependent_options = {
     # gnu gfortran (including under mingw)
     'gnu95' : {
-        'extra_f90_compile_args' : ["-g", "-fimplicit-none",  "-fopenmp", "-O3"],
+        # -O3 is most desireable, but generate NaNs under mingw32
+        'extra_f90_compile_args' : ["-g", "-fimplicit-none",  "-fopenmp", "-O1"],
+        #'extra_f90_compile_args' : ["-g", "-fimplicit-none",  "-fopenmp", "-Og", "-Wall", "-Wextra", "-fcheck=all", "-ffpe-trap=invalid,zero,overflow"],
         'libraries' : ["gomp"]
      },
         
@@ -78,8 +80,9 @@ cython_modules = [
                   sources = [join('src', 'core_cython.pyx')],
                   include_dirs = [numpy.get_include()],
                   #libraries=['m'],
-                  #extra_compile_args=['-z', '-fopenmp'],
+                  extra_compile_args=['-fopenmp'],
                   #extra_link_args=['-z']
+                  #language = 'c++'
                   )]
 
 
@@ -156,7 +159,8 @@ setup(name = 'OpenModes',
     license ='',
     url = '',
     packages = ['openmodes'],
-    ext_modules = [dunavant, openmodes_core]+cythonize(cython_modules),
+    ext_modules = [dunavant, openmodes_core], #+cythonize(cython_modules),
+    #ext_modules = cythonize(cython_modules),
     version = '0.1dev',
     #install_requires = ['numpy >= 1.6.2', 'scipy'],
     long_description=long_description,

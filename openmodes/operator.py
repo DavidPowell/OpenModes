@@ -125,13 +125,17 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
             for q in sharing_triangles:
                 if q == p:
                     # calculate the self term using the exact formula
-                    singular_terms[p, p] = openmodes_core.arcioni_singular(nodes_p,)
+                    res = openmodes_core.arcioni_singular(nodes_p,)
+                    assert(np.all(np.isfinite(res[0])) and np.all(np.isfinite(res[1])))
+                    singular_terms[p, p] = res
                 else:
                     # at least one node is shared
                     # calculate neighbour integrals semi-numerically
                     #nodes_q = 
-                    singular_terms[p, q] = openmodes_core.face_integrals_hanninen(
+                    res = openmodes_core.face_integrals_hanninen(
                                         nodes[triangle_nodes[q]], xi_eta_eval, weights, nodes_p)
+                    assert(np.all(np.isfinite(res[0])) and np.all(np.isfinite(res[1])))
+                    singular_terms[p, q] = res
         
         cached_singular_terms[unique_id] = singular_terms.to_csr()
         return cached_singular_terms[unique_id]
@@ -144,15 +148,18 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o, basis_s 
 
     if (basis_s is None):
         # calculate self impedance
-        
+
         singular_terms = singular_impedance_rwg_efie_homogeneous(basis_o, 
                                                              quadrature_rule)
 
-        #(I_phi_sing, I_A_sing, index_sing, indptr_sing) = singular_terms
+        (I_phi_sing, I_A_sing, index_sing, indptr_sing) = singular_terms
+        #assert(sum(np.isnan(I_phi_sing)) == 0)
+        #assert(sum(np.isnan(I_A_sing)) == 0)
    
         A_faces, phi_faces = openmodes_core.z_efie_faces_self(nodes_o, 
                                           basis_o.mesh.triangle_nodes, s, 
-                                          xi_eta_eval, weights, *singular_terms) #I_phi_sing, I_A_sing, index_sing, indptr_sing)
+                                          xi_eta_eval, weights, I_phi_sing, I_A_sing, index_sing, indptr_sing)
+                                          #*singular_terms) #
 
         #L = triangle_face_to_rwg(A_faces, basis.rwg, basis.rwg)
         #S = triangle_face_to_rwg(phi_faces, basis.rwg, basis.rwg)
@@ -240,7 +247,20 @@ class EfieOperator(object):
 
             xi_eta_eval, weights = self.quadrature_rule
             
-            incident = openmodes_core.voltage_plane_wave(part.nodes, 
+#            from core_cython import voltage_plane_wave_serial as voltage_plane_wave          
+#            incident = voltage_plane_wave(np.ascontiguousarray(part.nodes), 
+#                            np.ascontiguousarray(basis.mesh.triangle_nodes, dtype=np.int32), 
+#                            np.ascontiguousarray(basis.rwg.tri_p, dtype=np.int32), 
+#                            np.ascontiguousarray(basis.rwg.tri_m, dtype=np.int32), 
+#                            np.ascontiguousarray(basis.rwg.node_p, dtype=np.int32), 
+#                            np.ascontiguousarray(basis.rwg.node_m, dtype=np.int32), 
+#                            np.ascontiguousarray(xi_eta_eval), 
+#                            np.ascontiguousarray(weights[0]), e_inc, jk_inc)
+
+
+            from openmodes_core import voltage_plane_wave
+            
+            incident = voltage_plane_wave(part.nodes, 
                             basis.mesh.triangle_nodes, basis.rwg.tri_p, 
                             basis.rwg.tri_m, basis.rwg.node_p, basis.rwg.node_m, 
                             xi_eta_eval, weights, e_inc, jk_inc)

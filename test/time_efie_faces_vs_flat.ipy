@@ -1,0 +1,56 @@
+"""Compare speed of different ways of calculating EFIE over triangle faces
+"""
+
+
+import numpy as np
+from numpy import random #as np.random
+from scipy.sparse import csr_matrix
+import os.path as osp
+
+import openmodes_core
+from openmodes.basis import triangle_face_to_rwg, DivRwgBasis
+from openmodes.operator import singular_impedance_rwg_efie_homogeneous
+from openmodes import load_mesh
+from openmodes.integration import get_dunavant_rule
+
+mesh_tol = 0.4e-3
+mesh = load_mesh(osp.join("..", "examples", "geometry", "square_plate.geo"), mesh_tol)
+
+basis = DivRwgBasis(mesh)
+#basis = LoopStarBasis(mesh)
+
+basis_o = basis
+basis_s = basis
+nodes_o = mesh.nodes
+nodes_s = mesh.nodes
+
+quadrature_rule = get_dunavant_rule(5)
+xi_eta_eval, weights = quadrature_rule
+
+singular_terms = singular_impedance_rwg_efie_homogeneous(basis_o, 
+                                                     quadrature_rule)
+
+(I_phi_sing, I_A_sing, index_sing, indptr_sing) = singular_terms
+#assert(sum(np.isnan(I_phi_sing)) == 0)
+#assert(sum(np.isnan(I_A_sing)) == 0)
+
+s = 2j*np.pi*1e9
+
+print "original"   
+%timeit openmodes_core.z_efie_faces_self(nodes_o, basis_o.mesh.triangle_nodes, s,  xi_eta_eval, weights, *singular_terms)
+
+print "flatter"
+%timeit openmodes_core.z_efie_faces_self_flat(nodes_o, basis_o.mesh.triangle_nodes, s,  xi_eta_eval, weights, *singular_terms)
+
+
+
+num_tri = len(mesh.triangle_nodes)
+num_basis = len(basis)
+
+triangle_vector = np.array(random.rand(num_tri, num_tri, 3, 3), dtype=np.complex128)
+triangle_scalar = np.array(random.rand(num_tri, num_tri), dtype=np.complex128)
+
+triangle_vector_f = np.asfortranarray(triangle_vector)
+triangle_scalar_f = np.asfortranarray(triangle_scalar)
+
+

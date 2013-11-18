@@ -94,16 +94,6 @@ class Simulation(object):
         #self.parts_modified()
         return sim_part
     
-    def parts_modified(self):
-        """Called when any parts have been modified, invalidating the combined 
-        mesh and precalculated impedance terms"""
-        
-        if hasattr(self, "combined_mesh"):
-            del self._combined_mesh
-            
-        if hasattr(self, "combined_precalc"):
-            del self._combined_precalc
-          
     def impedance_matrix(self, s, serial_interpolation = False, 
                          loop_star = True):
         """Evaluate the impedances matrices

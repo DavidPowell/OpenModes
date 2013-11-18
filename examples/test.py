@@ -180,7 +180,7 @@ def srr_coupling():
     plt.show()
 
     plt.figure()
-    plt.plot(freqs*1e-9, y_srr.real)
+    plt.plot(freqs*1e-9, *singular_terms) #y_srr.real)
     plt.plot(freqs*1e-9, y_srr.imag)
     plt.show()
 
@@ -225,7 +225,7 @@ def srr_extinction():
         extinction[freq_count] = np.dot(V.conj(), la.solve(s*L + S/s, V))
         
     plt.figure()
-    plt.plot(freqs*1e-9, extinction.real)
+    plt.plot(freqs*1e-9,*singular_terms) # extinction.real)
     plt.plot(freqs*1e-9, extinction.imag)
     plt.show()
 
@@ -289,58 +289,95 @@ def compare_source_terms():
     plt.plot(incident2.imag, '--')
     plt.show()
     
-#def test_rwg():
-#from openmodes.mesh import TriangularSurfaceMesh
-#from openmodes.basis import DivRwgBasis
-#from openmodes import gmsh
-from openmodes import load_mesh, Simulation
-#from openmodes.operator import EfieOperator
-#from openmodes import integration
+def test_rwg():
+    #from openmodes.mesh import TriangularSurfaceMesh
+    #from openmodes.basis import DivRwgBasis
+    #from openmodes import gmsh
+    from openmodes import load_mesh, Simulation
+    #from openmodes.operator import EfieOperator
+    #from openmodes import integration
+    
+    filename = osp.join("geometry", "SRR.geo")
+    
+    mesh_tol = 0.4e-3 #0.25e-3
+    #meshed_name = gmsh.mesh_geometry(filename, mesh_tol)
+    #
+    #raw_mesh = gmsh.read_mesh(meshed_name)
+    #
+    #mesh = TriangularSurfaceMesh(raw_mesh[0])
+    
+    mesh = load_mesh(filename, mesh_tol)
+    
+    #plot_parts([mesh], view_angles=(40, 70))
+    
+    sim = Simulation()    
+    
+    srr = sim.place_part(mesh)
+    
+    #op = EfieOperator([part], integration.get_dunavant_rule(5))
+    
+    freqs = np.linspace(2e9, 20e9, 501)
+    
+    e_inc = np.array([1, 1, 0], dtype=np.complex128)
+    k_hat = np.array([0, 0, 1], dtype=np.complex128)
+        
+    extinction = np.zeros(len(freqs), np.complex128)
+    
+    for freq_count, freq in enumerate(freqs):
+        s = 2j*np.pi*freq
+        jk_inc = s/c*k_hat
+        
+        L, S = sim.operator.impedance_matrix(s, srr)
+        #V = sim.operator.plane_wave_source(sim.parts[0], s, e_inc, jk_inc)
+        V = sim.operator.plane_wave_source(srr, e_inc, jk_inc)
+    
+        extinction[freq_count] = np.dot(V.conj(), la.solve(s*L + S/s, V))
+       
+    plt.figure()
+    plt.plot(freqs*1e-9, extinction.real)
+    plt.plot(freqs*1e-9, extinction.imag)
+    plt.show()
+    
+    #basis = DivRwgBasis(mesh)
+    #mes
+        
+#def test_sphere():
 
-filename = osp.join("geometry", "SRR.geo")
+filename = osp.join("geometry", "sphere.geo")
+mesh_tol = 0.4
 
-mesh_tol = 0.4e-3 #0.25e-3
-#meshed_name = gmsh.mesh_geometry(filename, mesh_tol)
-#
-#raw_mesh = gmsh.read_mesh(meshed_name)
-#
-#mesh = TriangularSurfaceMesh(raw_mesh[0])
+mesh = openmodes.load_mesh(filename, mesh_tol)    
+sim = openmodes.Simulation()    
 
-mesh = load_mesh(filename, mesh_tol)
+sphere = sim.place_part(mesh)
 
-#plot_parts([mesh], view_angles=(40, 70))
+k_num = np.linspace(0.1, 3, 51)
 
-sim = Simulation()    
+freqs = c/(2*np.pi)*k_num
 
-srr = sim.place_part(mesh)
-
-#op = EfieOperator([part], integration.get_dunavant_rule(5))
-
-freqs = np.linspace(2e9, 20e9, 501)
-
-e_inc = np.array([1, 1, 0], dtype=np.complex128)
+e_inc = np.array([0, 1, 0], dtype=np.complex128)
 k_hat = np.array([0, 0, 1], dtype=np.complex128)
     
 extinction = np.zeros(len(freqs), np.complex128)
+
+a = 1.0
 
 for freq_count, freq in enumerate(freqs):
     s = 2j*np.pi*freq
     jk_inc = s/c*k_hat
     
-    L, S = sim.operator.impedance_matrix(s, srr)
+    L, S = sim.operator.impedance_matrix(s, sphere)
     #V = sim.operator.plane_wave_source(sim.parts[0], s, e_inc, jk_inc)
-    V = sim.operator.plane_wave_source(srr, e_inc, jk_inc)
+    V = sim.operator.plane_wave_source(sphere, e_inc, jk_inc)
 
     extinction[freq_count] = np.dot(V.conj(), la.solve(s*L + S/s, V))
    
+from openmodes.constants import eta_0   
+   
 plt.figure()
-plt.plot(freqs*1e-9, extinction.real)
-plt.plot(freqs*1e-9, extinction.imag)
+plt.plot(k_num, extinction.real*eta_0/(np.pi*a**2))
+#plt.plot(k_num, extinction.imag)
 plt.show()
-    
-    #basis = DivRwgBasis(mesh)
-    #mes
-        
 
 
 #loop_star_linear_eigenmodes()
