@@ -21,6 +21,8 @@ import numpy as np
 
 from collections import namedtuple
 
+from scipy.sparse import dok_matrix, csr_matrix
+
 from openmodes.mesh import nodes_not_in_edge, shared_nodes
 
 # A named tuple for holding the positive and negative triangles and nodes
@@ -177,7 +179,11 @@ def rwg_to_triangle_face(rwg_func, num_tri, rwg):
         
     return tri_func
 
-class DivRwgBasis(object):
+class LinearTriangleBasis(object):
+    "An abstract base class for 1st order basis functions on triangles"
+    pass
+
+class DivRwgBasis(LinearTriangleBasis):
     """Divergence-conforming RWG basis functions
     
     The simplest basis functions which can be defined on a triangular mesh.
@@ -274,8 +280,10 @@ class DivRwgBasis(object):
         
             num_basis = len(self)
             num_tri = len(self.mesh.triangle_nodes)
-            self.scalar_transform = np.zeros((num_basis, num_tri), np.float64)
-            self.vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
+            #self.scalar_transform = np.zeros((num_basis, num_tri), np.float64)
+            #self.vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
+            self.scalar_transform = dok_matrix((num_basis, num_tri), np.float64)
+            self.vector_transform = dok_matrix((num_basis, 3*num_tri), np.float64)
             
             for basis_count, (tri_p, tri_m, node_p, node_m) in enumerate(self):
                 self.scalar_transform[basis_count, tri_p] = 1.0
@@ -284,7 +292,8 @@ class DivRwgBasis(object):
                 self.vector_transform[basis_count, tri_p*3+node_p] = 1.0
                 self.vector_transform[basis_count, tri_m*3+node_m] = -1.0
     
-            return self.vector_transform, self.scalar_transform
+            #return self.vector_transform, self.scalar_transform
+            return csr_matrix(self.vector_transform), csr_matrix(self.scalar_transform)
 
             
      
@@ -383,7 +392,7 @@ def construct_loop(loop_triangles, triangle_nodes):
 
     return RWG(tri_p, tri_m, node_p, node_m)
 
-class LoopStarBasis(object):
+class LoopStarBasis(LinearTriangleBasis):
     """Loop-Star basis functions.
     
     Similar to div conforming RWG, but explicitly divides the basis functions
@@ -544,8 +553,11 @@ class LoopStarBasis(object):
         
             num_basis = len(self)
             num_tri = len(self.mesh.triangle_nodes)
-            self.scalar_transform = np.zeros((num_basis, num_tri), np.float64)
-            self.vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
+            #self.scalar_transform = np.zeros((num_basis, num_tri), np.float64)
+            #self.vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
+
+            self.scalar_transform = dok_matrix((num_basis, num_tri), np.float64)
+            self.vector_transform = dok_matrix((num_basis, 3*num_tri), np.float64)
             
             for basis_count, (tri_p, tri_m, node_p, node_m) in enumerate(self):
                 if basis_count >= self.num_loops:
@@ -560,7 +572,8 @@ class LoopStarBasis(object):
                 for tri_n, node_n in zip(tri_m, node_m):
                     self.vector_transform[basis_count, tri_n*3+node_n] += -1.0
     
-            return self.vector_transform, self.scalar_transform
+            #return self.vector_transform, self.scalar_transform
+            return csr_matrix(self.vector_transform), csr_matrix(self.scalar_transform)
             
 
 cached_basis_functions = {}      

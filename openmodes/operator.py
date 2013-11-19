@@ -23,7 +23,7 @@ import numpy as np
 import openmodes_core
 
 from openmodes.constants import epsilon_0, mu_0, pi
-from openmodes.basis import DivRwgBasis, generate_basis_functions, triangle_face_to_rwg
+from openmodes.basis import LinearTriangleBasis, DivRwgBasis, LoopStarBasis, generate_basis_functions, triangle_face_to_rwg
 
 class FreeSpaceGreensFunction(object):
     "Green's function in Free Space"
@@ -146,6 +146,10 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o, basis_s 
 
     xi_eta_eval, weights = quadrature_rule
 
+    transform_L_o, transform_S_o = basis_o.transformation_matrices
+    
+
+
     if (basis_s is None):
         # calculate self impedance
 
@@ -165,13 +169,12 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o, basis_s 
 
         #L = triangle_face_to_rwg(A_faces, basis.rwg, basis.rwg)
         #S = triangle_face_to_rwg(phi_faces, basis.rwg, basis.rwg)
+
+        transform_L_s = transform_L_o
+        transform_S_s = transform_S_o
     
         # needs to be cached
-        transform_L, transform_S = basis_o.transformation_matrices
-    
         # A faces does not need to be transposed as it is symmetric
-        L = transform_L.dot(transform_L.dot(A_faces.reshape(n_faces*3, n_faces*3)).T)
-        S = transform_S.dot(transform_S.dot(phi_faces).T)
     
         #L, S = openmodes_core.triangle_face_to_rwg(basis_o.rwg.tri_p, basis_o.rwg.tri_m,
         #                                           basis_o.rwg.node_p, basis_o.rwg.node_m, A_faces, phi_faces)
@@ -187,11 +190,17 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o, basis_s 
                                 basis_o.mesh.triangle_nodes, nodes_s, 
                                 basis_s.mesh.triangle_nodes, s, xi_eta_eval, weights)
 
-        L = triangle_face_to_rwg(A_faces, basis_o.rwg, basis_s.rwg)
-        S = triangle_face_to_rwg(phi_faces, basis_o.rwg, basis_s.rwg)
+        transform_L_s, transform_S_s = basis_s.transformation_matrices
+
+
+        #L = triangle_face_to_rwg(A_faces, basis_o.rwg, basis_s.rwg)
+        #S = triangle_face_to_rwg(phi_faces, basis_o.rwg, basis_s.rwg)
 #    L, S = openmodes_core.triangle_face_to_rwg(basis.tri_p, basis.tri_m, 
 #                            basis.node_p, basis.node_m, A_faces, phi_faces)
-    
+
+    L = transform_L_o.dot(transform_L_s.dot(A_faces.reshape(n_faces*3, n_faces*3)).T)
+    S = transform_S_o.dot(transform_S_s.dot(phi_faces).T)
+
     L *= mu_0/(4*pi)
     S *= 1/(pi*epsilon_0)
     return L, S
@@ -223,7 +232,7 @@ class EfieOperator(object):
             
         
         if isinstance(self.greens_function, FreeSpaceGreensFunction):
-            if True: #isinstance(basis_o, DivRwgBasis):
+            if isinstance(basis_o, LinearTriangleBasis):
                 return impedance_rwg_efie_free_space(s, self.quadrature_rule, 
                                                      basis_o, part_o.nodes, 
                                                      basis_s, nodes_s)
@@ -251,7 +260,7 @@ class EfieOperator(object):
         basis = generate_basis_functions(part.mesh, self.basis_class)
         #basis = self.basis[part_number]
 
-        if (True and #isinstance(basis, DivRwgBasis) and 
+        if (isinstance(basis, LinearTriangleBasis) and 
             isinstance(self.greens_function, FreeSpaceGreensFunction)):
 
             xi_eta_eval, weights = self.quadrature_rule

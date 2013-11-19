@@ -347,8 +347,8 @@ filename = osp.join("geometry", "sphere.geo")
 mesh_tol = 0.4
 
 mesh = openmodes.load_mesh(filename, mesh_tol)    
-sim = openmodes.Simulation(basis_class = LoopStarBasis)    
-#sim = openmodes.Simulation(basis_class = DivRwgBasis)
+#sim = openmodes.Simulation(basis_class = LoopStarBasis)    
+sim = openmodes.Simulation(basis_class = DivRwgBasis)
 
 sphere = sim.place_part(mesh)
 basis = LoopStarBasis(mesh)
