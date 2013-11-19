@@ -23,7 +23,8 @@ import numpy as np
 import openmodes_core
 
 from openmodes.constants import epsilon_0, mu_0, pi
-from openmodes.basis import LinearTriangleBasis, DivRwgBasis, LoopStarBasis, generate_basis_functions, triangle_face_to_rwg
+from openmodes.basis import LinearTriangleBasis, DivRwgBasis, LoopStarBasis, \
+                            generate_basis_functions, triangle_face_to_rwg
 
 class FreeSpaceGreensFunction(object):
     "Green's function in Free Space"
@@ -45,6 +46,7 @@ class SingularSparse(object):
             self.rows[row] = {col: item}
     
     def iteritems(self):
+        "Iterate through all items"
         for row, row_dict in self.rows.iteritems():
             for col, item in row_dict.iteritems():
                 yield ((row, col), item)
@@ -108,12 +110,12 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
         # on the observation point    
         triangle_nodes = basis.mesh.triangle_nodes
         nodes = basis.mesh.nodes
-        N_face = len(triangle_nodes)
+        num_faces = len(triangle_nodes)
     
         singular_terms = SingularSparse()
         # find the neighbouring triangles (including self terms) to integrate
         # singular part
-        for p in xrange(0, N_face): # observer:
+        for p in xrange(0, num_faces): # observer:
             
             nodes_p = nodes[triangle_nodes[p]]
 
@@ -142,7 +144,8 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
 
 #import core_cython
 
-def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o, basis_s = None, nodes_s = None):
+def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o, 
+                                  basis_s = None, nodes_s = None):
 
     xi_eta_eval, weights = quadrature_rule
 
@@ -156,16 +159,16 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o, basis_s 
         singular_terms = singular_impedance_rwg_efie_homogeneous(basis_o, 
                                                              quadrature_rule)
 
-        (I_phi_sing, I_A_sing, index_sing, indptr_sing) = singular_terms
+        #(I_phi_sing, I_A_sing, index_sing, indptr_sing) = singular_terms
         #assert(sum(np.isnan(I_phi_sing)) == 0)
         #assert(sum(np.isnan(I_A_sing)) == 0)
    
         #n_basis = len(basis_o)
-        n_faces = len(basis_o.mesh.triangle_nodes)
+        num_faces = len(basis_o.mesh.triangle_nodes)
         A_faces, phi_faces = openmodes_core.z_efie_faces_self(nodes_o, 
                                           basis_o.mesh.triangle_nodes, s, 
-                                          xi_eta_eval, weights, I_phi_sing, I_A_sing, index_sing, indptr_sing)
-                                          #*singular_terms) #
+                                          xi_eta_eval, weights, *singular_terms) #I_phi_sing, I_A_sing, index_sing, indptr_sing)
+                                          #
 
         #L = triangle_face_to_rwg(A_faces, basis.rwg, basis.rwg)
         #S = triangle_face_to_rwg(phi_faces, basis.rwg, basis.rwg)
@@ -198,7 +201,7 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o, basis_s 
 #    L, S = openmodes_core.triangle_face_to_rwg(basis.tri_p, basis.tri_m, 
 #                            basis.node_p, basis.node_m, A_faces, phi_faces)
 
-    L = transform_L_o.dot(transform_L_s.dot(A_faces.reshape(n_faces*3, n_faces*3)).T)
+    L = transform_L_o.dot(transform_L_s.dot(A_faces.reshape(num_faces*3, num_faces*3)).T)
     S = transform_S_o.dot(transform_S_s.dot(phi_faces).T)
 
     L *= mu_0/(4*pi)
@@ -212,7 +215,7 @@ class EfieOperator(object):
     """
     def __init__(self, quadrature_rule, 
                  greens_function=FreeSpaceGreensFunction(),
-                 basis_class=DivRwgBasis):
+                 basis_class=LoopStarBasis):
         self.basis_class = basis_class
         self.quadrature_rule = quadrature_rule
         self.greens_function = greens_function

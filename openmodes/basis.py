@@ -72,7 +72,13 @@ def interpolate_triangle(nodes, edge_vals, xi_eta):
 
 def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True):
     """Interpolate a function on a triangular mesh with linear basis functions
-    on each face"""
+    on each face
+    
+    Parameters
+    ----------
+    flatten : boolean, optional
+        Return a 2D array, instead of a 3D array    
+    """
 
     points_per_tri = len(xi_eta)
 
@@ -118,16 +124,6 @@ def triangle_face_to_rwg(face_val, rwg_o, rwg_s = None):
  
 #    rwg_val = np.empty((len(basis_o), len(basis_s)), face_val.dtype)
     if len(face_val.shape) == 4:
-
-#        p_p = basis_o.tri_p
-#        p_m = basis_o.tri_m
-#        ip_p = basis_o.node_p
-#        ip_m = basis_o.node_m
-#
-#        q_p = basis_s.tri_p
-#        q_m = basis_s.tri_m
-#        iq_p = basis_s.node_p
-#        iq_m = basis_s.node_m
 
         p_p, p_m, ip_p, ip_m = rwg_o
         q_p, q_m, iq_p, iq_m = rwg_s
@@ -449,10 +445,6 @@ class LoopStarBasis(LinearTriangleBasis):
         boundary_contours = 2-num_nodes+len(edges)-len(mesh.triangle_nodes)
         #print "separated contours", boundary_contours
         
-        if boundary_contours > len(inner_nodes):
-            # TODO: need to deal with holes in 2D (and 3D?) structures
-            raise NotImplementedError
-            
         
         # Note that this would create one basis function for each inner 
         # node which may exceed the number of RWG degrees of freedom. In
@@ -460,6 +452,12 @@ class LoopStarBasis(LinearTriangleBasis):
         # the conversion
         
         num_loops = len(inner_nodes) + boundary_contours - 1
+
+        if num_loops > len(inner_nodes):
+            # TODO: need to deal with holes in 2D (and 3D?) structures
+            raise NotImplementedError
+            
+
 
         triangles_sharing_nodes = mesh.triangles_sharing_nodes()
 

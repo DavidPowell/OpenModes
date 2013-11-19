@@ -87,6 +87,11 @@ class TriangularSurfaceMesh(object):
         #N_nodes = len(self.nodes)
 
         self.triangle_nodes = np.asfortranarray(raw_mesh['triangles'])
+        
+        try:
+            self.physical_name = raw_mesh['physical_name']
+        except KeyError:
+            self.physical_name = None
         #N_tri = len(self.triangle_nodes)
 
         #self.edges = raw_mesh['edges']

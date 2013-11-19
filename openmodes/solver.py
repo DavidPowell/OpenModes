@@ -117,7 +117,7 @@ class Simulation(object):
             the inductance and susceptance matrices
          
         """
-        return self.operator.impedance_matrix(s, self._parts[0])
+        return self.operator.impedance_matrix(s, self.parts[0])
 
           
     def source_term(self, e_inc, jk_inc, loop_star = True):
@@ -136,23 +136,7 @@ class Simulation(object):
             the source "voltage" vector
         """
 
-        return self.operator.plane_wave_source(self._parts[0], e_inc, jk_inc)
-        
-
-        xi_eta_eval, weights = self.quadrature_rule
-        
-        nodes = self.nodes
-        tri = self.tri
-        basis = self.basis
-
-        incident = core_for.voltage_plane_wave(nodes, tri.nodes, basis.tri_p, 
-                                       basis.tri_m, basis.node_p, basis.node_m, 
-                                       xi_eta_eval, weights, e_inc, jk_inc)
-
-        if loop_star:
-            incident = self.loop_star_transform.dot(incident)
-
-        return incident
+        return self.operator.plane_wave_source(self.parts[0], e_inc, jk_inc)
 
     def linearised_eig(self, L, S, n_modes, which_obj = None):
         """Solves a linearised approximation to the eigenvalue problem from

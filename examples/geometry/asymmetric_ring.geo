@@ -44,4 +44,6 @@ Line Loop(l+10) = {l+6, l+7, l+8, l+9};
 
 Plane Surface(s+2) = {l+10};
 
+Physical Surface("left") = {s+1};
+Physical Surface("right") = {s+2};
 
