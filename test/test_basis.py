@@ -11,7 +11,7 @@ import os.path as osp
 
 from openmodes.basis import interpolate_triangle, DivRwgBasis, LoopStarBasis
 from openmodes.integration import get_dunavant_rule
-from openmodes import load_parts
+from openmodes import load_mesh
 
 def test_interpolate_triangles():
     
@@ -32,7 +32,7 @@ def test_interpolate_triangles():
 def test_interpolate_rwg():
 
     mesh_tol = 0.5e-3
-    srr = load_parts(osp.join("..", "examples", "geometry", "SRR.geo"), mesh_tol)
+    srr = load_mesh(osp.join("..", "examples", "geometry", "SRR.geo"), mesh_tol)
     
     basis = DivRwgBasis(srr)
     
@@ -52,7 +52,7 @@ def test_interpolate_rwg():
 def test_interpolate_loop_star():
         
     mesh_tol = 4e-3
-    mesh = load_parts(osp.join("..", "examples", "geometry", "square_plate.geo"), mesh_tol)
+    mesh = load_mesh(osp.join("..", "examples", "geometry", "square_plate.geo"), mesh_tol)
     
     #basis = DivRwgBasis(mesh)
     basis = LoopStarBasis(mesh)
@@ -81,14 +81,17 @@ def test_interpolate_loop_star():
     #plt.plot(r[:, 0], r[:, 1], 'x')
     plt.show()
 
-from core_cython import IrregularIntArray
+def test_irregular_array():
 
-a = IrregularIntArray([[1, 2, 3], [4, 5], [6, 7, 8, 9]])
-print a[0, 1]
-#try:
-print a[4, 3]
+    from core_cython import IrregularIntArray
+    
+    a = IrregularIntArray([[1, 2, 3], [4, 5], [6, 7, 8, 9]])
+    print a[0, 1]
+    #try:
+    print a[4, 3]
 #except Exception as e:
 #    print e
 #prin
 
 #test_interpolate_rwg()
+test_interpolate_loop_star()

@@ -548,11 +548,17 @@ class LoopStarBasis(object):
             self.vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
             
             for basis_count, (tri_p, tri_m, node_p, node_m) in enumerate(self):
-                self.scalar_transform[basis_count, tri_p] = 1.0
-                self.scalar_transform[basis_count, tri_m] = -1.0
+                if basis_count >= self.num_loops:
+                    for tri_n in tri_p:
+                        self.scalar_transform[basis_count, tri_n] += 1.0
+                    for tri_n in tri_m:
+                        self.scalar_transform[basis_count, tri_n] += -1.0
     
-                self.vector_transform[basis_count, tri_p*3+node_p] = 1.0
-                self.vector_transform[basis_count, tri_m*3+node_m] = -1.0
+                for tri_n, node_n in zip(tri_p, node_p):
+                    self.vector_transform[basis_count, tri_n*3+node_n] += 1.0
+                    
+                for tri_n, node_n in zip(tri_m, node_m):
+                    self.vector_transform[basis_count, tri_n*3+node_n] += -1.0
     
             return self.vector_transform, self.scalar_transform
             

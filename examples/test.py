@@ -27,7 +27,7 @@ import scipy.linalg as la
 import openmodes
 from openmodes.visualise import plot_parts
 from openmodes.constants import c
-
+from openmodes.basis import DivRwgBasis, LoopStarBasis
 
 
 def loop_star_linear_eigenmodes():
@@ -347,9 +347,11 @@ filename = osp.join("geometry", "sphere.geo")
 mesh_tol = 0.4
 
 mesh = openmodes.load_mesh(filename, mesh_tol)    
-sim = openmodes.Simulation()    
+sim = openmodes.Simulation(basis_class = LoopStarBasis)    
+#sim = openmodes.Simulation(basis_class = DivRwgBasis)
 
 sphere = sim.place_part(mesh)
+basis = LoopStarBasis(mesh)
 
 k_num = np.linspace(0.1, 3, 51)
 

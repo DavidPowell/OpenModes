@@ -223,7 +223,7 @@ class EfieOperator(object):
             
         
         if isinstance(self.greens_function, FreeSpaceGreensFunction):
-            if isinstance(basis_o, DivRwgBasis):
+            if True: #isinstance(basis_o, DivRwgBasis):
                 return impedance_rwg_efie_free_space(s, self.quadrature_rule, 
                                                      basis_o, part_o.nodes, 
                                                      basis_s, nodes_s)
@@ -251,7 +251,7 @@ class EfieOperator(object):
         basis = generate_basis_functions(part.mesh, self.basis_class)
         #basis = self.basis[part_number]
 
-        if (isinstance(basis, DivRwgBasis) and 
+        if (True and #isinstance(basis, DivRwgBasis) and 
             isinstance(self.greens_function, FreeSpaceGreensFunction)):
 
             xi_eta_eval, weights = self.quadrature_rule
