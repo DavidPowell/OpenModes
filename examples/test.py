@@ -32,62 +32,54 @@ from openmodes.basis import DivRwgBasis, LoopStarBasis
 from openmodes.eig import linearised_eig
 
 
-#def loop_star_linear_eigenmodes():
-""""Solve the linearised eigenvalue problem in a loop-star basis.
-"""
-
-#filename = osp.join("geometry", "asymmetric_ring.geo")
-#mesh_tol = 1e-3
-
-#meshed_name = gmsh.mesh_geometry(filename, mesh_tol)
-#(nodes1, triangles1), (nodes2, triangles2) = gmsh.read_mesh(meshed_name, split_geometry=True)
-#ring1 = openmodes.sim_object(nodes1, triangles1)
-#ring2 = openmodes.sim_object(nodes2, triangles2)
-#ring1, ring2 = openmodes.load_mesh(
-#                osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
-
-ring1 = openmodes.load_mesh(
-                osp.join("geometry", "SRR.geo"), mesh_tol=0.4e-3)
-
-#basis_class=LoopStarBasis
-basis_class=DivRwgBasis
-
-sim = openmodes.Simulation(basis_class=basis_class)
-part1 = sim.place_part(ring1)
-#part2 = sim.place_part(ring2)
-   
-freq = 7e9
-#omega = 2*np.pi*freq
-s = 2j*np.pi*freq
-
-L, S = sim.operator.impedance_matrix(s, part1)
-#V = sim.source_term(np.array([0, 1, 0]), np.array([0, 0, 0]))
-V = sim.operator.plane_wave_source(part1, np.array([0, 1, 0]), np.array([0, 0, 0]))
-
-I = la.solve(s*L + S/s, V)
-
-#power = np.dot(V.conj(), I)
-
-#n_modes = 3
-
-basis = basis_class(ring1)
-
-#w, vr = linearised_eig(L, S, n_modes, basis)
-
-#I = np.zeros(len(basis), np.complex128)
-#I[0] = 1.0
-
-#I = vr[:, 0]
-
-#face_current = openmodes.basis.rwg_to_triangle_face(I, len(basis.mesh.polygons), basis.rwg)
-face_centre, face_current, face_charge = basis.interpolate_function(I, return_scalar=True)
-
-
-
-write_vtk(part1.mesh, part1.nodes, osp.join("output", "test.vtk"), 
-          vector_function = face_current, scalar_function=face_charge
-          )
-
+def loop_star_linear_eigenmodes():
+    """"Solve the linearised eigenvalue problem in a loop-star basis.
+    """
+    
+    
+    ring1, ring2 = openmodes.load_mesh(
+                    osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
+    
+    #ring1 = openmodes.load_mesh(
+    #                osp.join("geometry", "SRR.geo"), mesh_tol=0.4e-3)
+    
+    basis_class=LoopStarBasis
+    #basis_class=DivRwgBasis
+    
+    sim = openmodes.Simulation(basis_class=basis_class)
+    part1 = sim.place_part(ring1)
+    part2 = sim.place_part(ring2)
+       
+    freq = 7e9
+    s = 2j*np.pi*freq
+    
+    L, S = sim.operator.impedance_matrix(s, part1)
+    V = sim.operator.plane_wave_source(part1, np.array([0, 1, 0]), np.array([0, 0, 0]))
+    
+    #I = la.solve(s*L + S/s, V)
+    
+    #power = np.dot(V.conj(), I)
+    
+    n_modes = 3
+    
+    basis = basis_class(ring1)
+    
+    w, vr = sim.linearised_eig(part1, L, S, n_modes)
+    
+    #I = np.zeros(len(basis), np.complex128)
+    #I[0] = 1.0
+    
+    I = vr[:, 0]
+    
+    #face_current = openmodes.basis.rwg_to_triangle_face(I, len(basis.mesh.polygons), basis.rwg)
+    face_centre, face_current, face_charge = basis.interpolate_function(I, return_scalar=True)
+    
+    
+    
+    write_vtk(part1.mesh, part1.nodes, osp.join("output", "test.vtk"), 
+              vector_function = face_current, scalar_function=face_charge
+              )
+    
 #plt.loglog(abs(w.real), abs(w.imag), 'x')
 
 #    power_modes = np.empty(n_modes, np.complex128)
@@ -407,6 +399,24 @@ def test_sphere():
     plt.plot(k_num, extinction.real*eta_0/(np.pi*a**2))
     #plt.plot(k_num, extinction.imag)
     plt.show()
+
+#def mutual_impedance()
+ring1, ring2 = openmodes.load_mesh(
+                osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
+
+basis_class=LoopStarBasis
+#basis_class=DivRwgBasis
+
+sim = openmodes.Simulation(basis_class=basis_class)
+part1 = sim.place_part(ring1)
+part2 = sim.place_part(ring2)
+   
+freq = 7e9
+s = 2j*np.pi*freq
+
+L, S = sim.operator.impedance_matrix(s, part1, part2)
+V1 = sim.operator.plane_wave_source(part1, np.array([0, 1, 0]), np.array([0, 0, 0]))
+V2 = sim.operator.plane_wave_source(part2, np.array([0, 1, 0]), np.array([0, 0, 0]))
 
 
 #loop_star_linear_eigenmodes()

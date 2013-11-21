@@ -28,12 +28,10 @@ import numpy.linalg as la
 from openmodes import integration
 from openmodes.parts import Part#, Triangles, RwgBasis
 
-from openmodes.basis import DivRwgBasis
+from openmodes.basis import DivRwgBasis, get_basis_functions
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
+from openmodes.eig import linearised_eig
 
-# compiled fortran libraries
-#import core_for
- 
 class Simulation(object):
     """This object controls everything within the simluation. It contains all
     the parts which have been placed, and the operator equation which is
@@ -62,12 +60,12 @@ class Simulation(object):
                                        basis_class=basis_class, 
                                        greens_function=greens_function)
 
-    def place_part(self, library_part, location=None):
+    def place_part(self, mesh, location=None):
         """Add a part to the simulation domain
         
         Parameters
         ----------
-        library_part : LibraryPart
+        mesh : LibraryPart
             The part to place
         location : array, optional
             If specified, place the part at a given location, otherwise it will
@@ -85,13 +83,9 @@ class Simulation(object):
         conductor
         """
         
-        sim_part = Part(library_part, location=location) 
-        #self.parts_modified, 
+        sim_part = Part(mesh, location=location) 
         self.parts.append(sim_part)
 
-        #sim_part.add_observer(self.objects_changed)
-        #self.objects_changed()
-        #self.parts_modified()
         return sim_part
     
     def impedance_matrix(self, s, serial_interpolation = False, 
@@ -120,7 +114,7 @@ class Simulation(object):
         return self.operator.impedance_matrix(s, self.parts[0])
 
           
-    def source_term(self, e_inc, jk_inc, loop_star = True):
+    def source_term(self, e_inc, jk_inc):
         """Evaluate the source vector due to the incident wave
         
         Parameters
@@ -138,7 +132,7 @@ class Simulation(object):
 
         return self.operator.plane_wave_source(self.parts[0], e_inc, jk_inc)
 
-    def linearised_eig(self, L, S, n_modes, which_obj = None):
+    def linearised_eig(self, part, L, S, num_modes):
         """Solves a linearised approximation to the eigenvalue problem from
         the impedance calculated at some fixed frequency.
         
@@ -160,43 +154,7 @@ class Simulation(object):
         j_mode : ndarray, complex
             Columns of this matrix contain the corresponding modal currents
         """
+        basis = get_basis_functions(part.mesh, self.basis_class)
+        return linearised_eig(L, S, num_modes, basis)
         
-        if which_obj is None:
-            # just solve for the whole system, which is easy
-            
-            loop_range = slice(0, self.n_loop)
-            star_range = slice(self.n_loop, len(self.basis))
-            
-        else:
-            loop_ranges, star_ranges = self.object_basis()
-            loop_range = loop_ranges[which_obj]
-            star_range = star_ranges[which_obj]
-
-        if loop_range.start == loop_range.stop:
-            # object has no loops
-            no_loops = True
-        else:
-            no_loops = False
-            
-        if no_loops:
-            L_red = L[star_range, star_range]
-        else:
-            L_conv = la.solve(L[loop_range, loop_range], 
-                              L[loop_range, star_range])
-            L_red = L[star_range, star_range] - np.dot(L[star_range, loop_range], L_conv)
-
-        # find eigenvalues, and star part of eigenvectors, for LS combined modes
-        w, v_s = la.eig(S[star_range, star_range], L_red)
-        
-        if no_loops:
-            vr = v_s
-        else:
-            v_l = -np.dot(L_conv, v_s)
-            vr = np.vstack((v_l, v_s))
-        
-        w_freq = np.sqrt(w)/2/np.pi
-        w_selected = np.ma.masked_array(w_freq, w_freq.real < w_freq.imag)
-        which_modes = np.argsort(w_selected.real)[:n_modes]
-        
-        return np.sqrt(w[which_modes]), vr[:, which_modes]
-
+    #def write_vtk(self, file_name
