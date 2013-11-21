@@ -23,7 +23,7 @@ import numpy as np
 import openmodes_core
 
 from openmodes.constants import epsilon_0, mu_0, pi
-from openmodes.basis import LinearTriangleBasis, generate_basis_functions
+from openmodes.basis import LinearTriangleBasis, get_basis_functions
 
 class FreeSpaceGreensFunction(object):
     "Green's function in Free Space"
@@ -150,6 +150,7 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
 
     transform_L_o, transform_S_o = basis_o.transformation_matrices
     
+    num_faces_o = len(basis_o.mesh.polygons)
 
 
     if (basis_s is None):
@@ -163,7 +164,7 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
         #assert(sum(np.isnan(I_A_sing)) == 0)
    
         #n_basis = len(basis_o)
-        num_faces = len(basis_o.mesh.polygons)
+        num_faces_s = num_faces_o
         A_faces, phi_faces = openmodes_core.z_efie_faces_self(nodes_o, 
                                           basis_o.mesh.polygons, s, 
                                           xi_eta_eval, weights, *singular_terms) #I_phi_sing, I_A_sing, index_sing, indptr_sing)
@@ -188,6 +189,8 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
     else:
         # calculate mutual impedance
 
+        num_faces_s = len(basis_s.mesh.polygons)
+
         A_faces, phi_faces = openmodes_core.z_efie_faces_mutual(nodes_o, 
                                 basis_o.mesh.polygons, nodes_s, 
                                 basis_s.mesh.polygons, s, xi_eta_eval, weights)
@@ -200,8 +203,8 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
 #    L, S = openmodes_core.triangle_face_to_rwg(basis.tri_p, basis.tri_m, 
 #                            basis.node_p, basis.node_m, A_faces, phi_faces)
 
-    L = transform_L_o.dot(transform_L_s.dot(A_faces.reshape(num_faces*3, num_faces*3)).T)
-    S = transform_S_o.dot(transform_S_s.dot(phi_faces).T)
+    L = transform_L_o.dot(transform_L_s.dot(A_faces.reshape(num_faces_o*3, num_faces_s*3).T).T)
+    S = transform_S_o.dot(transform_S_s.dot(phi_faces.T).T)
 
     L *= mu_0/(4*pi)
     S *= 1/(pi*epsilon_0)
@@ -222,14 +225,14 @@ class EfieOperator(object):
         """Calculate the impedance matrix for a single part, at a given
         complex frequency s"""
         
-        basis_o = generate_basis_functions(part_o.mesh, self.basis_class)
+        basis_o = get_basis_functions(part_o.mesh, self.basis_class)
         
         if part_s is None:
             basis_s = None
             nodes_s = None
         else:
-            basis_s = generate_basis_functions(part_s.mesh, self.basis_class)
-            nodes_s = part_s.mesh
+            basis_s = get_basis_functions(part_s.mesh, self.basis_class)
+            nodes_s = part_s.nodes
             
         
         if isinstance(self.greens_function, FreeSpaceGreensFunction):
@@ -258,7 +261,7 @@ class EfieOperator(object):
         V : ndarray
             the source "voltage" vector
         """
-        basis = generate_basis_functions(part.mesh, self.basis_class)
+        basis = get_basis_functions(part.mesh, self.basis_class)
         #basis = self.basis[part_number]
 
         if (isinstance(basis, LinearTriangleBasis) and 

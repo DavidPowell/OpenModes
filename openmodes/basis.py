@@ -490,7 +490,7 @@ class LoopStarBasis(LinearTriangleBasis):
 
 cached_basis_functions = {}      
         
-def generate_basis_functions(mesh, basis_class):
+def get_basis_functions(mesh, basis_class):
     """Generate basis functions for a mesh. Performs caching, so that if an
     identical mesh has already been generated, the basis functions will
     not be unnecessarily duplicated
