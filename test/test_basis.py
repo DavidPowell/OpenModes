@@ -71,8 +71,8 @@ def test_interpolate_loop_star():
     
     the_basis = basis[which_basis]
     
-    plus_nodes = mesh.nodes[basis.mesh.triangle_nodes[the_basis.tri_p, the_basis.node_p]]
-    minus_nodes = mesh.nodes[basis.mesh.triangle_nodes[the_basis.tri_m, the_basis.node_m]]
+    plus_nodes = mesh.nodes[basis.mesh.polygons[the_basis.tri_p, the_basis.node_p]]
+    minus_nodes = mesh.nodes[basis.mesh.polygons[the_basis.tri_m, the_basis.node_m]]
     
     plt.figure(figsize=(6, 6))
     plt.quiver(r[:, 0], r[:, 1], res[:, 0], res[:, 1], scale=0.05, pivot='middle')

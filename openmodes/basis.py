@@ -86,7 +86,7 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True):
     func_all = np.empty((num_tri, points_per_tri, 3), tri_func.dtype)
 
 
-    for tri_count, node_nums in enumerate(mesh.triangle_nodes):
+    for tri_count, node_nums in enumerate(mesh.polygons):
         r, interp_func = interpolate_triangle(mesh.nodes[node_nums], 
                                               tri_func[tri_count], xi_eta)
         r_all[tri_count] = r
@@ -226,9 +226,9 @@ class DivRwgBasis(LinearTriangleBasis):
             # determine the indices of the unshared nodes, indexed within the
             # sharing triangles (i.e. 0, 1 or 2)
             node_p[basis_count] = nodes_not_in_edge(
-                            mesh.triangle_nodes[tri_p[basis_count]], edges[edge_count])[0]
+                            mesh.polygons[tri_p[basis_count]], edges[edge_count])[0]
             node_m[basis_count] = nodes_not_in_edge(
-                            mesh.triangle_nodes[tri_m[basis_count]], edges[edge_count])[0]
+                            mesh.polygons[tri_m[basis_count]], edges[edge_count])[0]
 
         self.rwg = RWG(tri_p, tri_m, node_p, node_m)
 
@@ -252,7 +252,7 @@ class DivRwgBasis(LinearTriangleBasis):
         func_all : ndarray
             The vector function at each interpolation point
         """
-        num_tri = len(self.mesh.triangle_nodes)
+        num_tri = len(self.mesh.polygons)
         tri_func = rwg_to_triangle_face(rwg_func, num_tri, self.rwg)
 
         return interpolate_triangle_mesh(self.mesh, tri_func, num_tri, xi_eta, flatten)
@@ -275,7 +275,7 @@ class DivRwgBasis(LinearTriangleBasis):
         except AttributeError:
         
             num_basis = len(self)
-            num_tri = len(self.mesh.triangle_nodes)
+            num_tri = len(self.mesh.polygons)
             #self.scalar_transform = np.zeros((num_basis, num_tri), np.float64)
             #self.vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
             self.scalar_transform = dok_matrix((num_basis, num_tri), np.float64)
@@ -303,7 +303,7 @@ class DivRwgBasis(LinearTriangleBasis):
 def construct_stars(mesh, edges, triangles_shared_by_edges, sharing_count):
     """Construct star basis functions on a triangular mesh"""
     
-    num_tri = len(mesh.triangle_nodes)        
+    num_tri = len(mesh.polygons)        
 
     shared_edge_indices = np.where(sharing_count == 2)[0]
 
@@ -323,9 +323,9 @@ def construct_stars(mesh, edges, triangles_shared_by_edges, sharing_count):
         tri_m[tri1].append(tri2)
         tri_m[tri2].append(tri1)
 
-        node1 = nodes_not_in_edge(mesh.triangle_nodes[tri1], 
+        node1 = nodes_not_in_edge(mesh.polygons[tri1], 
                                   edges[edge_count])[0]
-        node2 = nodes_not_in_edge(mesh.triangle_nodes[tri2], 
+        node2 = nodes_not_in_edge(mesh.polygons[tri2], 
                                   edges[edge_count])[0]
         node_p[tri1].append(node1)
         node_p[tri2].append(node2)
@@ -335,7 +335,7 @@ def construct_stars(mesh, edges, triangles_shared_by_edges, sharing_count):
  
     return RWG(tri_p, tri_m, node_p, node_m)
 
-def construct_loop(loop_triangles, triangle_nodes):
+def construct_loop(loop_triangles, polygons):
     """Construct a single loop basis function corresponding to a single inner
     node of a triangular mesh"""
 
@@ -354,7 +354,7 @@ def construct_loop(loop_triangles, triangle_nodes):
    
     while len(loop_triangles) > 0:
         for triangle_count, next_triangle in enumerate(loop_triangles):
-            shared = shared_nodes(triangle_nodes[next_triangle], triangle_nodes[current_triangle])
+            shared = shared_nodes(polygons[next_triangle], polygons[current_triangle])
             if len(shared) == 2:
                 break
         #raise ValueError("Cannot find adjoining triangle") # wrong!
@@ -362,8 +362,8 @@ def construct_loop(loop_triangles, triangle_nodes):
         #ordered_triangles.append(current_triangle)
         
         # find the unshared nodes
-        free_current = nodes_not_in_edge(triangle_nodes[current_triangle], shared)[0]
-        free_next = nodes_not_in_edge(triangle_nodes[next_triangle], shared)[0]
+        free_current = nodes_not_in_edge(polygons[current_triangle], shared)[0]
+        free_next = nodes_not_in_edge(polygons[next_triangle], shared)[0]
         
         tri_p.append(current_triangle)
         tri_m.append(next_triangle)
@@ -375,10 +375,10 @@ def construct_loop(loop_triangles, triangle_nodes):
         current_triangle = next_triangle
 
     # now connect the loop with the first and last triangle
-    shared = shared_nodes(triangle_nodes[first_triangle], triangle_nodes[current_triangle])
+    shared = shared_nodes(polygons[first_triangle], polygons[current_triangle])
 
-    free_current = nodes_not_in_edge(triangle_nodes[current_triangle], shared)[0]
-    free_next = nodes_not_in_edge(triangle_nodes[first_triangle], shared)[0]
+    free_current = nodes_not_in_edge(polygons[current_triangle], shared)[0]
+    free_next = nodes_not_in_edge(polygons[first_triangle], shared)[0]
 
     tri_p.append(current_triangle)
     tri_m.append(first_triangle)
@@ -442,7 +442,7 @@ class LoopStarBasis(LinearTriangleBasis):
         #print "vertices", n_vertices
         #print "faces", len(triangles)
         #print "edges", len(all_edges)
-        boundary_contours = 2-num_nodes+len(edges)-len(mesh.triangle_nodes)
+        boundary_contours = 2-num_nodes+len(edges)-len(mesh.polygons)
         #print "separated contours", boundary_contours
         
         
@@ -477,7 +477,7 @@ class LoopStarBasis(LinearTriangleBasis):
                 # find all the triangles sharing this node
                 loop_triangles = list(triangles_sharing_nodes[node_number])
                 
-                this_loop = construct_loop(loop_triangles, mesh.triangle_nodes)
+                this_loop = construct_loop(loop_triangles, mesh.polygons)
                 loop_tri_p.append(this_loop[0])
                 loop_tri_m.append(this_loop[1])
                 loop_node_p.append(this_loop[2])
@@ -506,7 +506,7 @@ class LoopStarBasis(LinearTriangleBasis):
         func_all : ndarray
             The vector function at each interpolation point
         """
-        num_tri = len(self.mesh.triangle_nodes)
+        num_tri = len(self.mesh.polygons)
         combined_rwg = RWG._make(a + b for a, b in zip(self.rwg_loop, self.rwg_star))
         tri_func = rwg_to_triangle_face(ls_func, num_tri, combined_rwg)
 
@@ -533,8 +533,15 @@ class LoopStarBasis(LinearTriangleBasis):
                     self.rwg_loop.node_p[index], self.rwg_loop.node_m[index])
 
     @property
+    def rwg(self):
+        return RWG(self.rwg_loop.tri_p + self.rwg_star.tri_p,
+                   self.rwg_loop.tri_m + self.rwg_star.tri_m,
+                   self.rwg_loop.node_p + self.rwg_star.node_p,
+                   self.rwg_loop.node_m + self.rwg_star.node_m)
+
+    @property
     def transformation_matrices(self):
-        """Returns the (sparse???) transformation matrix to turn quantities
+        """Returns the sparse transformation matrices to turn quantities
         defined on faces to loop-star basis
         
         For vector quantities, assumes that the face-based quantity has been 
@@ -550,7 +557,7 @@ class LoopStarBasis(LinearTriangleBasis):
         except AttributeError:
         
             num_basis = len(self)
-            num_tri = len(self.mesh.triangle_nodes)
+            num_tri = len(self.mesh.polygons)
             #self.scalar_transform = np.zeros((num_basis, num_tri), np.float64)
             #self.vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
 
@@ -576,7 +583,7 @@ class LoopStarBasis(LinearTriangleBasis):
 
 cached_basis_functions = {}      
         
-def generate_basis_functions(mesh, basis_class=DivRwgBasis):
+def generate_basis_functions(mesh, basis_class):
     """Generate basis functions for a mesh. Performs caching, so that if an
     identical mesh has already been generated, the basis functions will
     not be unnecessarily duplicated
@@ -586,7 +593,7 @@ def generate_basis_functions(mesh, basis_class=DivRwgBasis):
     mesh : object
         The mesh to generate the basis functions for
     
-    basis_class : class, optional
+    basis_class : class
         Which class of basis function should be created
     """
     

@@ -14,7 +14,8 @@ libraries.
 Then install `gmsh <http://geuz.org/gmsh/>`_, and make sure that the gmsh
 executable is added to the windows PATH environment variable.
 
-Download the OpenModes executable package from ??? and install it.
+Download the OpenModes executable package from ??? and install it using the
+WinPython/Python(x,y) package manager.
 
 Requirements
 ------------
@@ -28,12 +29,13 @@ The following software packages are the absolute minimum to run OpenModes:
 Strongly recommended packages
 
 - IPython (the notebook is used by many of the examples)
+- pyvtk (to export 3D plots to vtk file format)
 
 Other packages which may be useful
 
 - spyder (a GUI for editing python)
 - scipy (contains many useful computational python routines)
-- ViSit or ParaView (3D plotting software)
+- ViSit or ParaView (3D plotting software to view vtk files)
 
 OpenModes contains some core routines which are optimised using fortran.
 Therefore, on platforms where a binary package of OpenModes is not provided,
@@ -57,7 +59,7 @@ For ubuntu users, the appropriate packages can be installed using the following
 command
 
 ``sudo apt-get install python python-numpy python-matplotlib gmsh gfortran
-ipython python-dev``
+ipython python-dev pyvtk??``
 
 Mac OSX
 -------
@@ -72,7 +74,7 @@ Manual installation under windows is difficult, as it requires the use of
 mingw compilers.
 
 MingW 4.8 has a bug which causes the fortran extensions to randomly generate
-NaNs in the returned arrays.
+NaNs in the returned arrays if optimisation levels -O2 or -O3 are specified.
 
 The windows binaries were successfully built under the mingw-64 
 x32-4.8.1-posix-dwarf-rev5 compiler.

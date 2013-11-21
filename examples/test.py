@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 import scipy.linalg as la
 
 import openmodes
-from openmodes.visualise import plot_parts
+from openmodes.visualise import plot_parts, write_vtk
 from openmodes.constants import c
 from openmodes.basis import DivRwgBasis, LoopStarBasis
 from openmodes.eig import linearised_eig
@@ -42,16 +42,19 @@ from openmodes.eig import linearised_eig
 #(nodes1, triangles1), (nodes2, triangles2) = gmsh.read_mesh(meshed_name, split_geometry=True)
 #ring1 = openmodes.sim_object(nodes1, triangles1)
 #ring2 = openmodes.sim_object(nodes2, triangles2)
-ring1, ring2 = openmodes.load_mesh(
-                osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
+#ring1, ring2 = openmodes.load_mesh(
+#                osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
 
-sim = openmodes.Simulation(integration_rule = 10)
+ring1 = openmodes.load_mesh(
+                osp.join("geometry", "SRR.geo"), mesh_tol=0.5e-3)
+
+sim = openmodes.Simulation(basis_class=LoopStarBasis)
 part1 = sim.place_part(ring1)
-part2 = sim.place_part(ring2)
+#part2 = sim.place_part(ring2)
    
 freq = 7e9
-omega = 2*np.pi*freq
-s = 1j*omega
+#omega = 2*np.pi*freq
+s = 2j*np.pi*freq
 
 L, S = sim.operator.impedance_matrix(s, part1)
 #V = sim.source_term(np.array([0, 1, 0]), np.array([0, 0, 0]))
@@ -61,11 +64,18 @@ I = la.solve(s*L + S/s, V)
 
 power = np.dot(V.conj(), I)
 
-n_modes = 20
+n_modes = 3
 
 basis = LoopStarBasis(ring1)
 
 w, vr = linearised_eig(L, S, n_modes, basis)
+
+face_current = openmodes.basis.rwg_to_triangle_face(vr[:, 0], len(basis.mesh.polygons), basis.rwg)
+
+write_vtk(part1.mesh, part1.nodes, polygon_current = face_current, 
+          osp.join("output", "test.vtk"))
+
+#plt.loglog(abs(w.real), abs(w.imag), 'x')
 
 #    power_modes = np.empty(n_modes, np.complex128)
 #

@@ -5,8 +5,6 @@ Created on Tue Oct 29 12:17:16 2013
 @author: dap124
 """
 
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 #import matplotlib.tri as mtri
 
 def plot_parts(parts, figsize=(10, 4), view_angles = (20, 90)):
@@ -21,7 +19,12 @@ def plot_parts(parts, figsize=(10, 4), view_angles = (20, 90)):
     viewangles : tuple, optional
         The viewing angle of the 3D plot in degrees, will be passed to 
         matplotlib
+        
+    Requires that matplotlib is installed
     """
+
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
     
     fig = plt.figure(figsize=figsize)
     ax = fig.add_subplot(111, projection='3d')
@@ -39,7 +42,7 @@ def plot_parts(parts, figsize=(10, 4), view_angles = (20, 90)):
 
 from openmodes.constants import eta_0 
      
-def write_vtk(part, filename, I=None, scale_coords = 1, 
+def write_vtk(mesh, nodes, filename, I=None, scale_coords = 1, 
               scale_current = eta_0, scale_charge = 1):
     """Write the mesh and solution data to a VTK file
     
@@ -54,12 +57,15 @@ def write_vtk(part, filename, I=None, scale_coords = 1,
         current vector of MOM solution in RWG basis
     scale_coords : number, optional
         a scaling factor to apply to the coordinates
+        
+    Requires that pyvtk is installed
     """
     
     from pyvtk import PolyData, VtkData, Scalars, CellData, Vectors
     
-    poly = [[int(j) for j in i] for i in part.tri.nodes]    
-    struct = PolyData(points=part.nodes*scale_coords, polygons=poly)
+    #poly = [[int(j) for j in i] for i in mesh.polygons]    
+    polygons = mesh.polygons.tolist()
+    struct = PolyData(points=nodes*scale_coords, polygons=polygons)
 
     if I is not None:
 

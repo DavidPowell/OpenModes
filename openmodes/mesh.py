@@ -66,6 +66,15 @@ class TriangularSurfaceMesh(object):
 
     Once created a mesh cannot be modified, as it is designed to be an
     unchanging reference object
+    
+    The internal member `nodes` contains the original node locations. However,
+    the mesh object can also refer to the connectivity of a set of nodes which
+    have been transformed, and is held externally.
+    
+    For external nodes, the areas and lengths of the mesh elements are
+    correct if the nodes have been translated or rotated, but not if they
+    have been scaled or sheared.
+    
     """
 
     def __init__(self, raw_mesh):
@@ -79,20 +88,20 @@ class TriangularSurfaceMesh(object):
             triangles : ndarray
                 The node indices of triangles making up the object
             
-        The internal storage of `nodes` and `triangle_nodes` will be put into
+        The internal storage of `nodes` and `polygons` will be put into
         fortran order as these arrays will be passed to fortran routines
         """
         
         self.nodes = np.asfortranarray(raw_mesh['nodes'])
         #N_nodes = len(self.nodes)
 
-        self.triangle_nodes = np.asfortranarray(raw_mesh['triangles'])
+        self.polygons = np.asfortranarray(raw_mesh['triangles'])
         
         try:
             self.physical_name = raw_mesh['physical_name']
         except KeyError:
             self.physical_name = None
-        #N_tri = len(self.triangle_nodes)
+        #N_tri = len(self.polygons)
 
         #self.edges = raw_mesh['edges']
 
@@ -124,7 +133,7 @@ class TriangularSurfaceMesh(object):
         shared_edges = [] 
         triangles_shared_by_edges = dict()
         
-        for count, t_nodes in enumerate(self.triangle_nodes):    
+        for count, t_nodes in enumerate(self.polygons):    
     
             # edges are represented as sets to avoid ambiguity of order
             triangle_edges = [frozenset((t_nodes[0], t_nodes[1])), 
@@ -156,14 +165,14 @@ class TriangularSurfaceMesh(object):
     def triangles_sharing_nodes(self):
         """Return a set of all the triangles which share each node"""
         
-        triangle_nodes = [set() for _ in xrange(len(self.nodes))]        
+        polygons = [set() for _ in xrange(len(self.nodes))]        
         
-        for count, t_nodes in enumerate(self.triangle_nodes):    
+        for count, t_nodes in enumerate(self.polygons):    
             # tell each node that it is a part of this triangle
             for node in t_nodes:
-                triangle_nodes[node].add(count)       
+                polygons[node].add(count)       
                 
-        return triangle_nodes
+        return polygons
 
 
     @property
@@ -174,10 +183,10 @@ class TriangularSurfaceMesh(object):
     @property
     def triangle_areas(self):
         """The area of each triangle in the mesh"""
-        areas = np.empty(len(self.triangle_nodes), np.float64)
+        areas = np.empty(len(self.polygons), np.float64)
 
         # calculate all the edges in the mesh
-        for count, t_nodes in enumerate(self.triangle_nodes):    
+        for count, t_nodes in enumerate(self.polygons):    
             # calculate the area of each triangle
             vec1 = self.nodes[t_nodes[1]]-self.nodes[t_nodes[0]]
             vec2 = self.nodes[t_nodes[2]]-self.nodes[t_nodes[0]]
@@ -189,7 +198,7 @@ class TriangularSurfaceMesh(object):
     def triangle_lens(self):
         """The length of each triangle's edges"""
         # indexing: triangle, vertex_num, x/y/z
-        vertices = self.nodes[self.triangle_nodes]
+        vertices = self.nodes[self.polygons]
 
         # each edge is numbered according to its opposite node
         return np.sqrt(np.sum((np.roll(vertices, 1, axis=1) - 

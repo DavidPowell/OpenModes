@@ -51,7 +51,7 @@ def linearised_eig(L, S, num_modes, basis):
                                                     L_conv)
 
     # find eigenvalues, and star part of eigenvectors, for LS combined modes
-    w, v_s = la.eig(S[star_range, star_range], L_red)
+    w, v_s = la.eig(S[star_range, star_range], -L_red)
     
     if basis.num_loops == 0:
         vr = v_s
@@ -59,8 +59,15 @@ def linearised_eig(L, S, num_modes, basis):
         v_l = -np.dot(L_conv, v_s)
         vr = np.vstack((v_l, v_s))
     
-    w_freq = np.sqrt(w)/2/np.pi
-    w_selected = np.ma.masked_array(w_freq, w_freq.real < w_freq.imag)
-    which_modes = np.argsort(w_selected.real)[:num_modes]
+#    import matplotlib.pyplot as plt
+#    plt.loglog(w.real, w.imag, 'x')    
     
-    return np.sqrt(w_freq[which_modes]), vr[:, which_modes]
+    w_freq = np.sqrt(w)/2/np.pi
+
+    #plt.loglog(w_freq.real, w_freq.imag, 'x')    
+
+    #w_selected = np.ma.masked_array(w_freq, w_freq.real < w_freq.imag)
+    w_selected = np.ma.masked_array(w_freq, abs(w_freq.real) > abs(w_freq.imag))
+    which_modes = np.argsort(abs(w_selected.imag))[:num_modes]
+    
+    return w_freq[which_modes], vr[:, which_modes]

@@ -108,19 +108,19 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
         
         # Precalculate the singular integration rules for faces, which depend
         # on the observation point    
-        triangle_nodes = basis.mesh.triangle_nodes
+        polygons = basis.mesh.polygons
         nodes = basis.mesh.nodes
-        num_faces = len(triangle_nodes)
+        num_faces = len(polygons)
     
         singular_terms = SingularSparse()
         # find the neighbouring triangles (including self terms) to integrate
         # singular part
         for p in xrange(0, num_faces): # observer:
             
-            nodes_p = nodes[triangle_nodes[p]]
+            nodes_p = nodes[polygons[p]]
 
             sharing_triangles = set()
-            for node in triangle_nodes[p]:
+            for node in polygons[p]:
                 sharing_triangles = sharing_triangles.union(sharing_nodes[node])
             
             # find any neighbouring elements which are touching
@@ -135,7 +135,7 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
                     # calculate neighbour integrals semi-numerically
                     #nodes_q = 
                     res = openmodes_core.face_integrals_hanninen(
-                                        nodes[triangle_nodes[q]], xi_eta_eval, weights, nodes_p)
+                                        nodes[polygons[q]], xi_eta_eval, weights, nodes_p)
                     assert(np.all(np.isfinite(res[0])) and np.all(np.isfinite(res[1])))
                     singular_terms[p, q] = res
         
@@ -164,9 +164,9 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
         #assert(sum(np.isnan(I_A_sing)) == 0)
    
         #n_basis = len(basis_o)
-        num_faces = len(basis_o.mesh.triangle_nodes)
+        num_faces = len(basis_o.mesh.polygons)
         A_faces, phi_faces = openmodes_core.z_efie_faces_self(nodes_o, 
-                                          basis_o.mesh.triangle_nodes, s, 
+                                          basis_o.mesh.polygons, s, 
                                           xi_eta_eval, weights, *singular_terms) #I_phi_sing, I_A_sing, index_sing, indptr_sing)
                                           #
 
@@ -190,8 +190,8 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
         # calculate mutual impedance
 
         A_faces, phi_faces = openmodes_core.z_efie_faces_mutual(nodes_o, 
-                                basis_o.mesh.triangle_nodes, nodes_s, 
-                                basis_s.mesh.triangle_nodes, s, xi_eta_eval, weights)
+                                basis_o.mesh.polygons, nodes_s, 
+                                basis_s.mesh.polygons, s, xi_eta_eval, weights)
 
         transform_L_s, transform_S_s = basis_s.transformation_matrices
 
@@ -213,9 +213,8 @@ class EfieOperator(object):
     respect to some set of basis functions. Assumes that Galerkin's method is
     used, such that the testing functions are the same as the basis functions.
     """
-    def __init__(self, quadrature_rule, 
-                 greens_function=FreeSpaceGreensFunction(),
-                 basis_class=LoopStarBasis):
+    def __init__(self, quadrature_rule, basis_class,
+                 greens_function=FreeSpaceGreensFunction()):
         self.basis_class = basis_class
         self.quadrature_rule = quadrature_rule
         self.greens_function = greens_function
@@ -269,7 +268,7 @@ class EfieOperator(object):
             xi_eta_eval, weights = self.quadrature_rule
   
             incident_faces = openmodes_core.v_efie_faces_plane_wave(part.nodes, 
-                                        basis.mesh.triangle_nodes, xi_eta_eval,
+                                        basis.mesh.polygons, xi_eta_eval,
                                         weights, e_inc, jk_inc)
 
 
@@ -279,7 +278,7 @@ class EfieOperator(object):
           
 #            from core_cython import voltage_plane_wave_serial as voltage_plane_wave          
 #            incident = voltage_plane_wave(np.ascontiguousarray(part.nodes), 
-#                            np.ascontiguousarray(basis.mesh.triangle_nodes, dtype=np.int32), 
+#                            np.ascontiguousarray(basis.mesh.polygons, dtype=np.int32), 
 #                            np.ascontiguousarray(basis.rwg.tri_p, dtype=np.int32), 
 #                            np.ascontiguousarray(basis.rwg.tri_m, dtype=np.int32), 
 #                            np.ascontiguousarray(basis.rwg.node_p, dtype=np.int32), 
@@ -291,7 +290,7 @@ class EfieOperator(object):
 #            from openmodes_core import voltage_plane_wave
 #            
 #            incident = voltage_plane_wave(part.nodes, 
-#                            basis.mesh.triangle_nodes, basis.rwg.tri_p, 
+#                            basis.mesh.polygons, basis.rwg.tri_p, 
 #                            basis.rwg.tri_m, basis.rwg.node_p, basis.rwg.node_m, 
 #                            xi_eta_eval, weights, e_inc, jk_inc)
                                            
