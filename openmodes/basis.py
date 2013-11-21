@@ -75,30 +75,6 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True):
     
     return r, vector_func, scalar_func
 
-#def rwg_to_triangle_face(rwg_func, num_tri, rwg):
-#    """Convert from RWG basis, to triangle face basis
-#    
-#    Parameters
-#    ----------
-#    rwg_func : ndarray
-#        The function defined in RWG basis
-#    num_tri : integer
-#        The number of triangles
-#    rwg : RWG
-#        The RWG data
-#    Returns
-#    -------
-#    tri_func : ndarray
-#        The function defined over triangle faces
-#    """
-#    tri_func = np.zeros((num_tri, 3), rwg_func.dtype)
-#    
-#    for count, func in enumerate(rwg_func):
-#        tri_func[rwg.tri_p[count], rwg.node_p[count]] += func
-#        tri_func[rwg.tri_m[count], rwg.node_m[count]] -= func
-#        
-#    return tri_func
-
 class LinearTriangleBasis(object):
     "An abstract base class for 1st order basis functions on triangles"
 
@@ -427,34 +403,6 @@ class LoopStarBasis(LinearTriangleBasis):
                 loop_node_m.append(this_loop[3])
                 
         self.rwg_loop = RWG(loop_tri_p, loop_tri_m, loop_node_p, loop_node_m)
-
-#    def interpolate_function(self, ls_func, xi_eta = [[1.0/3, 1.0/3]], flatten = True):
-#        """Interpolate a function defined in loop-star basis over the complete
-#        mesh
-#        
-#        Parameters
-#        ----------
-#        ls_func : ndarray
-#            The function defined over loop-star basis functions
-#        xi_eta : ndarray, optional
-#            The barycentric coordinates to interpolate on each triangle. If not
-#            specified, one point at the centre of each triangle will be used.
-#        flatten : bool, optional
-#            If false, data for each triangle will be identified by a specific
-#            index of the array, otherwise all points are identical
-#            
-#        Returns
-#        -------
-#        r_all : ndarray
-#            The interpolation points
-#        func_all : ndarray
-#            The vector function at each interpolation point
-#        """
-#        num_tri = len(self.mesh.polygons)
-#        combined_rwg = RWG._make(a + b for a, b in zip(self.rwg_loop, self.rwg_star))
-#        tri_func = rwg_to_triangle_face(ls_func, num_tri, combined_rwg)
-#
-#        return interpolate_triangle_mesh(self.mesh, tri_func, num_tri, xi_eta, flatten)
 
     def __len__(self):
         return len(self.rwg_loop.tri_p)+len(self.rwg_star.tri_p)

@@ -9,25 +9,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os.path as osp
 
-from openmodes.basis import interpolate_triangle, DivRwgBasis, LoopStarBasis
+from openmodes.basis import DivRwgBasis, LoopStarBasis
 from openmodes.integration import get_dunavant_rule
 from openmodes import load_mesh
-
-def test_interpolate_triangles():
-    
-    nodes = np.array([[0.0, 0, 0], [0, 1.0, 0], [1.0, 0, 0.0]])
-    
-    edge_vals = np.array([0, 0, -1.0], np.float64)
-    
-    xi_eta, weights = get_dunavant_rule(10)
-    
-    r, res = interpolate_triangle(nodes, edge_vals, xi_eta)
-    
-    plt.figure()
-    plt.quiver(r[:, 0], r[:, 1], res[:, 0], res[:, 1])
-    #plt.plot(r[:, 0], r[:, 1], 'x')
-    plt.show()
-
 
 def test_interpolate_rwg():
 
