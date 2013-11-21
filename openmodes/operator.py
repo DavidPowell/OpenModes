@@ -23,8 +23,7 @@ import numpy as np
 import openmodes_core
 
 from openmodes.constants import epsilon_0, mu_0, pi
-from openmodes.basis import LinearTriangleBasis, DivRwgBasis, LoopStarBasis, \
-                            generate_basis_functions, triangle_face_to_rwg
+from openmodes.basis import LinearTriangleBasis, generate_basis_functions
 
 class FreeSpaceGreensFunction(object):
     "Green's function in Free Space"

@@ -23,6 +23,7 @@ import os.path as osp
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.linalg as la
+import scipy.sparse.linalg as spla
 
 import openmodes
 from openmodes.visualise import plot_parts, write_vtk
@@ -70,10 +71,11 @@ basis = LoopStarBasis(ring1)
 
 w, vr = linearised_eig(L, S, n_modes, basis)
 
-face_current = openmodes.basis.rwg_to_triangle_face(vr[:, 0], len(basis.mesh.polygons), basis.rwg)
+#face_current = openmodes.basis.rwg_to_triangle_face(vr[:, 0], len(basis.mesh.polygons), basis.rwg)
 
-write_vtk(part1.mesh, part1.nodes, polygon_current = face_current, 
-          osp.join("output", "test.vtk"))
+write_vtk(part1.mesh, part1.nodes, osp.join("output", "test.vtk"), 
+          polygon_current = face_current 
+          )
 
 #plt.loglog(abs(w.real), abs(w.imag), 'x')
 

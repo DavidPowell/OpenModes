@@ -225,20 +225,19 @@ class DivRwgBasis(LinearTriangleBasis):
             num_tri = len(self.mesh.polygons)
             #self.scalar_transform = np.zeros((num_basis, num_tri), np.float64)
             #self.vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
-            self.scalar_transform = dok_matrix((num_basis, num_tri), np.float64)
-            self.vector_transform = dok_matrix((num_basis, 3*num_tri), np.float64)
+            scalar_transform = dok_matrix((num_basis, num_tri), np.float64)
+            vector_transform = dok_matrix((num_basis, 3*num_tri), np.float64)
             
             for basis_count, (tri_p, tri_m, node_p, node_m) in enumerate(self):
-                self.scalar_transform[basis_count, tri_p] = 1.0
-                self.scalar_transform[basis_count, tri_m] = -1.0
+                scalar_transform[basis_count, tri_p] = 1.0
+                scalar_transform[basis_count, tri_m] = -1.0
     
-                self.vector_transform[basis_count, tri_p*3+node_p] = 1.0
-                self.vector_transform[basis_count, tri_m*3+node_m] = -1.0
+                vector_transform[basis_count, tri_p*3+node_p] = 1.0
+                vector_transform[basis_count, tri_m*3+node_m] = -1.0
     
-            #return self.vector_transform, self.scalar_transform
-            return csr_matrix(self.vector_transform), csr_matrix(self.scalar_transform)
-
-            
+            self.vector_transform = vector_transform.tocsr()
+            self.scalar_transform = scalar_transform.tocsr()
+            return self.vector_transform, self.scalar_transform
      
     def __len__(self):
         return len(self.rwg.tri_p)
@@ -508,24 +507,38 @@ class LoopStarBasis(LinearTriangleBasis):
             #self.scalar_transform = np.zeros((num_basis, num_tri), np.float64)
             #self.vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
 
-            self.scalar_transform = dok_matrix((num_basis, num_tri), np.float64)
-            self.vector_transform = dok_matrix((num_basis, 3*num_tri), np.float64)
+            scalar_transform = dok_matrix((num_basis, num_tri), np.float64)
+            vector_transform = dok_matrix((num_basis, 3*num_tri), np.float64)
             
             for basis_count, (tri_p, tri_m, node_p, node_m) in enumerate(self):
+                # Assume that tri_p, tri_m, node_p, node_m are all of same 
+                # length, which they must be for loop-star basis
                 if basis_count >= self.num_loops:
                     for tri_n in tri_p:
-                        self.scalar_transform[basis_count, tri_n] += 1.0
+                        scalar_transform[basis_count, tri_n] += 1.0
                     for tri_n in tri_m:
-                        self.scalar_transform[basis_count, tri_n] += -1.0
-    
+                        scalar_transform[basis_count, tri_n] += -1.0
+                      
+#                # TODO: slicing dok_matrix may be quite slow
+#                norm = np.sqrt(scalar_transform[basis_count, :].multiply(
+#                                scalar_transform[basis_count, :]).sum())                    
+#                scalar_transform[basis_count, :] /= norm
+#    
                 for tri_n, node_n in zip(tri_p, node_p):
-                    self.vector_transform[basis_count, tri_n*3+node_n] += 1.0
+                    vector_transform[basis_count, tri_n*3+node_n] += 1.0
                     
                 for tri_n, node_n in zip(tri_m, node_m):
-                    self.vector_transform[basis_count, tri_n*3+node_n] += -1.0
+                    vector_transform[basis_count, tri_n*3+node_n] += -1.0
+
+#                norm = np.sqrt(vector_transform[basis_count, :].multiply(
+#                                vector_transform[basis_count, :]).sum())                    
+#                vector_transform[basis_count, :] /= norm
+                    
+            self.vector_transform = vector_transform.tocsr()
+            self.scalar_transform = scalar_transform.tocsr()
     
             #return self.vector_transform, self.scalar_transform
-            return csr_matrix(self.vector_transform), csr_matrix(self.scalar_transform)
+            return self.vector_transform.tocsr(), self.scalar_transform.tocsr()
             
 
 cached_basis_functions = {}      
