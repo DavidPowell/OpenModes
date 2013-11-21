@@ -98,59 +98,6 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True):
     
     return r_all, func_all
 
-
-def triangle_face_to_rwg(face_val, rwg_o, rwg_s = None):
-    """Take quantities which are defined as interaction between faces and 
-    convert them to RWG basis
-    
-    Parameters
-    ----------
-    face_val : ndarray
-        The function, which can be either a vector or scalar defined over faces
-    rwg_o : RwgDivBasis
-        The RWG basis functions of the observer
-    rwg_s : RwgDivBasis
-        The RWG basis functions of the source. This is not required if the
-        desired function is a vector rather than a matrix
-
-    Returns
-    -------
-    rwg_val : ndarray
-        Either a 1D or 2D array, collected over RWG basis functions
-    """
- 
-#    if basis_s is None:
-#        basis_s = basis
- 
-#    rwg_val = np.empty((len(basis_o), len(basis_s)), face_val.dtype)
-    if len(face_val.shape) == 4:
-
-        p_p, p_m, ip_p, ip_m = rwg_o
-        q_p, q_m, iq_p, iq_m = rwg_s
-
-        rwg_val = ( 
-            face_val[p_p[:, None], q_p[None, :], ip_p[:, None], iq_p[None, :]]
-          - face_val[p_p[:, None], q_m[None, :], ip_p[:, None], iq_m[None, :]]
-          - face_val[p_m[:, None], q_p[None, :], ip_m[:, None], iq_p[None, :]] 
-          + face_val[p_m[:, None], q_m[None, :], ip_m[:, None], iq_m[None, :]])
-
-
-    elif len(face_val.shape) == 2:
-        p_p = rwg_o.tri_p
-        p_m = rwg_o.tri_m
-        q_p = rwg_s.tri_p
-        q_m = rwg_s.tri_m
-
-        rwg_val = ( 
-                face_val[p_p[:, None], q_p[None, :]] 
-              - face_val[p_p[:, None], q_m[None, :]]
-              - face_val[p_m[:, None], q_p[None, :]] 
-              + face_val[p_m[:, None], q_m[None, :]])
-    else:
-        raise ValueError("Don't know how to convert his function to RWG basis")
-
-    return rwg_val
-
 def rwg_to_triangle_face(rwg_func, num_tri, rwg):
     """Convert from RWG basis, to triangle face basis
     
