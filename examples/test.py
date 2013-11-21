@@ -47,9 +47,12 @@ from openmodes.eig import linearised_eig
 #                osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
 
 ring1 = openmodes.load_mesh(
-                osp.join("geometry", "SRR.geo"), mesh_tol=0.5e-3)
+                osp.join("geometry", "SRR.geo"), mesh_tol=0.4e-3)
 
-sim = openmodes.Simulation(basis_class=LoopStarBasis)
+#basis_class=LoopStarBasis
+basis_class=DivRwgBasis
+
+sim = openmodes.Simulation(basis_class=basis_class)
 part1 = sim.place_part(ring1)
 #part2 = sim.place_part(ring2)
    
@@ -63,15 +66,23 @@ V = sim.operator.plane_wave_source(part1, np.array([0, 1, 0]), np.array([0, 0, 0
 
 I = la.solve(s*L + S/s, V)
 
-power = np.dot(V.conj(), I)
+#power = np.dot(V.conj(), I)
 
-n_modes = 3
+#n_modes = 3
 
-basis = LoopStarBasis(ring1)
+basis = basis_class(ring1)
 
-w, vr = linearised_eig(L, S, n_modes, basis)
+#w, vr = linearised_eig(L, S, n_modes, basis)
 
-#face_current = openmodes.basis.rwg_to_triangle_face(vr[:, 0], len(basis.mesh.polygons), basis.rwg)
+#I = np.zeros(len(basis), np.complex128)
+#I[0] = 1.0
+
+#I = vr[:, 0]
+
+#face_current = openmodes.basis.rwg_to_triangle_face(I, len(basis.mesh.polygons), basis.rwg)
+face_centre, face_current = basis.interpolate_function(I)
+
+
 
 write_vtk(part1.mesh, part1.nodes, osp.join("output", "test.vtk"), 
           polygon_current = face_current 
