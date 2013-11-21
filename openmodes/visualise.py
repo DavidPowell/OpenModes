@@ -40,10 +40,11 @@ def plot_parts(parts, figsize=(10, 4), view_angles = (20, 90)):
     plt.show()
  
 
-from openmodes.constants import eta_0 
+#from openmodes.constants import eta_0 
      
-def write_vtk(mesh, nodes, filename, I=None, scale_coords = 1, 
-              scale_current = eta_0, scale_charge = 1):
+def write_vtk(mesh, nodes, filename, vector_function=None, 
+              scalar_function=None, vector_name="vector", 
+              scalar_name="scalar"):
     """Write the mesh and solution data to a VTK file
     
     If the current vector is given, then currents and charges will be
@@ -65,23 +66,28 @@ def write_vtk(mesh, nodes, filename, I=None, scale_coords = 1,
     
     #poly = [[int(j) for j in i] for i in mesh.polygons]    
     polygons = mesh.polygons.tolist()
-    struct = PolyData(points=nodes*scale_coords, polygons=polygons)
+    struct = PolyData(points=nodes, polygons=polygons)
 
-    if I is not None:
+    data = []
 
-        rmid, currents, charges = part.face_currents_and_charges(I)
-
-        cell_data = CellData(
-                    Vectors((currents.real*scale_current), name="Jr"), 
-                    Vectors((currents.imag*scale_current), name="Ji"),
-                    Scalars(charges.real*scale_charge, name="qr", 
-                            lookup_table="default"),
-                    Scalars(charges.imag*scale_charge, name="qi", 
+    if vector_function is not None:
+        data.append(Vectors(vector_function.real, name=vector_name+"_real"))
+        data.append(Vectors(vector_function.imag, name=vector_name+"_imag"))
+        
+    if scalar_function is not None:
+        data.append(Scalars(scalar_function.real, name=scalar_name+"_real", 
                             lookup_table="default"))
+        data.append(Scalars(scalar_function.imag, name=scalar_name+"_imag", 
+                            lookup_table="default"))
+
     
-        vtk = VtkData(struct, cell_data, "MOM solution")
-    else:
-        vtk = VtkData(struct, "MOM mesh")
+    cell_data = CellData(*data)
+
+    vtk = VtkData(struct, cell_data, "OpenModes mesh and data")
+    #else:
+    #    vtk = VtkData(struct, "MOM mesh")
+
+
         
     vtk.tofile(filename, "ascii")
     

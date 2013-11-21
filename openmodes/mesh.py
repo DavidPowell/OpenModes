@@ -178,10 +178,10 @@ class TriangularSurfaceMesh(object):
     @property
     def shortest_edge(self):
         """The shortest edge in the mesh"""
-        return self.triangle_lens.min()
+        return self.edge_lens.min()
      
     @property
-    def triangle_areas(self):
+    def polygon_areas(self):
         """The area of each triangle in the mesh"""
         areas = np.empty(len(self.polygons), np.float64)
 
@@ -195,7 +195,7 @@ class TriangularSurfaceMesh(object):
         return areas
     
     @property
-    def triangle_lens(self):
+    def edge_lens(self):
         """The length of each triangle's edges"""
         # indexing: triangle, vertex_num, x/y/z
         vertices = self.nodes[self.polygons]

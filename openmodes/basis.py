@@ -38,14 +38,14 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True):
     Parameters
     ----------
     flatten : boolean, optional
-        Return a 2D array, instead of a 3D array    
+        Return a 2D array, instead of a 3D array
     """
 
     points_per_tri = len(xi_eta)
 
     r = np.empty((num_tri, points_per_tri, 3), mesh.nodes.dtype)
-    func = np.zeros((num_tri, points_per_tri, 3), tri_func.dtype)
-
+    vector_func = np.zeros((num_tri, points_per_tri, 3), tri_func.dtype)
+    scalar_func = np.zeros((num_tri, points_per_tri), tri_func.dtype)
 
     for tri_count, node_nums in enumerate(mesh.polygons):
         #r, interp_func = interpolate_triangle(mesh.nodes[node_nums], 
@@ -58,18 +58,22 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True):
     
             # Cartesian coordinates of the point
             r[tri_count, point_count] = xi*nodes[0] + eta*nodes[1] + zeta*nodes[2]
+
+            scalar_func[tri_count, point_count] = sum(tri_func[tri_count])
     
             for node_count in xrange(3):
                 # Vector rho within the observer triangle
                 rho = r[tri_count, point_count] - nodes[node_count]
     
-                func[tri_count, point_count] += rho*tri_func[tri_count, node_count]
+                vector_func[tri_count, point_count] += rho*tri_func[tri_count, node_count]
+
                                               
     if flatten:
-        r = r.reshape((-1, 3))
-        func = func.reshape((-1, 3))
+        r = r.reshape((num_tri*points_per_tri, 3))
+        vector_func = vector_func.reshape((num_tri*points_per_tri, 3))
+        scalar_func = scalar_func.reshape((num_tri*points_per_tri,))
     
-    return r, func
+    return r, vector_func, scalar_func
 
 #def rwg_to_triangle_face(rwg_func, num_tri, rwg):
 #    """Convert from RWG basis, to triangle face basis
@@ -98,7 +102,8 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True):
 class LinearTriangleBasis(object):
     "An abstract base class for 1st order basis functions on triangles"
 
-    def interpolate_function(self, linear_func, xi_eta = [[1.0/3, 1.0/3]], flatten = True):
+    def interpolate_function(self, linear_func, xi_eta = [[1.0/3, 1.0/3]], 
+                             flatten = True, return_scalar=False):
         """Interpolate a function defined in RWG or loop-star basis over the 
         complete mesh
         
@@ -135,7 +140,15 @@ class LinearTriangleBasis(object):
             tri_func[self.rwg.tri_p[count], self.rwg.node_p[count]] += func
             tri_func[self.rwg.tri_m[count], self.rwg.node_m[count]] -= func
 
-        return interpolate_triangle_mesh(self.mesh, tri_func, num_tri, xi_eta, flatten)
+        tri_func /= 2*self.mesh.polygon_areas[:, None]
+
+        r, vector_func, scalar_func = interpolate_triangle_mesh(self.mesh, 
+                                            tri_func, num_tri, xi_eta, flatten)
+                                            
+        if return_scalar:
+            return r, vector_func, scalar_func
+        else:
+            return r, vector_func
 
 class DivRwgBasis(LinearTriangleBasis):
     """Divergence-conforming RWG basis functions

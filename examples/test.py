@@ -80,12 +80,12 @@ basis = basis_class(ring1)
 #I = vr[:, 0]
 
 #face_current = openmodes.basis.rwg_to_triangle_face(I, len(basis.mesh.polygons), basis.rwg)
-face_centre, face_current = basis.interpolate_function(I)
+face_centre, face_current, face_charge = basis.interpolate_function(I, return_scalar=True)
 
 
 
 write_vtk(part1.mesh, part1.nodes, osp.join("output", "test.vtk"), 
-          polygon_current = face_current 
+          vector_function = face_current, scalar_function=face_charge
           )
 
 #plt.loglog(abs(w.real), abs(w.imag), 'x')
