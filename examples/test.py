@@ -404,8 +404,8 @@ def test_sphere():
 ring1, ring2 = openmodes.load_mesh(
                 osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
 
-basis_class=LoopStarBasis
-#basis_class=DivRwgBasis
+#basis_class=LoopStarBasis
+basis_class=DivRwgBasis
 
 sim = openmodes.Simulation(basis_class=basis_class)
 part1 = sim.place_part(ring1)
@@ -414,9 +414,21 @@ part2 = sim.place_part(ring2)
 freq = 7e9
 s = 2j*np.pi*freq
 
-L, S = sim.operator.impedance_matrix(s, part1, part2)
-V1 = sim.operator.plane_wave_source(part1, np.array([0, 1, 0]), np.array([0, 0, 0]))
-V2 = sim.operator.plane_wave_source(part2, np.array([0, 1, 0]), np.array([0, 0, 0]))
+S_list = []
+L_list = []
+
+for index_a, part_a in enumerate(sim.parts):
+    S_list.append([])
+    L_list.append([])
+    for index_b, part_b in enumerate(sim.parts):
+        if index_a == index_b:
+            L, S = sim.operator.impedance_matrix(s, part_a)
+        else:
+            L, S = sim.operator.impedance_matrix(s, part_a, part_b)
+        S_list[-1].append(S)
+        L_list[-1].append(L)
+#V1 = sim.operator.plane_wave_source(part1, np.array([0, 1, 0]), np.array([0, 0, 0]))
+#V2 = sim.operator.plane_wave_source(part2, np.array([0, 1, 0]), np.array([0, 0, 0]))
 
 
 #loop_star_linear_eigenmodes()

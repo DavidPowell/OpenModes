@@ -618,7 +618,7 @@ subroutine Z_EFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
     !$OMP PRIVATE (p, q, nodes_p, nodes_q, I_A, I_phi)
     do p = 0,num_triangles_o-1 ! p is the index of the observer face:
         nodes_p = nodes_o(triangle_nodes_o(p, :), :)
-        do q = 0,num_triangles_o ! q is the index of the source face
+        do q = 0,num_triangles_s-1 ! q is the index of the source face
 
             nodes_q = nodes_s(triangle_nodes_s(q, :), :)
             ! just perform regular integration

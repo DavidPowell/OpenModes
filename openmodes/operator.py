@@ -155,6 +155,7 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
 
     if (basis_s is None):
         # calculate self impedance
+        print "self"
 
         singular_terms = singular_impedance_rwg_efie_homogeneous(basis_o, 
                                                              quadrature_rule)
@@ -185,12 +186,12 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
         #L, S = core_cython.triangle_face_to_rwg(basis.rwg.tri_p, basis.rwg.tri_m,
         #                                           basis.rwg.node_p, basis.rwg.node_m, A_faces, phi_faces)
 
-
     else:
         # calculate mutual impedance
+        print "mutual"
 
         num_faces_s = len(basis_s.mesh.polygons)
-
+        
         A_faces, phi_faces = openmodes_core.z_efie_faces_mutual(nodes_o, 
                                 basis_o.mesh.polygons, nodes_s, 
                                 basis_s.mesh.polygons, s, xi_eta_eval, weights)
@@ -227,10 +228,13 @@ class EfieOperator(object):
         
         basis_o = get_basis_functions(part_o.mesh, self.basis_class)
         
-        if part_s is None:
+        if part_s is None or part_s == part_o:
+            #print "self"
             basis_s = None
             nodes_s = None
         else:
+            #print "mutual"
+            #print part_o, part_s
             basis_s = get_basis_functions(part_s.mesh, self.basis_class)
             nodes_s = part_s.nodes
             

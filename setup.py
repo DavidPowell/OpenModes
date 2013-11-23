@@ -57,8 +57,8 @@ fcompiler_dependent_options = {
     # gnu gfortran (including under mingw)
     'gnu95' : {
         # -O3 is most desireable, but generate NaNs under mingw32
-        'extra_f90_compile_args' : ["-g", "-fimplicit-none",  "-fopenmp", "-O1"],
-        #'extra_f90_compile_args' : ["-g", "-fimplicit-none",  "-fopenmp", "-Og", "-Wall", "-Wextra", "-fcheck=all", "-ffpe-trap=invalid,zero,overflow"],
+        #'extra_f90_compile_args' : ["-g", "-fimplicit-none",  "-fopenmp", "-O1"],
+        'extra_f90_compile_args' : ["-g", "-fimplicit-none",  "-fopenmp", "-Og", "-Wall", "-Wextra", "-fcheck=all", "-ffpe-trap=invalid,zero,overflow"],
         'libraries' : ["gomp"]
      },
         

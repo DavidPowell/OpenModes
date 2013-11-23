@@ -51,7 +51,7 @@ def test_interpolate_loop_star():
     xi_eta, weights = get_dunavant_rule(10)
     
     
-    r, res = basis.interpolate_function(ls_function , xi_eta)
+    r, res = basis.interpolate_function(ls_function, xi_eta)
     
     the_basis = basis[which_basis]
     
