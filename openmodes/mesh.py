@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
 import os.path as osp
+import uuid
 
 from openmodes import gmsh
 
@@ -93,17 +94,14 @@ class TriangularSurfaceMesh(object):
         """
         
         self.nodes = np.asfortranarray(raw_mesh['nodes'])
-        #N_nodes = len(self.nodes)
-
         self.polygons = np.asfortranarray(raw_mesh['triangles'])
         
         try:
             self.physical_name = raw_mesh['physical_name']
         except KeyError:
             self.physical_name = None
-        #N_tri = len(self.polygons)
 
-        #self.edges = raw_mesh['edges']
+        self.id = uuid.uuid4()
 
 #    def __repr__(self):
 #        return "Nodes

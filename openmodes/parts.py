@@ -17,7 +17,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-
+import uuid
 import numpy as np
 
 # a constant, indicating that this material is a perfect electric conductor
@@ -27,34 +27,22 @@ class Part(object):
     """A part which has been placed into the simulation, and which can be
     modified"""
 
-    def __init__(self, mesh, material=PecMaterial, location = None):
+    def __init__(self, mesh, material = PecMaterial, location = None):
                      
-        #notify_function,                      
-
         self.mesh = mesh
         self.material = material
-        #self.notify = notify_function
+        self.id = uuid.uuid4()
 
         self.initial_location = location
         self.reset()
-        #self.transformation_matrix = np.eye(4)
-        #if location is not None:
-        #    self.translate(location)
-
-    #def notify(self):
-    #    """Notify that this part has been changed"""
-    #    self.notify_function()
         
     def reset(self):
-        """Reset this part to the default values of the original `LibraryPart`
-        from which this `SimulationPart` was created
-        """
-        
+        """Reset this part to the default values of the original `Mesh`
+        from which this `Part` was created
+        """        
         self.transformation_matrix = np.eye(4)
         if self.initial_location is not None:
             self.translate(self.initial_location)
-        #else:
-        #    self.notify()
 
     @property
     def nodes(self):
@@ -67,15 +55,11 @@ class Part(object):
         
         Care needs to be take if this puts an object in a different layer
         """
-        # does not break relationship with parent
-        #self.nodes = self.nodes+np.array(offset_vector)
-         
         translation = np.eye(4)
         translation[:3, 3] = offset_vector
          
-        self.transformation_matrix = np.dot(translation, self.transformation_matrix)
-         
-        #self.notify() # reset any combined mesh this is a part of
+        self.transformation_matrix = np.dot(translation, 
+                                            self.transformation_matrix)
            
     def rotate(self, axis, angle):
         """
@@ -103,13 +87,15 @@ class Part(object):
         a = np.cos(0.5*angle)
         b, c, d = axis*np.sin(0.5*angle)
         
-        matrix = np.array([[a**2 + b**2 - c**2 - d**2, 2*(b*c - a*d), 2*(b*d + a*c), 0],
-                           [2*(b*c + a*d), a**2 + c**2 - b**2 - d**2, 2*(c*d - a*b), 0],
-                           [2*(b*d - a*c), 2*(c*d + a*b), a**2 + d**2 - b**2 - c**2, 0],
-                           [0, 0, 0, 1]])
+        matrix = np.array([[a**2 + b**2 - c**2 - d**2, 
+                            2*(b*c - a*d), 2*(b*d + a*c), 0],
+                           [2*(b*c + a*d), a**2 + c**2 - b**2 - d**2, 
+                            2*(c*d - a*b), 0],
+                           [2*(b*d - a*c), 2*(c*d + a*b), 
+                            a**2 + d**2 - b**2 - c**2, 0],
+                           [0, 0, 0, 1.0]])
         
         self.transformation_matrix = np.dot(matrix, self.transformation_matrix)
-        #self.notify()
 
     def scale(self, scale_factor):
         raise NotImplementedError

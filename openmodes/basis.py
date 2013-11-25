@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from collections import namedtuple
 from scipy.sparse import dok_matrix
 import numpy as np
+import uuid
 
 from openmodes.mesh import nodes_not_in_edge, shared_nodes
 
@@ -77,6 +78,9 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True):
 
 class LinearTriangleBasis(object):
     "An abstract base class for 1st order basis functions on triangles"
+
+    def __init__(self):
+        self.id = uuid.uuid4()
 
     def interpolate_function(self, linear_func, xi_eta = [[1.0/3, 1.0/3]], 
                              flatten = True, return_scalar=False):
@@ -140,6 +144,7 @@ class DivRwgBasis(LinearTriangleBasis):
         will be referenced, so it should not be modified after generating the
         basis functions.
         """
+        super(DivRwgBasis, self).__init__()
         self.mesh = mesh
 
         if edge_cache is None:
@@ -328,6 +333,7 @@ class LoopStarBasis(LinearTriangleBasis):
     """
     
     def __init__(self, mesh):
+        super(LoopStarBasis, self).__init__()
         self.mesh = mesh
 
         edges, triangles_shared_by_edges = mesh.get_edges(True)
@@ -338,12 +344,9 @@ class LoopStarBasis(LinearTriangleBasis):
             raise ValueError("Mesh edges must be part of exactly 1 or 2" +
                              "triangles for loop-star basis functions")
 
-
         self.rwg_star = construct_stars(mesh, edges, triangles_shared_by_edges, sharing_count)
 
-
         # Now start searching for loops
-
         num_nodes = len(mesh.nodes)        
 
         # find the set of unshared edges
@@ -508,12 +511,13 @@ def get_basis_functions(mesh, basis_class):
     # unique. Potentially this could be expanded to include non-affine mesh
     # transformations, or other parameters passed to the basis function
     # constructor
-    unique_key = (mesh, basis_class)    
+    unique_key = (mesh.id, basis_class)    
     
     if unique_key in cached_basis_functions:
         #print "Basis functions retrieved from cache"
         return cached_basis_functions[unique_key]
     else:
+        #print "Calculating new basis functions"
         result = basis_class(mesh)
         cached_basis_functions[unique_key] = result
         return result
