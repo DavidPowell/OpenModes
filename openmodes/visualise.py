@@ -5,6 +5,8 @@ Created on Tue Oct 29 12:17:16 2013
 @author: dap124
 """
 
+from openmodes.parts import Part
+
 #import matplotlib.tri as mtri
 
 def plot_parts(parts, figsize=(10, 4), view_angles = (20, 90)):
@@ -12,7 +14,7 @@ def plot_parts(parts, figsize=(10, 4), view_angles = (20, 90)):
     
     Parameters
     ----------
-    parts : list of LibraryPart or SimulationPart
+    parts : list of `Mesh` or `Part`
         The parts to plot
     figsize : tuple, optional
         The figsize (in inches) which will be passed to matplotlib
@@ -30,7 +32,12 @@ def plot_parts(parts, figsize=(10, 4), view_angles = (20, 90)):
     ax = fig.add_subplot(111, projection='3d')
     
     for part in parts:
-        for edge in part.get_edges():
+        if isinstance(part, Part):
+            mesh = part.mesh
+        else:
+            mesh = part
+            
+        for edge in mesh.get_edges():
             nodes = part.nodes[edge]
             ax.plot(nodes[:, 0], nodes[:, 1], nodes[:, 2], 'k')
         #ax.scatter(part.nodes[:, 0], part.nodes[:, 1], part.nodes[:, 2], marker='x')
@@ -79,7 +86,6 @@ def write_vtk(mesh, nodes, filename, vector_function=None,
                             lookup_table="default"))
         data.append(Scalars(scalar_function.imag, name=scalar_name+"_imag", 
                             lookup_table="default"))
-
     
     cell_data = CellData(*data)
 
