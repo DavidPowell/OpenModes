@@ -96,7 +96,7 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
         the sparse array of singular impedance terms
     
     """
-    unique_id = ("EFIE", "RWG", basis.__hash__(), quadrature_rule.__repr__())
+    unique_id = ("EFIE", "RWG", basis.id, quadrature_rule.__repr__())
     if unique_id in cached_singular_terms:
         #print "singular terms retrieved from cache"
         return cached_singular_terms[unique_id]
@@ -132,7 +132,6 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
                 else:
                     # at least one node is shared
                     # calculate neighbour integrals semi-numerically
-                    #nodes_q = 
                     res = openmodes_core.face_integrals_hanninen(
                                         nodes[polygons[q]], xi_eta_eval, weights, nodes_p)
                     assert(np.all(np.isfinite(res[0])) and np.all(np.isfinite(res[1])))
@@ -145,50 +144,31 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
 
 def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o, 
                                   basis_s = None, nodes_s = None):
+    """EFIE derived Impedance matrix for RWG or loop-star basis functions"""
 
     xi_eta_eval, weights = quadrature_rule
-
     transform_L_o, transform_S_o = basis_o.transformation_matrices
-    
     num_faces_o = len(basis_o.mesh.polygons)
-
 
     if (basis_s is None):
         # calculate self impedance
-        print "self"
 
         singular_terms = singular_impedance_rwg_efie_homogeneous(basis_o, 
                                                              quadrature_rule)
-
         #(I_phi_sing, I_A_sing, index_sing, indptr_sing) = singular_terms
         #assert(sum(np.isnan(I_phi_sing)) == 0)
         #assert(sum(np.isnan(I_A_sing)) == 0)
    
-        #n_basis = len(basis_o)
         num_faces_s = num_faces_o
         A_faces, phi_faces = openmodes_core.z_efie_faces_self(nodes_o, 
-                                          basis_o.mesh.polygons, s, 
-                                          xi_eta_eval, weights, *singular_terms) #I_phi_sing, I_A_sing, index_sing, indptr_sing)
-                                          #
-
-        #L = triangle_face_to_rwg(A_faces, basis.rwg, basis.rwg)
-        #S = triangle_face_to_rwg(phi_faces, basis.rwg, basis.rwg)
-
+                                         basis_o.mesh.polygons, s, 
+                                         xi_eta_eval, weights, *singular_terms)
+                                #I_phi_sing, I_A_sing, index_sing, indptr_sing)
         transform_L_s = transform_L_o
         transform_S_s = transform_S_o
     
-        # needs to be cached
-        # A faces does not need to be transposed as it is symmetric
-    
-        #L, S = openmodes_core.triangle_face_to_rwg(basis_o.rwg.tri_p, basis_o.rwg.tri_m,
-        #                                           basis_o.rwg.node_p, basis_o.rwg.node_m, A_faces, phi_faces)
-    
-        #L, S = core_cython.triangle_face_to_rwg(basis.rwg.tri_p, basis.rwg.tri_m,
-        #                                           basis.rwg.node_p, basis.rwg.node_m, A_faces, phi_faces)
-
     else:
         # calculate mutual impedance
-        print "mutual"
 
         num_faces_s = len(basis_s.mesh.polygons)
         
@@ -198,13 +178,8 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
 
         transform_L_s, transform_S_s = basis_s.transformation_matrices
 
-
-        #L = triangle_face_to_rwg(A_faces, basis_o.rwg, basis_s.rwg)
-        #S = triangle_face_to_rwg(phi_faces, basis_o.rwg, basis_s.rwg)
-#    L, S = openmodes_core.triangle_face_to_rwg(basis.tri_p, basis.tri_m, 
-#                            basis.node_p, basis.node_m, A_faces, phi_faces)
-
-    L = transform_L_o.dot(transform_L_s.dot(A_faces.reshape(num_faces_o*3, num_faces_s*3).T).T)
+    L = transform_L_o.dot(transform_L_s.dot(A_faces.reshape(num_faces_o*3, 
+                                                        num_faces_s*3).T).T)
     S = transform_S_o.dot(transform_S_s.dot(phi_faces.T).T)
 
     L *= mu_0/(4*pi)
@@ -222,26 +197,25 @@ class EfieOperator(object):
         self.quadrature_rule = quadrature_rule
         self.greens_function = greens_function
         
-    def impedance_matrix(self, s, part_o, part_s=None):
+    def impedance_matrix(self, s, part_o, part_s=None, combine=False):
         """Calculate the impedance matrix for a single part, at a given
         complex frequency s"""
         
         basis_o = get_basis_functions(part_o.mesh, self.basis_class)
         
-        if part_s is None or part_s == part_o:
+        if part_s is None or part_s.id == part_o.id:
             #print "self"
             basis_s = None
             nodes_s = None
         else:
             #print "mutual"
-            #print part_o, part_s
             basis_s = get_basis_functions(part_s.mesh, self.basis_class)
             nodes_s = part_s.nodes
             
         
         if isinstance(self.greens_function, FreeSpaceGreensFunction):
             if isinstance(basis_o, LinearTriangleBasis):
-                return impedance_rwg_efie_free_space(s, self.quadrature_rule, 
+                result = impedance_rwg_efie_free_space(s, self.quadrature_rule, 
                                                      basis_o, part_o.nodes, 
                                                      basis_s, nodes_s)
             else:
@@ -250,7 +224,12 @@ class EfieOperator(object):
         else:
             raise NotImplementedError
             
-    def plane_wave_source(self, part, e_inc, jk_inc):
+        if combine:
+            return s*result[0] + result[1]/s
+        else:
+            return result
+            
+    def source_plane_wave(self, part, e_inc, jk_inc):
         """Evaluate the source vector due to the incident wave
         
         Parameters
@@ -266,7 +245,6 @@ class EfieOperator(object):
             the source "voltage" vector
         """
         basis = get_basis_functions(part.mesh, self.basis_class)
-        #basis = self.basis[part_number]
 
         if (isinstance(basis, LinearTriangleBasis) and 
             isinstance(self.greens_function, FreeSpaceGreensFunction)):
@@ -306,4 +284,4 @@ class EfieOperator(object):
             
         
 
-        
+#def get_impedance(operator, part_o, part_s = None)

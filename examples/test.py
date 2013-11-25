@@ -29,7 +29,7 @@ import openmodes
 from openmodes.visualise import plot_parts, write_vtk
 from openmodes.constants import c
 from openmodes.basis import DivRwgBasis, LoopStarBasis
-from openmodes.eig import linearised_eig
+from openmodes.eig import eig_linearised
 
 
 def loop_star_linear_eigenmodes():
@@ -54,7 +54,7 @@ def loop_star_linear_eigenmodes():
     s = 2j*np.pi*freq
     
     L, S = sim.operator.impedance_matrix(s, part1)
-    V = sim.operator.plane_wave_source(part1, np.array([0, 1, 0]), np.array([0, 0, 0]))
+    V = sim.operator.source_plane_wave(part1, np.array([0, 1, 0]), np.array([0, 0, 0]))
     
     #I = la.solve(s*L + S/s, V)
     
@@ -64,7 +64,7 @@ def loop_star_linear_eigenmodes():
     
     basis = basis_class(ring1)
     
-    w, vr = sim.linearised_eig(part1, L, S, n_modes)
+    w, vr = sim.eig_linearised(part1, L, S, n_modes)
     
     #I = np.zeros(len(basis), np.complex128)
     #I[0] = 1.0
@@ -163,7 +163,7 @@ def srr_coupling():
 
         y_srr[count] = 1.0/z_direct
 
-        #w, v = mom.linearised_eig(L, S, n_modes, which_obj = 0)
+        #w, v = mom.eig_linearised(L, S, n_modes, which_obj = 0)
         #w, vl, vr = sim.get_eigs(L[r1, r1], S[r1, r1], filter_freq, left=True)
 
 
@@ -347,8 +347,8 @@ def test_rwg():
         jk_inc = s/c*k_hat
         
         L, S = sim.operator.impedance_matrix(s, srr)
-        #V = sim.operator.plane_wave_source(sim.parts[0], s, e_inc, jk_inc)
-        V = sim.operator.plane_wave_source(srr, e_inc, jk_inc)
+        #V = sim.operator.source_plane_wave(sim.parts[0], s, e_inc, jk_inc)
+        V = sim.operator.source_plane_wave(srr, e_inc, jk_inc)
     
         extinction[freq_count] = np.dot(V.conj(), la.solve(s*L + S/s, V))
        
@@ -388,8 +388,8 @@ def test_sphere():
         jk_inc = s/c*k_hat
         
         L, S = sim.operator.impedance_matrix(s, sphere)
-        #V = sim.operator.plane_wave_source(sim.parts[0], s, e_inc, jk_inc)
-        V = sim.operator.plane_wave_source(sphere, e_inc, jk_inc)
+        #V = sim.operator.source_plane_wave(sim.parts[0], s, e_inc, jk_inc)
+        V = sim.operator.source_plane_wave(sphere, e_inc, jk_inc)
     
         extinction[freq_count] = np.dot(V.conj(), la.solve(s*L + S/s, V))
        
@@ -400,35 +400,147 @@ def test_sphere():
     #plt.plot(k_num, extinction.imag)
     plt.show()
 
-#def mutual_impedance()
+def reduced_impedance():
+    "Plot the reduced self impedance"
+    ring1, ring2 = openmodes.load_mesh(
+                    osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
+    
+    #basis_class=LoopStarBasis
+    basis_class=DivRwgBasis
+    
+    sim = openmodes.Simulation(basis_class=basis_class)
+    part1 = sim.place_part(ring1)
+    part2 = sim.place_part(ring2)
+     
+    
+    e_inc = np.array([0, 1, 0], dtype=np.complex128)
+    k_hat = np.array([0, 0, 1], dtype=np.complex128)
+    
+    
+    freqs = np.linspace(1e9, 25e9, 51)
+    
+    L_list = []
+    S_list = []
+    
+    P = []
+    
+    num_modes = 3
+    
+    extinction = np.empty(len(freqs), np.complex128)
+    
+    for freq in freqs:
+        s = 2j*np.pi*freq
+    
+        impedance = sim.calculate_impedance(s)
+        impedance.calculate_eigenmodes(num_modes)
+        #P.append(w[0])
+        L, S = impedance.impedance_reduced()
+        
+        
+        V = impedance.source_reduced(sim.source_plane_wave(e_inc, k_hat*s/c))
+        L_list.append(L)
+        S_list.append(S)
+    #    L = impedance.L_parts[1][1]
+    #    S = impedance.S_parts[1][1]
+    #    P.append(np.vdot(V, la.solve(s*L + S/s, V)))
+    
+    L_list = np.array(L_list)
+    S_list = np.array(S_list)
+    #
+    P = np.array(P)
+    
+    plt.figure()
+    plt.subplot(2, 1, 1)
+    #plt.plot(freqs*1e-9, P.real, 'x')
+    plt.plot(freqs*1e-9, L_list[:, 0, 0].real, 'x')
+    plt.plot(freqs*1e-9, L_list[:, 1, 1].real, 'x')
+    plt.plot(freqs*1e-9, L_list[:, 2, 2].real, 'x')
+    
+    plt.subplot(2, 1, 2)
+    
+    plt.plot(freqs*1e-9, L_list[:, 0, 0].imag, 'x')
+    plt.plot(freqs*1e-9, L_list[:, 1, 1].imag, 'x')
+    plt.plot(freqs*1e-9, L_list[:, 2, 2].imag, 'x')
+    
+    
+    plt.show()
+    
+def coupled_extinction():
+    """Calculate extinction for a coupled pair, showing that the reduced
+    problem gives the same result as the full problem"""
+    
+    ring1, ring2 = openmodes.load_mesh(
+                    osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
+    
+    basis_class=LoopStarBasis
+    #basis_class=DivRwgBasis
+    
+    sim = openmodes.Simulation(basis_class=basis_class)
+    part1 = sim.place_part(ring1)
+    part2 = sim.place_part(ring2)
+     
+    
+    e_inc = np.array([0, 1, 0], dtype=np.complex128)
+    k_hat = np.array([0, 0, 1], dtype=np.complex128)
+    
+    
+    freqs = np.linspace(10e9, 25e9, 51)
+    
+    L_list = []
+    S_list = []
+    
+    P = []
+    
+    num_modes = 3
+    
+    extinction_red = np.empty(len(freqs), np.complex128)
+    extinction_tot = np.empty(len(freqs), np.complex128)
+    
+    for freq_count, freq in enumerate(freqs):
+        s = 2j*np.pi*freq
+    
+        impedance = sim.calculate_impedance(s)
+        V = sim.source_plane_wave(e_inc, k_hat*s/c)
+        
+        impedance.calculate_eigenmodes(num_modes)
+        L_red, S_red = impedance.impedance_reduced()
+        V_red = impedance.source_reduced(V)
+        extinction_red[freq_count] = np.vdot(V_red, la.solve(s*L_red + S_red/s, V_red))
+    
+        L_tot, S_tot = impedance.impedance_combined()
+        V_tot = np.hstack(V)
+        extinction_tot[freq_count] = np.vdot(V_tot, la.solve(s*L_tot + S_tot/s, V_tot))
+    
+    
+    
+    plt.figure()
+    plt.subplot(2, 1, 1)
+    plt.plot(freqs*1e-9, extinction_red.real)
+    plt.plot(freqs*1e-9, extinction_tot.real)
+    plt.subplot(2, 1, 2)
+    plt.plot(freqs*1e-9, extinction_red.imag)
+    plt.plot(freqs*1e-9, extinction_tot.imag)
+    plt.show()
+
+
+#def test_nonlinear_eig():
 ring1, ring2 = openmodes.load_mesh(
                 osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
 
-#basis_class=LoopStarBasis
-basis_class=DivRwgBasis
+basis_class=LoopStarBasis
+#basis_class=DivRwgBasis
 
 sim = openmodes.Simulation(basis_class=basis_class)
 part1 = sim.place_part(ring1)
 part2 = sim.place_part(ring2)
-   
-freq = 7e9
-s = 2j*np.pi*freq
+ 
+e_inc = np.array([0, 1, 0], dtype=np.complex128)
+k_hat = np.array([0, 0, 1], dtype=np.complex128)
 
-S_list = []
-L_list = []
+start_freq = 15e9
+start_s = 2j*np.pi*start_freq
 
-for index_a, part_a in enumerate(sim.parts):
-    S_list.append([])
-    L_list.append([])
-    for index_b, part_b in enumerate(sim.parts):
-        if index_a == index_b:
-            L, S = sim.operator.impedance_matrix(s, part_a)
-        else:
-            L, S = sim.operator.impedance_matrix(s, part_a, part_b)
-        S_list[-1].append(S)
-        L_list[-1].append(L)
-#V1 = sim.operator.plane_wave_source(part1, np.array([0, 1, 0]), np.array([0, 0, 0]))
-#V2 = sim.operator.plane_wave_source(part2, np.array([0, 1, 0]), np.array([0, 0, 0]))
+s_modes, j_modes = sim.find_singularities(s, 1)
 
 
 #loop_star_linear_eigenmodes()
@@ -437,3 +549,4 @@ for index_a, part_a in enumerate(sim.parts):
 #test_plotting()
 #compare_source_terms()
 #test_rwg()
+coupled_extinction()
