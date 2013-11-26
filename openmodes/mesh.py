@@ -172,12 +172,17 @@ class TriangularSurfaceMesh(object):
                 
         return polygons
 
-
     @property
     def shortest_edge(self):
         """The shortest edge in the mesh"""
         return self.edge_lens.min()
-     
+
+    @property  
+    def max_distance(self):
+        """The furthest distance between any two nodes in this mesh"""
+        return np.sqrt(np.sum((self.nodes[:, None, :] - 
+                                    self.nodes[None, :, :])**2, axis=2)).max()
+   
     @property
     def polygon_areas(self):
         """The area of each triangle in the mesh"""
@@ -201,7 +206,6 @@ class TriangularSurfaceMesh(object):
         # each edge is numbered according to its opposite node
         return np.sqrt(np.sum((np.roll(vertices, 1, axis=1) - 
                             np.roll(vertices, 2, axis=1))**2, axis=2))    
-
 
 def load_mesh(filename, mesh_tol=None, force_tuple = False):
     """
