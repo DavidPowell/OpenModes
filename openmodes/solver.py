@@ -34,14 +34,13 @@ from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
 from openmodes.eig import eig_linearised, eig_newton
 
 # SimulationResult?? (also contains field?)
-class ImpedanceData(object):
+class ImpedanceMatrix(object):
     """Holds all the different forms of the impedance matrices for a set of
     parts, calculated at a specific frequency"""
     
     def __init__(self, s, operator, parts):
         self.s = s
         self.operator = operator
-        #self.parts
         
         S_parts = []
         L_parts = []
@@ -64,7 +63,6 @@ class ImpedanceData(object):
 
         self.L_parts = L_parts
         self.S_parts = S_parts
-        #return L_parts, S_parts
 
     def impedance_combined(self):
         """Evaluate the self and mutual impedances of all parts combined into
@@ -88,68 +86,70 @@ class ImpedanceData(object):
         S_tot[:] = np.nan
 
         row_offset = 0
-        for a, (L_row, S_row) in enumerate(zip(self.L_parts, self.S_parts)):
+        for L_row, S_row in zip(self.L_parts, self.S_parts):
             row_size = L_row[0].shape[0]
             col_offset = 0
-            for b, (L, S) in enumerate(zip(L_row, S_row)):
+            for L, S in zip(L_row, S_row):
                 col_size = L.shape[1]
                 L_tot[row_offset:row_offset+row_size, col_offset:col_offset+col_size] = L
                 S_tot[row_offset:row_offset+row_size, col_offset:col_offset+col_size] = S
                 col_offset += col_size
             row_offset += row_size
             
-        #self.L_tot = L_tot
-        #self.S_tot = S_tot
         return L_tot, S_tot
 
-#    def eig_linearised(self, num_modes = 1):
-#        """Solves a linearised approximation to the eigenvalue problem from
-#        the impedance calculated at some fixed frequency.
-#        
-#        Parameters
-#        ----------
-#        L, S : ndarray
-#            The two components of the impedance matrix. They *must* be
-#            calculated in the loop-star basis.
-#        n_modes : int
-#            The number of modes required.
-#        which_obj : int, optional
-#            Which object in the system to find modes for. If not specified, 
-#            then modes of the entire system will be found
-#            
-#        Returns
-#        -------
-#        omega_mode : ndarray, complex
-#            The resonant frequencies of the modes
-#        j_mode : ndarray, complex
-#            Columns of this matrix contain the corresponding modal currents
-#        """
-#        #basis = get_basis_functions(part.mesh, self.basis_class)
-#        #return eig_linearised(L, S, num_modes, basis)
-#
-##        if L_parts is None or S_parts is None:
-##            L_parts, S_parts = self.impedance_parts(s)
-#
-#        part_impedances = []
-#        part_currents = []        
-#        
-#        for i, part in enumerate(self.parts):
-#            basis = get_basis_functions(part.mesh, self.basis_class)
-#            mode_impedances, mode_currents = eig_linearised(self.L_parts[i][i], 
-#                                        self.S_parts[i][i], num_modes, basis)
-#            part_impedances.append(mode_impedances)
-#            part_currents.append(mode_currents)
-#
-#        self.part_impedances = part_impedances
-#        self.part_currents = part_currents
-#
-#        return part_impedances, part_currents
+    def eig_linearised(self, num_modes = 1):
+        """Solves a linearised approximation to the eigenvalue problem from
+        the impedance calculated at some fixed frequency.
+        
+        Parameters
+        ----------
+        L, S : ndarray
+            The two components of the impedance matrix. They *must* be
+            calculated in the loop-star basis.
+        n_modes : int
+            The number of modes required.
+        which_obj : int, optional
+            Which object in the system to find modes for. If not specified, 
+            then modes of the entire system will be found
+            
+        Returns
+        -------
+        omega_mode : ndarray, complex
+            The resonant frequencies of the modes
+        j_mode : ndarray, complex
+            Columns of this matrix contain the corresponding modal currents
+        """
+        #basis = get_basis_functions(part.mesh, self.basis_class)
+        #return eig_linearised(L, S, num_modes, basis)
+
+#        if L_parts is None or S_parts is None:
+#            L_parts, S_parts = self.impedance_parts(s)
+
+        part_impedances = []
+        part_currents = []        
+        
+        for i, part in enumerate(self.parts):
+            basis = get_basis_functions(part.mesh, self.basis_class)
+            mode_impedances, mode_currents = eig_linearised(self.L_parts[i][i], 
+                                        self.S_parts[i][i], num_modes, basis)
+            part_impedances.append(mode_impedances)
+            part_currents.append(mode_currents)
+
+        self.part_impedances = part_impedances
+        self.part_currents = part_currents
+
+        return part_impedances, part_currents
 
     def calculate_eigenmodes(self, num_modes = 1):
         """Calculate the eigenimpedance and eigencurrents of each part's modes
         
         The modes with the smallest imaginary part of their impedance will be
         returned.
+        
+        Note that the impedance matrix is typically *ill-conditioned*.
+        Therefore this routine can return junk results, particularly if the
+        mesh is dense.
         """
         
         part_impedances = []
@@ -317,8 +317,6 @@ class Simulation(object):
 
         return sim_part
 
-        # always call impedance_parts in constructor?
-
     def calculate_impedance(self, s):
         """Evaluate the self and mutual impedances of all parts  in the
         simulation. Return an impedance object which can calculate several
@@ -331,11 +329,11 @@ class Simulation(object):
         
         Returns
         -------
-        impedance_data : ImpedanceData
-            The impedance data object which can represent the impedance object
-            in several ways.
+        impedance_matrix : ImpedanceMatrix
+            The impedance matrix object which can represent the impedance of
+            the object in several ways.
         """
-        return ImpedanceData(s, self.operator, self.parts)
+        return ImpedanceMatrix(s, self.operator, self.parts)
     
             
     def source_plane_wave(self, e_inc, jk_inc):
@@ -352,12 +350,12 @@ class Simulation(object):
         Returns
         -------
         V : list of ndarray
-            the source "voltage" vector for each part
+            the source vector for each part
         """
         return [self.operator.source_plane_wave(part, e_inc, jk_inc) for part 
                 in self.parts]
                 
-    def find_singularities(self, s_start, num_modes):
+    def part_singularities(self, s_start, num_modes):
         """Find the singularities of the system in the complex frequency plane
 
         Parameters
@@ -371,10 +369,11 @@ class Simulation(object):
         all_s = []
         all_j = []        
         
-        for i, part in enumerate(self.parts):
+        for part in self.parts:
             basis = get_basis_functions(part.mesh, self.basis_class)
             L, S = self.operator.impedance_matrix(s_start, part)
             lin_s, lin_currents = eig_linearised(L, S, num_modes, basis)
+            #print lin_s/2/np.pi
 
             mode_s = np.empty(num_modes, np.complex128)
             mode_j = np.empty((len(basis), num_modes), np.complex128)
@@ -383,14 +382,18 @@ class Simulation(object):
         
             for mode in xrange(num_modes):
                 res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode], 
-                                 weight='max element', lambda_tol=1e-12)#, max_iter=200, lambda_tol=1e-4)
+                                 weight='max element', lambda_tol=1e-8, max_iter=200)
                                  
                 print "Iterations", res['iter_count']
+                #print res['eigval']/2/np.pi
                 mode_s[mode] = res['eigval']
                 j_calc = res['eigvec']
-                mode_j[::, mode] = j_calc/np.sqrt(np.sum(j_calc**2))
+                mode_j[:, mode] = j_calc/np.sqrt(np.sum(j_calc**2))
                 
             all_s.append(mode_s)
             all_j.append(mode_j)
+
+#            all_s.append(lin_s)
+#            all_j.append(lin_currents)
 
         return all_s, all_j

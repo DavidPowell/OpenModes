@@ -28,14 +28,13 @@ import scipy.sparse.linalg as spla
 import openmodes
 from openmodes.visualise import plot_parts, write_vtk
 from openmodes.constants import c
-from openmodes.basis import DivRwgBasis, LoopStarBasis
+from openmodes.basis import DivRwgBasis, LoopStarBasis, get_basis_functions
 from openmodes.eig import eig_linearised
 
 
 def loop_star_linear_eigenmodes():
     """"Solve the linearised eigenvalue problem in a loop-star basis.
     """
-    
     
     ring1, ring2 = openmodes.load_mesh(
                     osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
@@ -470,7 +469,7 @@ def coupled_extinction():
     problem gives the same result as the full problem"""
     
     ring1, ring2 = openmodes.load_mesh(
-                    osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
+                    osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=0.5e-3)
     
     basis_class=LoopStarBasis
     #basis_class=DivRwgBasis
@@ -480,21 +479,17 @@ def coupled_extinction():
     part2 = sim.place_part(ring2)
      
     
-    e_inc = np.array([0, 1, 0], dtype=np.complex128)
+    e_inc = np.array([1, 0, 0], dtype=np.complex128)
     k_hat = np.array([0, 0, 1], dtype=np.complex128)
-    
-    
-    freqs = np.linspace(10e9, 25e9, 51)
-    
-    L_list = []
-    S_list = []
-    
-    P = []
+        
+    freqs = np.linspace(5e9, 15e9, 201)
     
     num_modes = 3
     
     extinction_red = np.empty(len(freqs), np.complex128)
     extinction_tot = np.empty(len(freqs), np.complex128)
+
+    extinction_parts = np.empty((len(freqs), len(sim.parts)*num_modes), np.complex128)
     
     for freq_count, freq in enumerate(freqs):
         s = 2j*np.pi*freq
@@ -511,37 +506,162 @@ def coupled_extinction():
         V_tot = np.hstack(V)
         extinction_tot[freq_count] = np.vdot(V_tot, la.solve(s*L_tot + S_tot/s, V_tot))
     
-    
+        for i in xrange(len(sim.parts)*num_modes):
+            extinction_parts[freq_count, i] = V_red[i].conj()*V_red[i]/(s*L_red[i, i] + S_red[i, i]/s)
     
     plt.figure()
     plt.subplot(2, 1, 1)
     plt.plot(freqs*1e-9, extinction_red.real)
     plt.plot(freqs*1e-9, extinction_tot.real)
     plt.subplot(2, 1, 2)
-    plt.plot(freqs*1e-9, extinction_red.imag)
-    plt.plot(freqs*1e-9, extinction_tot.imag)
+    #plt.plot(freqs*1e-9, extinction_red.imag)
+    #plt.plot(freqs*1e-9, extinction_tot.imag)
+    plt.plot(freqs*1e-9, extinction_parts.real)
     plt.show()
 
 
-#def test_nonlinear_eig():
-ring1, ring2 = openmodes.load_mesh(
-                osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
+def test_nonlinear_eig_asrr():
+    ring1, ring2 = openmodes.load_mesh(
+                    osp.join("geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
+    
+    basis_class=LoopStarBasis
+    #basis_class=DivRwgBasis
+    
+    sim = openmodes.Simulation(basis_class=basis_class)
+    part1 = sim.place_part(ring1)
+    part2 = sim.place_part(ring2)
+     
+    e_inc = np.array([1.0, 0, 0], dtype=np.complex128)
+    k_hat = np.array([0, 0, 1], dtype=np.complex128)
+    
+    start_freq = 15e9
+    start_s = 2j*np.pi*start_freq
+    
+    s_modes, j_modes = sim.part_singularities(start_s, 1)
+    
+    print np.array(s_modes)/2/np.pi
+
+def test_nonlinear_eig_srr():
+    
+    ring1 = openmodes.load_mesh(
+                        osp.join("geometry", "SRR.geo"), mesh_tol=1e-3)
+    
+    
+    basis_class=LoopStarBasis
+    #basis_class=DivRwgBasis
+    
+    sim = openmodes.Simulation(basis_class=basis_class)
+    part1 = sim.place_part(ring1)
+    #part2 = sim.place_part(ring2)
+     
+    e_inc = np.array([1.0, 1.00, 0], dtype=np.complex128)
+    k_hat = np.array([0, 0, 1], dtype=np.complex128)
+    
+    start_freq = 10e9
+    start_s = 2j*np.pi*start_freq
+    
+    num_modes = 3
+    
+    #s_modes, j_modes = sim.part_singularities(start_s, num_modes)
+    #
+    #print np.array(s_modes)/2/np.pi
+    
+    freqs = np.linspace(1e9, 20e9, 201)
+    
+    extinction_red = np.empty((len(freqs), num_modes), np.complex128)
+    extinction_tot = np.empty(len(freqs), np.complex128)
+    
+    extinction_parts = np.empty((len(freqs), len(sim.parts)*num_modes), np.complex128)
+    
+    w_list = []
+    
+    for freq_count, freq in enumerate(freqs):
+        s = 2j*np.pi*freq
+    
+        impedance = sim.calculate_impedance(s)
+        V = sim.source_plane_wave(e_inc, k_hat*s/c)
+        if freq_count == 0:
+            print len(V[0])
+        
+        w, vr = impedance.calculate_eigenmodes(num_modes)
+        w_list.append(w[0])
+        L_red, S_red = impedance.impedance_reduced()
+        V_red = impedance.source_reduced(V)
+        #extinction_red[freq_count] = np.vdot(V_red, la.solve(s*L_red + S_red/s, V_red))
+        extinction_red[freq_count] = V_red.conj()*V_red/np.diag(s*L_red + S_red/s)
+    
+        L_tot, S_tot = impedance.impedance_combined()
+        V_tot = np.hstack(V)
+        extinction_tot[freq_count] = np.vdot(V_tot, la.solve(s*L_tot + S_tot/s, V_tot))
+    
+    
+    
+    w_list = np.array(w_list)
+    
+     
+    plt.figure(figsize=(10, 4))
+    plt.subplot(1, 2, 1)
+    plt.plot(freqs*1e-9, w_list.real, 'x')
+    plt.subplot(1, 2, 2)
+    plt.plot(freqs*1e-9, w_list.imag, 'x')
+    #plt.ylim(-2, 1)
+    plt.show()
+
+#plt.figure()
+##plt.subplot(2, 1, 1)
+#plt.plot(freqs*1e-9, extinction_red.real)
+#plt.plot(freqs*1e-9, extinction_tot.real)
+#plt.show()    
+
+#def vis_eigencurrents():
+ring1 = openmodes.load_mesh(
+                    osp.join("geometry", "SRR.geo"), mesh_tol=0.2e-3)
+#ring1 = openmodes.load_mesh(osp.join("geometry", "SRR.msh"))
+
 
 basis_class=LoopStarBasis
 #basis_class=DivRwgBasis
 
 sim = openmodes.Simulation(basis_class=basis_class)
 part1 = sim.place_part(ring1)
-part2 = sim.place_part(ring2)
+#part2 = sim.place_part(ring2)
  
-e_inc = np.array([0, 1, 0], dtype=np.complex128)
-k_hat = np.array([0, 0, 1], dtype=np.complex128)
-
-start_freq = 15e9
+start_freq = 2e9
 start_s = 2j*np.pi*start_freq
 
-s_modes, j_modes = sim.find_singularities(s, 1)
+num_modes = 4
 
+s_modes, j_modes = sim.part_singularities(start_s, num_modes)
+print np.array(s_modes)/2/np.pi
+
+s = start_s    
+
+#impedance = sim.calculate_impedance(s)    
+#w, vr = impedance.calculate_eigenmodes(num_modes)
+
+basis = get_basis_functions(ring1, basis_class)
+
+#Z = s*impedance.L_parts[0][0]+impedance.S_parts[0][0]/s
+#
+#print la.svdvals(Z)
+
+
+
+for mode in xrange(num_modes):    
+    
+    #I = vr[0][:, mode]
+    I = j_modes[0][:, mode]
+    face_centre, face_current, face_charge = basis.interpolate_function(I, return_scalar=True)
+        
+    write_vtk(part1.mesh, part1.nodes, osp.join("output", "srr-mode-%d.vtk" % mode), 
+              vector_function = face_current, scalar_function=face_charge
+              )
+
+
+#pcolor(abs(impedance.S_parts[0][0]))
+
+
+#test_nonlinear_eig_srr()
 
 #loop_star_linear_eigenmodes()
 #srr_coupling()
@@ -549,4 +669,5 @@ s_modes, j_modes = sim.find_singularities(s, 1)
 #test_plotting()
 #compare_source_terms()
 #test_rwg()
-coupled_extinction()
+#coupled_extinction()
+#vis_eigencurrents()

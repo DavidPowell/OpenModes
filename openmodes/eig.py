@@ -53,6 +53,7 @@ def eig_linearised(L, S, num_modes, basis):
     # find eigenvalues, and star part of eigenvectors, for LS combined modes
     w, v_s = la.eig(S[star_range, star_range], -L_red)
     
+    
     if basis.num_loops == 0:
         vr = v_s
     else:
@@ -63,6 +64,8 @@ def eig_linearised(L, S, num_modes, basis):
 #    plt.loglog(w.real, w.imag, 'x')    
     
     w_freq = np.sqrt(w)#/2/np.pi
+    # make sure real part is negative
+    w_freq = np.where(w_freq.real > 0, -w_freq, w_freq)
 
     #plt.loglog(w_freq.real, w_freq.imag, 'x')    
 
@@ -110,13 +113,19 @@ def eig_newton(func, lambda_0, x_0, lambda_tol = 1e-8, max_iter = 20,
     res : dictionary
         A dictionary containing the following members:
         
-        'eigval' : the eigenvalue
+        `eigval` : the eigenvalue
         
         'eigvect' : the eigenvector
         
         'iter_count' : the number of iterations performed
         
         'delta_lambda' : the change in the eigenvalue on the final iteration
+
+
+    See:
+        P. Lancaster, Lambda Matrices and Vibrating Systems. Oxford: Pergamon, 1966.
+        A. Ruhe, “Algorithms for the Nonlinear Eigenvalue Problem,” SIAM J. Numer. Anal., vol. 10, no. 4, pp. 674–689, Sep. 1973.
+        
     """
 
     x_s = x_0
@@ -127,7 +136,8 @@ def eig_newton(func, lambda_0, x_0, lambda_tol = 1e-8, max_iter = 20,
     if not func_gives_der:
         # evaluate at an arbitrary nearby starting point to allow finite
         # differences to be taken
-        lambda_sm = lambda_0*(1+2*lambda_tol) # a point for taking finite differences
+        #lambda_sm = lambda_0*(1+2*lambda_tol)
+        lambda_sm = lambda_0*(1+10j*lambda_tol)
         T_sm = func(lambda_sm, *args)
    
     for iter_count in xrange(max_iter):
@@ -162,13 +172,15 @@ def eig_newton(func, lambda_0, x_0, lambda_tol = 1e-8, max_iter = 20,
             
         lambda_s = lambda_s1
         x_s = x_s1
+        #print x_s
+        #print lambda_s
         
         if converged: break
         
     if not converged:
         raise ValueError, "maximum iterations reached, no convergence"
      
-    res = {'eigval' : lambda_s, 'eigvec' : x_s, 'iter_count' : iter_count,
+    res = {'eigval' : lambda_s, 'eigvec' : x_s, 'iter_count' : iter_count+1,
            'delta_lambda' : delta_lambda}
      
     return res
