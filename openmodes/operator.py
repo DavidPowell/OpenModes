@@ -140,8 +140,6 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
         cached_singular_terms[unique_id] = singular_terms.to_csr()
         return cached_singular_terms[unique_id]
 
-#import core_cython
-
 def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o, 
                                   basis_s = None, nodes_s = None):
     """EFIE derived Impedance matrix for RWG or loop-star basis functions"""
@@ -255,30 +253,8 @@ class EfieOperator(object):
                                         basis.mesh.polygons, xi_eta_eval,
                                         weights, e_inc, jk_inc)
 
-
             transform_L, _ = basis.transformation_matrices
-
-            return transform_L.dot(incident_faces.flatten())
-          
-#            from core_cython import voltage_plane_wave_serial as voltage_plane_wave          
-#            incident = voltage_plane_wave(np.ascontiguousarray(part.nodes), 
-#                            np.ascontiguousarray(basis.mesh.polygons, dtype=np.int32), 
-#                            np.ascontiguousarray(basis.rwg.tri_p, dtype=np.int32), 
-#                            np.ascontiguousarray(basis.rwg.tri_m, dtype=np.int32), 
-#                            np.ascontiguousarray(basis.rwg.node_p, dtype=np.int32), 
-#                            np.ascontiguousarray(basis.rwg.node_m, dtype=np.int32), 
-#                            np.ascontiguousarray(xi_eta_eval), 
-#                            np.ascontiguousarray(weights[0]), e_inc, jk_inc)
-
-
-#            from openmodes_core import voltage_plane_wave
-#            
-#            incident = voltage_plane_wave(part.nodes, 
-#                            basis.mesh.polygons, basis.rwg.tri_p, 
-#                            basis.rwg.tri_m, basis.rwg.node_p, basis.rwg.node_m, 
-#                            xi_eta_eval, weights, e_inc, jk_inc)
-                                           
-            #return incident
+            return transform_L.dot(incident_faces.flatten())          
         else:
             raise NotImplementedError
             

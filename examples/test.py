@@ -266,47 +266,6 @@ def test_plotting():
     #set([srr1])
     plot_parts(sim.parts, view_angles=(40, 70))
 
-    
-def compare_source_terms():
-
-    import core_for
-    #import core_cython
-
-     
-    filename = osp.join("geometry", "SRR.geo")
-    
-    mesh_tol = 0.1e-3
-    srr = openmodes.load_parts(filename, mesh_tol)
-    
-    sim = openmodes.Simulation()    
-    sim.place_part(srr)
-    
-    
-    e_inc = np.array([1, 1, 0], dtype=np.complex128)
-    k_hat = np.array([0, 0, 1], dtype=np.complex128)
-    
-    s = 2j*np.pi*1e9
-    jk_inc = s/c*k_hat
-       
-    xi_eta_eval, weights = sim.quadrature_rule
-    nodes = sim.nodes
-    tri = sim.tri
-    basis = sim.basis
-        
-    
-    
-    incident = core_for.voltage_plane_wave(nodes, tri.nodes, basis.tri_p, 
-                       basis.tri_m, basis.node_p, basis.node_m, 
-                       xi_eta_eval, weights, e_inc, jk_inc)
-    #incident2 = core_cython.voltage_plane_wave(nodes, tri.nodes, basis.tri_p, basis.tri_m, basis.node_p, basis.node_m, xi_eta_eval, weights[0], e_inc, jk_inc)
-    
-    plt.figure()
-    plt.plot(incident.real)
-    plt.plot(incident.imag)
-    plt.plot(incident2.real, '--')
-    plt.plot(incident2.imag, '--')
-    plt.show()
-    
 def test_rwg():
     #from openmodes.mesh import TriangularSurfaceMesh
     #from openmodes.basis import DivRwgBasis

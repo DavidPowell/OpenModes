@@ -67,19 +67,6 @@ def test_interpolate_loop_star():
     #plt.plot(r[:, 0], r[:, 1], 'x')
     plt.show()
 
-def test_irregular_array():
-
-    from core_cython import IrregularIntArray
-    
-    a = IrregularIntArray([[1, 2, 3], [4, 5], [6, 7, 8, 9]])
-    print a[0, 1]
-    #try:
-    print a[4, 3]
-#except Exception as e:
-#    print e
-#prin
-
-
 def loop_star_to_vtk():
         
     mesh_tol = 1e-3
