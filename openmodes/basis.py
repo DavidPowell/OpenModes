@@ -227,7 +227,8 @@ class DivRwgBasis(LinearTriangleBasis):
                    self.rwg.node_p[index], self.rwg.node_m[index])
 
 def construct_stars(mesh, edges, triangles_shared_by_edges, sharing_count):
-    """Construct star basis functions on a triangular mesh"""
+    """Construct star basis functions on a triangular mesh. The star
+    corresponding to one triangle faces will be arbitrarily dropped"""
     
     num_tri = len(mesh.polygons)        
 
@@ -239,7 +240,7 @@ def construct_stars(mesh, edges, triangles_shared_by_edges, sharing_count):
     node_m = [list() for _ in xrange(num_tri)]
     
     # Go through shared edges, and update both star-basis functions
-    # to add the influence of this shared edge
+    # to add the influence of this shared edge.
     for edge_count in shared_edge_indices:
         tri1, tri2 = triangles_shared_by_edges[edge_count]
 
@@ -259,7 +260,7 @@ def construct_stars(mesh, edges, triangles_shared_by_edges, sharing_count):
         node_m[tri1].append(node2)
         node_m[tri2].append(node1)
  
-    return RWG(tri_p, tri_m, node_p, node_m)
+    return RWG(tri_p[:-1], tri_m[:-1], node_p[:-1], node_m[:-1])
 
 def construct_loop(loop_triangles, polygons):
     """Construct a single loop basis function corresponding to a single inner
@@ -362,6 +363,16 @@ class LoopStarBasis(LinearTriangleBasis):
         # find the nodes which don't belong to any shared edge
         inner_nodes = set(xrange(num_nodes)) - outer_nodes
 
+        triangles_sharing_nodes = mesh.triangles_sharing_nodes()
+
+#        # eliminate nodes which don't belong to any edge at all 
+#        # (e.g. the point at the centre when constructing an arc)
+#        for node_count in xrange(num_nodes):
+#            if len(triangles_sharing_nodes[node_count]) == 0:
+#                print "eliminated node", node_count
+#                inner_nodes.remove(node_count)
+
+
         #n_vertices = len(self.inner_nodes)+len(outer_nodes)
         #print "vertices", n_vertices
         #print "faces", len(triangles)
@@ -381,8 +392,6 @@ class LoopStarBasis(LinearTriangleBasis):
             # TODO: need to deal with holes in 2D (and 3D?) structures
             raise NotImplementedError
         
-        triangles_sharing_nodes = mesh.triangles_sharing_nodes()
-
         loop_tri_p = []
         loop_tri_m = []
         loop_node_p = []
@@ -487,8 +496,8 @@ class LoopStarBasis(LinearTriangleBasis):
             self.vector_transform = vector_transform.tocsr()
             self.scalar_transform = scalar_transform.tocsr()
     
-            #return self.vector_transform, self.scalar_transform
-            return self.vector_transform.tocsr(), self.scalar_transform.tocsr()
+            return self.vector_transform, self.scalar_transform
+            #return self.vector_transform.tocsr(), self.scalar_transform.tocsr()
             
 
 cached_basis_functions = {}      
