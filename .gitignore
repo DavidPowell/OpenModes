@@ -39,3 +39,6 @@ examples/.ipynb_checkpoints/
 src/openmodes_coremodule.c
 src/core_cython.c
 src/*.html
+*.vtk
+*.session
+*.session.gui
