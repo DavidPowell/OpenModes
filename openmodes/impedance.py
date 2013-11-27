@@ -25,8 +25,10 @@ import scipy.linalg as la
 import itertools
 
 # TODO: ImpedanceMatrix may need to know about number of loops and stars?
-class ImpedanceMatrix(object):
-    """Holds an impedance matrices calculated at a specific frequency
+class EfieImpedanceMatrix(object):
+    """Holds an impedance matrix from the electric field integral equation,
+    which contains two separate parts corresponding to the vector and scalar
+    potential.
     
     This is a single impedance matrix for the whole system
     """
@@ -36,6 +38,10 @@ class ImpedanceMatrix(object):
         assert(L.shape == S.shape)
         self.L = L
         self.S = S
+
+    def evaluate(self):
+        "Evaluates the total impedance matrix and returns it as an array"
+        return self.s*self.L + self.S/self.s
 
     def eigenmodes(self, num_modes):
         """Calculate the eigenimpedance and eigencurrents of each part's modes
@@ -47,7 +53,8 @@ class ImpedanceMatrix(object):
         Therefore this routine can return junk results, particularly if the
         mesh is dense.
         """
-        z_all, v_all = la.eig(self.s*self.L + self.S/self.s)
+        #z_all, v_all = la.eig(self.s*self.L + self.S/self.s)
+        z_all, v_all = la.eig(self())
         which_z = np.argsort(abs(z_all.imag))[:num_modes]
         eigenimpedance = z_all[which_z]
         
@@ -100,7 +107,7 @@ class ImpedanceMatrix(object):
         if return_arrays:
             return L_red, S_red
         else:
-            return ImpedanceMatrix(self.s, L_red, S_red)
+            return EfieImpedanceMatrix(self.s, L_red, S_red)
             
     def source_modes(self, V, num_modes, mode_currents):
         "Take a source field, and project it onto the modes of the system"
@@ -114,6 +121,7 @@ class ImpedanceMatrix(object):
 
     @property
     def shape(self):
+        "The shape of all matrices"
         return self.L.shape
 
 class ImpedanceParts(object):
@@ -122,6 +130,8 @@ class ImpedanceParts(object):
     This consists of separate matrices for each part, and their mutual
     coupling terms.
     """
+    # TODO: needs to be made agnostic regarding the type of impedance
+    # matrix which it contains
     
     def __init__(self, s, num_parts, matrices):
         """
@@ -167,7 +177,7 @@ class ImpedanceParts(object):
                 col_offset += col_size
             row_offset += row_size
             
-        return ImpedanceMatrix(self.s, L_tot, S_tot)
+        return EfieImpedanceMatrix(self.s, L_tot, S_tot)
 
     def eigenmodes(self, num_modes):
         """Calculate the eigenimpedance and eigencurrents of each part's modes
@@ -232,7 +242,7 @@ class ImpedanceParts(object):
         if combine:           
             L_red = L_red.reshape((num_parts*num_modes, num_parts*num_modes))
             S_red = S_red.reshape((num_parts*num_modes, num_parts*num_modes))
-            return ImpedanceMatrix(self.s, L_red, S_red)
+            return EfieImpedanceMatrix(self.s, L_red, S_red)
         else:
             raise NotImplementedError
         

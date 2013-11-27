@@ -24,6 +24,7 @@ import openmodes_core
 
 from openmodes.constants import epsilon_0, mu_0, pi
 from openmodes.basis import LinearTriangleBasis, get_basis_functions
+from openmodes.impedance import EfieImpedanceMatrix
 
 class FreeSpaceGreensFunction(object):
     "Green's function in Free Space"
@@ -197,7 +198,7 @@ class EfieOperator(object):
         self.quadrature_rule = quadrature_rule
         self.greens_function = greens_function
         
-    def impedance_matrix(self, s, part_o, part_s=None, combine=False):
+    def impedance_matrix(self, s, part_o, part_s=None):
         """Calculate the impedance matrix for a single part, at a given
         complex frequency s"""
         
@@ -215,7 +216,7 @@ class EfieOperator(object):
         
         if isinstance(self.greens_function, FreeSpaceGreensFunction):
             if isinstance(basis_o, LinearTriangleBasis):
-                result = impedance_rwg_efie_free_space(s, self.quadrature_rule, 
+                L, S = impedance_rwg_efie_free_space(s, self.quadrature_rule, 
                                                      basis_o, part_o.nodes, 
                                                      basis_s, nodes_s)
             else:
@@ -223,11 +224,8 @@ class EfieOperator(object):
     
         else:
             raise NotImplementedError
-            
-        if combine:
-            return s*result[0] + result[1]/s
-        else:
-            return result
+         
+        return EfieImpedanceMatrix(s, L, S)
             
     def source_plane_wave(self, part, e_inc, jk_inc):
         """Evaluate the source vector due to the incident wave

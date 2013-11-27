@@ -30,7 +30,7 @@ from scipy.optimize import nnls
 from openmodes import integration
 from openmodes.parts import Part#, Triangles, RwgBasis
 
-from openmodes.impedance import ImpedanceMatrix, ImpedanceParts
+from openmodes.impedance import ImpedanceParts
 from openmodes.basis import DivRwgBasis, get_basis_functions
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
 from openmodes.eig import eig_linearised, eig_newton
@@ -157,29 +157,20 @@ class Simulation(object):
             the object in several ways.
         """
 
-        #return ImpedanceMatrix(s, self.operator, self.parts)
-        
-        #S_parts = []
-        #L_parts = []
         matrices = []
         
         # TODO: cache individual part impedances to avoid repetition
         #parts_calculated = {}
 
         for index_a, part_a in enumerate(self.parts):
-            #S_parts.append([])
-            #L_parts.append([])
             matrices.append([])
             for index_b, part_b in enumerate(self.parts):
                 if (index_b < index_a) and self.operator.reciprocal:
                     # use reciprocity to avoid repeated calculation
-                    S = matrices[index_b][index_a].S.T
-                    L = matrices[index_b][index_a].L.T
+                    res = matrices[index_b][index_a].T
                 else:
-                    L, S = self.operator.impedance_matrix(s, part_a, part_b)
-                matrices[-1].append(ImpedanceMatrix(L, S))
-                #S_parts[-1].append(S)
-                #L_parts[-1].append(L)
+                    res = self.operator.impedance_matrix(s, part_a, part_b)
+                matrices[-1].append(res)
         
         return ImpedanceParts(s, len(self.parts), matrices)
     
@@ -218,15 +209,16 @@ class Simulation(object):
         all_j = []        
         
         for part in self.parts:
+            # first get an estimate of the pole locations
             basis = get_basis_functions(part.mesh, self.basis_class)
-            L, S = self.operator.impedance_matrix(s_start, part)
-            lin_s, lin_currents = eig_linearised(L, S, num_modes, basis)
+            Z = self.operator.impedance_matrix(s_start, part)
+            lin_s, lin_currents = eig_linearised(Z.L, Z.S, num_modes, basis)
             #print lin_s/2/np.pi
 
             mode_s = np.empty(num_modes, np.complex128)
             mode_j = np.empty((len(basis), num_modes), np.complex128)
         
-            Z_func = lambda s: self.operator.impedance_matrix(s, part, combine=True)
+            Z_func = lambda s: self.operator.impedance_matrix(s, part).evaluate()
         
             for mode in xrange(num_modes):
                 res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode], 
