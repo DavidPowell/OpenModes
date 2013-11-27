@@ -30,7 +30,8 @@ class EfieImpedanceMatrix(object):
     which contains two separate parts corresponding to the vector and scalar
     potential.
     
-    This is a single impedance matrix for the whole system
+    This is a single impedance matrix for the whole system. Note that elements
+    of the matrix should not be modified after being added to this object.
     """
     
     def __init__(self, s, L, S):
@@ -38,10 +39,38 @@ class EfieImpedanceMatrix(object):
         assert(L.shape == S.shape)
         self.L = L
         self.S = S
+        
+        # prevent external modification, to allow caching
+        L.setflags(write=False)
+        S.setflags(write=False)
 
-    def evaluate(self):
-        "Evaluates the total impedance matrix and returns it as an array"
-        return self.s*self.L + self.S/self.s
+#    def evaluate(self):
+#        "Evaluates the total impedance matrix and returns it as an array"
+#        return self.s*self.L + self.S/self.s
+
+    def __getitem__(self, index):
+        """Evaluates all or part of the impedance matrix, and returns it as
+        an array        
+        """
+        return self.s*self.L[index] + self.S[index]/self.s
+
+    def solve(self, V, cache=True):
+        """Solve for the current, given a voltage vector
+        
+        Parameters
+        ----------
+        V : ndarray
+            The source vector
+        cache : boolean, optional
+            If True, cache the LU factorisation to avoid recalculating it
+        """
+        if cache and hasattr(self, "factored_matrix"):
+            lu = self.factored_matrix
+        else:
+            lu = la.lu_factor(self[:], overwrite_a = True)
+            if cache:
+                self.factored_matrix = lu
+        return la.lu_solve(lu, V)
 
     def eigenmodes(self, num_modes):
         """Calculate the eigenimpedance and eigencurrents of each part's modes
@@ -53,8 +82,7 @@ class EfieImpedanceMatrix(object):
         Therefore this routine can return junk results, particularly if the
         mesh is dense.
         """
-        #z_all, v_all = la.eig(self.s*self.L + self.S/self.s)
-        z_all, v_all = la.eig(self())
+        z_all, v_all = la.eig(self[:])
         which_z = np.argsort(abs(z_all.imag))[:num_modes]
         eigenimpedance = z_all[which_z]
         
@@ -123,6 +151,11 @@ class EfieImpedanceMatrix(object):
     def shape(self):
         "The shape of all matrices"
         return self.L.shape
+        
+    @property
+    def T(self):
+        "A transposed version of the impedance matrix"
+        return EfieImpedanceMatrix(self.s, self.L.T, self.S.T)
 
 class ImpedanceParts(object):
     """Holds a impedance matrices calculated at a specific frequency
@@ -234,10 +267,15 @@ class ImpedanceParts(object):
             # so currently they are not calculated
             M = self.matrices[i][j]
 
-            L, S = M.impedance_modes(num_modes, mode_currents[i],
-                                        mode_currents[j], return_arrays=True)
+            if i == j:
+                # explicitly handle the diagonal cse
+                L, S = M.impedance_modes(num_modes, mode_currents[i],
+                                        return_arrays=True)
+            else:
+                L, S = M.impedance_modes(num_modes, mode_currents[i],
+                                         mode_currents[j], return_arrays=True)
             L_red[i, :, j, :] = L
-            L_red[i, :, j, :] = S
+            S_red[i, :, j, :] = S
             
         if combine:           
             L_red = L_red.reshape((num_parts*num_modes, num_parts*num_modes))

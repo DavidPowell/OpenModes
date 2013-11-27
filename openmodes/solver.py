@@ -218,7 +218,7 @@ class Simulation(object):
             mode_s = np.empty(num_modes, np.complex128)
             mode_j = np.empty((len(basis), num_modes), np.complex128)
         
-            Z_func = lambda s: self.operator.impedance_matrix(s, part).evaluate()
+            Z_func = lambda s: self.operator.impedance_matrix(s, part)[:] #.evaluate()
         
             for mode in xrange(num_modes):
                 res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode], 
