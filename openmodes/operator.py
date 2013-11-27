@@ -189,6 +189,8 @@ class EfieOperator(object):
     respect to some set of basis functions. Assumes that Galerkin's method is
     used, such that the testing functions are the same as the basis functions.
     """
+    reciprocal = True    
+    
     def __init__(self, quadrature_rule, basis_class,
                  greens_function=FreeSpaceGreensFunction()):
         self.basis_class = basis_class

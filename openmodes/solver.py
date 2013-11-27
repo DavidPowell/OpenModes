@@ -34,19 +34,8 @@ from openmodes.basis import DivRwgBasis, get_basis_functions
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
 from openmodes.eig import eig_linearised, eig_newton
 
-def find_eigenmodes(Z, num_modes):
-    "Find the eigenmodes of an impedance matrix which are closest to resonance"
-    z_all, v_all = la.eig(Z)
-    which_z = np.argsort(abs(z_all.imag))[:num_modes]
-    eigenimpedance = z_all[which_z]
-    
-    v = v_all[:, which_z]
-    eigencurrent = v/np.sqrt(np.sum(v**2, axis=0))
-    
-    return eigenimpedance, eigencurrent
 
 # TODO: ImpedanceMatrix may need to know about number of loops and stars?
-
 class ImpedanceMatrix(object):
     """Holds an impedance matrices calculated at a specific frequency
     
@@ -55,6 +44,7 @@ class ImpedanceMatrix(object):
     
     def __init__(self, s, L, S):
         self.s = s
+        assert(L.shape == S.shape)
         self.L = L
         self.S = S
 
@@ -68,9 +58,17 @@ class ImpedanceMatrix(object):
         Therefore this routine can return junk results, particularly if the
         mesh is dense.
         """
-        return find_eigenmodes(self.s*self.L + self.S/self.s, num_modes)
+        z_all, v_all = la.eig(self.s*self.L + self.S/self.s)
+        which_z = np.argsort(abs(z_all.imag))[:num_modes]
+        eigenimpedance = z_all[which_z]
+        
+        v = v_all[:, which_z]
+        eigencurrent = v/np.sqrt(np.sum(v**2, axis=0))
+        
+        return eigenimpedance, eigencurrent
 
-    def impedance_modes(self, num_modes, mode_currents):
+    def impedance_modes(self, num_modes, mode_currents_o, 
+                        mode_currents_s = None, return_arrays = False):
         """Calculate a reduced impedance matrix based on the scalar impedance
         of the modes of each part, and the scalar coupling coefficients.
 
@@ -80,8 +78,14 @@ class ImpedanceMatrix(object):
             complex frequency at which to calculate impedance (in rad/s)
         num_modes : integer
             The number of modes to take into account for each part
-        mode_currents : list
-            The modal currents of each part
+        mode_currents_o : array
+            The modal currents of the observer part
+        mode_currents_s : array, optional
+            The modal currents of the source part (only for off-diagonal terms
+            where the source differs from the observer)
+        return_arrays : boolean, optional
+            Return the impedance arrays directly, instead of constructing an
+            `ImpedanceMatrix` object
             
         Returns
         -------
@@ -94,13 +98,20 @@ class ImpedanceMatrix(object):
         L_red = np.zeros((num_modes, num_modes), np.complex128)
         S_red = np.zeros_like(L_red)
 
-        #for j, l in itertools.product(xrange(num_modes), xrange(num_modes)):
-        for i in xrange(num_modes):
-            # only diagonal terms are non-zero
-            L_red[i, i] = mode_currents[:, i].dot(self.L.dot(mode_currents[:, i]))
-            S_red[i, i] = mode_currents[:, i].dot(self.S.dot(mode_currents[:, i]))
+        if mode_currents_s is None:
+            for i in xrange(num_modes):
+                # only diagonal terms are non-zero
+                L_red[i, i] = mode_currents_o[:, i].dot(self.L.dot(mode_currents_o[:, i]))
+                S_red[i, i] = mode_currents_o[:, i].dot(self.S.dot(mode_currents_o[:, i]))
+        else:
+            for i, j in itertools.product(xrange(num_modes), xrange(num_modes)):
+                L_red[i, j] = mode_currents_o[:, i].dot(self.L.dot(mode_currents_s[:, j]))
+                S_red[i, j] = mode_currents_o[:, i].dot(self.S.dot(mode_currents_s[:, j]))
                             
-        return ImpedanceMatrix(self.s, L_red, S_red)
+        if return_arrays:
+            return L_red, S_red
+        else:
+            return ImpedanceMatrix(self.s, L_red, S_red)
             
     def source_modes(self, V, num_modes, mode_currents):
         "Take a source field, and project it onto the modes of the system"
@@ -112,6 +123,10 @@ class ImpedanceMatrix(object):
 
         return V_red
 
+    @property
+    def shape(self):
+        return self.L.shape
+
 class ImpedanceParts(object):
     """Holds a impedance matrices calculated at a specific frequency
     
@@ -119,21 +134,20 @@ class ImpedanceParts(object):
     coupling terms.
     """
     
-    def __init__(self, s, L, S, num_parts):
+    def __init__(self, s, num_parts, matrices):
         """
         Parameters
         ----------        
         s : complex
             complex frequency at which to calculate impedance (in rad/s)
-        L, S : list of list of ndarray
-            The self and mutual impedance matrices between parts
+        matrices : list of list of ImpedanceMatrix
+            The impedance matrix for each part, or mutual terms between them
         num_parts : int
             The number of parts in the system
         """
         self.s = s
-        self.L = L
-        self.S = S
         self.num_parts = num_parts
+        self.matrices = matrices
 
     def combine_parts(self):
         """Evaluate the self and mutual impedances of all parts combined into
@@ -145,22 +159,26 @@ class ImpedanceParts(object):
             An object containing the combined impedance matrices
         """
         
-        total_size = sum(L[0].shape[0] for L in self.L)
+        total_size = sum(M[0].shape[0] for M in self.matrices)
         L_tot = np.empty((total_size, total_size), np.complex128)
         S_tot = np.empty_like(L_tot)
 
         row_offset = 0
-        for L_row, S_row in zip(self.L, self.S):
-            row_size = L_row[0].shape[0]
+        #for L_row, S_row in zip(self.L, self.S):
+        for row in self.matrices:
+            row_size = row[0].shape[0]
             col_offset = 0
-            for L, S in zip(L_row, S_row):
-                col_size = L.shape[1]
-                L_tot[row_offset:row_offset+row_size, col_offset:col_offset+col_size] = L
-                S_tot[row_offset:row_offset+row_size, col_offset:col_offset+col_size] = S
+            #for L, S in zip(L_row, S_row):
+            for matrix in row:
+                #L = matrix.L
+                #S = matrix.S
+                col_size = matrix.shape[1]
+                L_tot[row_offset:row_offset+row_size, col_offset:col_offset+col_size] = matrix.L
+                S_tot[row_offset:row_offset+row_size, col_offset:col_offset+col_size] = matrix.S
                 col_offset += col_size
             row_offset += row_size
             
-        return ImpedanceMatrix(self.s, L_tot, S_tot, num_parts = 0)
+        return ImpedanceMatrix(self.s, L_tot, S_tot)
 
     def eigenmodes(self, num_modes):
         """Calculate the eigenimpedance and eigencurrents of each part's modes
@@ -173,14 +191,12 @@ class ImpedanceParts(object):
         mesh is dense.
         """
 
-        # TODO: cache this if parts are identical (should be upstreat caching
+        # TODO: cache this if parts are identical (should be upstream caching
         # of L and S for this to work)
         mode_impedances = []
         mode_currents = []
         for count in xrange(self.num_parts):
-            L = self.L_parts[count][count]
-            S = self.S_parts[count][count]
-            eig_z, eig_current = find_eigenmodes(self.s*L + S/self.s, num_modes)
+            eig_z, eig_current = self.matrices[count][count].eigenmodes(num_modes)
 
             mode_impedances.append(eig_z)
             mode_currents.append(eig_current)
@@ -213,17 +229,28 @@ class ImpedanceParts(object):
                             np.complex128)
         S_red = np.zeros_like(L_red)
         
-        for i, j, k, l in itertools.product(xrange(num_parts), xrange(num_modes),
-                                  xrange(num_parts), xrange(num_modes)):
-            if k != i or j == l:
-                # The mutual impedance terms of modes within the
-                # same resonator have L and S exactly cancelling,
-                # so currently they are not calculated
-                L_red[i, j, k, l] = mode_currents[i][:, j].dot(
-                                self.L[i][k].dot(mode_currents[k][:, l]))
-                S_red[i, j, k, l] = mode_currents[i][:, j].dot(
-                                self.S[i][k].dot(mode_currents[k][:, l]))
-                                     
+#        for i, j, k, l in itertools.product(xrange(num_parts), xrange(num_modes),
+#                                  xrange(num_parts), xrange(num_modes)):
+#            if k != i or j == l:
+#                # The mutual impedance terms of modes within the
+#                # same resonator have L and S exactly cancelling,
+#                # so currently they are not calculated
+#                L_red[i, j, k, l] = mode_currents[i][:, j].dot(
+#                                self.L[i][k].dot(mode_currents[k][:, l]))
+#                S_red[i, j, k, l] = mode_currents[i][:, j].dot(
+#                                self.S[i][k].dot(mode_currents[k][:, l]))
+
+        for i, j in itertools.product(xrange(num_parts), xrange(num_parts)):
+            # The mutual impedance terms of modes within the
+            # same resonator have L and S exactly cancelling,
+            # so currently they are not calculated
+            M = self.matrices[i][j]
+
+            L, S = M.impedance_modes(num_modes, mode_currents[i],
+                                        mode_currents[j], return_arrays=True)
+            L_red[i, :, j, :] = L
+            L_red[i, :, j, :] = S
+            
         if combine:           
             L_red = L_red.reshape((num_parts*num_modes, num_parts*num_modes))
             S_red = S_red.reshape((num_parts*num_modes, num_parts*num_modes))
@@ -234,22 +261,14 @@ class ImpedanceParts(object):
     def source_modes(self, V, num_modes, mode_currents, combine = True):
         "Take a source field, and project it onto the modes of each part"
         
-        if self.num_parts == 0:
-            # calculate separately
-            V_red = np.zeros(num_modes, np.complex128)
-            for i in xrange(num_modes):
-                V_red[i] = mode_currents[:, i].dot(V)
-
-            return V_red
-            
-        num_parts = self.num_parts
-        V_red = np.zeros((num_parts, num_modes), np.complex128)
+        V_red = np.zeros((self.num_parts, num_modes), np.complex128)
         
-        for i, j in itertools.product(xrange(num_parts), xrange(num_modes)):
-            V_red[i, j] = mode_currents[i][:, j].dot(V[i])
+        for i in xrange(self.num_parts):
+            V_red[i] = self.matrices[i][i].source_modes(V[i], num_modes,
+                mode_currents[i])
 
         if combine:
-            V_red = V_red.reshape(num_parts*num_modes)
+            V_red = V_red.reshape(self.num_parts*num_modes)
 
         return V_red
 
@@ -376,26 +395,29 @@ class Simulation(object):
 
         #return ImpedanceMatrix(s, self.operator, self.parts)
         
-        S_parts = []
-        L_parts = []
+        #S_parts = []
+        #L_parts = []
+        matrices = []
         
         # TODO: cache individual part impedances to avoid repetition
         #parts_calculated = {}
 
         for index_a, part_a in enumerate(self.parts):
-            S_parts.append([])
-            L_parts.append([])
+            #S_parts.append([])
+            #L_parts.append([])
+            matrices.append([])
             for index_b, part_b in enumerate(self.parts):
-                if index_b < index_a:
+                if (index_b < index_a) and self.operator.reciprocal:
                     # use reciprocity to avoid repeated calculation
-                    S = S_parts[index_b][index_a].T
-                    L = L_parts[index_b][index_a].T
+                    S = matrices[index_b][index_a].S.T
+                    L = matrices[index_b][index_a].L.T
                 else:
                     L, S = self.operator.impedance_matrix(s, part_a, part_b)
-                S_parts[-1].append(S)
-                L_parts[-1].append(L)
+                matrices[-1].append(ImpedanceMatrix(L, S))
+                #S_parts[-1].append(S)
+                #L_parts[-1].append(L)
         
-        return ImpedanceMatrix(s, L_parts, S_parts, combined=False)
+        return ImpedanceParts(s, len(self.parts), matrices)
     
             
     def source_plane_wave(self, e_inc, jk_inc):
@@ -460,16 +482,16 @@ class Simulation(object):
 
         return all_s, all_j
         
-    def circuit_models(self):
-        """
-        """
-        
-
-eig_derivs = []
-
-for part in xrange(n_parts):
-    eig_derivs.append(np.empty(n_modes, np.complex128))
-    for mode in xrange(n_modes):
-        eig_derivs[part][mode] = delta_eig(mode_omega[part][mode], mode_j[part][:, mode], part, loop_star=loop_star)
+#    def circuit_models(self):
+#        """
+#        """
+#        
+#
+#eig_derivs = []
+#
+#for part in xrange(n_parts):
+#    eig_derivs.append(np.empty(n_modes, np.complex128))
+#    for mode in xrange(n_modes):
+#        eig_derivs[part][mode] = delta_eig(mode_omega[part][mode], mode_j[part][:, mode], part, loop_star=loop_star)
 
             
