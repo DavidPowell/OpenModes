@@ -181,6 +181,15 @@ class ImpedanceParts(object):
         self.num_parts = num_parts
         self.matrices = matrices
 
+    def __getitem__(self, index):
+        """Allow matrices of individual parts to be accessed"""
+        try:
+            return self.matrices[index]
+        except TypeError:
+            if type(index[0]) == slice:
+                raise TypeError("Cannot slice the first dimension")
+            return self.matrices[index[0]][index[1]]
+
     def combine_parts(self):
         """Evaluate the self and mutual impedances of all parts combined into
         a pair of matrices for the whole system.
@@ -196,14 +205,10 @@ class ImpedanceParts(object):
         S_tot = np.empty_like(L_tot)
 
         row_offset = 0
-        #for L_row, S_row in zip(self.L, self.S):
         for row in self.matrices:
             row_size = row[0].shape[0]
             col_offset = 0
-            #for L, S in zip(L_row, S_row):
             for matrix in row:
-                #L = matrix.L
-                #S = matrix.S
                 col_size = matrix.shape[1]
                 L_tot[row_offset:row_offset+row_size, col_offset:col_offset+col_size] = matrix.L
                 S_tot[row_offset:row_offset+row_size, col_offset:col_offset+col_size] = matrix.S
