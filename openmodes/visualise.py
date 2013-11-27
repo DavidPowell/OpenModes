@@ -1,13 +1,26 @@
 # -*- coding: utf-8 -*-
+#-----------------------------------------------------------------------------
+#  OpenModes - An eigenmode solver for open electromagnetic resonantors
+#  Copyright (C) 2013 David Powell
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#-----------------------------------------------------------------------------
 """
-Created on Tue Oct 29 12:17:16 2013
-
-@author: dap124
+Routines for displaying parts and solutions.
 """
 
 from openmodes.parts import Part
-
-#import matplotlib.tri as mtri
 
 def plot_parts(parts, figsize=(10, 4), view_angles = (20, 90)):
     """Create a simple 3D plot to show the location of loaded parts in space
@@ -47,8 +60,6 @@ def plot_parts(parts, figsize=(10, 4), view_angles = (20, 90)):
     plt.show()
  
 
-#from openmodes.constants import eta_0 
-     
 def write_vtk(mesh, nodes, filename, vector_function=None, 
               scalar_function=None, vector_name="vector", 
               scalar_name="scalar"):
@@ -71,7 +82,6 @@ def write_vtk(mesh, nodes, filename, vector_function=None,
     
     from pyvtk import PolyData, VtkData, Scalars, CellData, Vectors
     
-    #poly = [[int(j) for j in i] for i in mesh.polygons]    
     polygons = mesh.polygons.tolist()
     struct = PolyData(points=nodes, polygons=polygons)
 
@@ -92,8 +102,6 @@ def write_vtk(mesh, nodes, filename, vector_function=None,
     vtk = VtkData(struct, cell_data, "OpenModes mesh and data")
     #else:
     #    vtk = VtkData(struct, "MOM mesh")
-
-
         
     vtk.tofile(filename, "ascii")
     

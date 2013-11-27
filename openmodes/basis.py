@@ -1,20 +1,23 @@
 # -*- coding: utf-8 -*-
+#-----------------------------------------------------------------------------
+#  OpenModes - An eigenmode solver for open electromagnetic resonantors
+#  Copyright (C) 2013 David Powell
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#-----------------------------------------------------------------------------
 """
-OpenModes - An eigenmode solver for open electromagnetic resonantors
-Copyright (C) 2013 David Powell
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Routines to construct the basis functions on a mesh
 """
 
 from collections import namedtuple
@@ -28,9 +31,7 @@ from openmodes.mesh import nodes_not_in_edge, shared_nodes
 # which are used by both RWG and loop-star basis functions
 RWG = namedtuple('RWG', ('tri_p', 'tri_m', 'node_p', 'node_m'))
 
-# TODO: interpolation needs to account for factor 1/(2A)
-# At which level should this factor be included?
-# May also need to integrate something over a triangle
+# TODO: routines to integrate over a triangle, with no scaling by area
 
 def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True):
     """Interpolate a function on a triangular mesh with linear basis functions
@@ -66,7 +67,8 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True):
                 # Vector rho within the observer triangle
                 rho = r[tri_count, point_count] - nodes[node_count]
     
-                vector_func[tri_count, point_count] += rho*tri_func[tri_count, node_count]
+                vector_func[tri_count, point_count] += rho*tri_func[tri_count,
+                             node_count]
 
                                               
     if flatten:
@@ -178,9 +180,9 @@ class DivRwgBasis(LinearTriangleBasis):
             # determine the indices of the unshared nodes, indexed within the
             # sharing triangles (i.e. 0, 1 or 2)
             node_p[basis_count] = nodes_not_in_edge(
-                            mesh.polygons[tri_p[basis_count]], edges[edge_count])[0]
+                       mesh.polygons[tri_p[basis_count]], edges[edge_count])[0]
             node_m[basis_count] = nodes_not_in_edge(
-                            mesh.polygons[tri_m[basis_count]], edges[edge_count])[0]
+                       mesh.polygons[tri_m[basis_count]], edges[edge_count])[0]
 
         self.rwg = RWG(tri_p, tri_m, node_p, node_m)
 
@@ -204,7 +206,7 @@ class DivRwgBasis(LinearTriangleBasis):
             num_basis = len(self)
             num_tri = len(self.mesh.polygons)
             #self.scalar_transform = np.zeros((num_basis, num_tri), np.float64)
-            #self.vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
+            #self.vector_transform=np.zeros((num_basis, 3*num_tri), np.float64)
             scalar_transform = dok_matrix((num_basis, num_tri), np.float64)
             vector_transform = dok_matrix((num_basis, 3*num_tri), np.float64)
             
@@ -281,7 +283,8 @@ def construct_loop(loop_triangles, polygons):
    
     while len(loop_triangles) > 0:
         for triangle_count, next_triangle in enumerate(loop_triangles):
-            shared = shared_nodes(polygons[next_triangle], polygons[current_triangle])
+            shared = shared_nodes(polygons[next_triangle], 
+                                  polygons[current_triangle])
             if len(shared) == 2:
                 break
         #raise ValueError("Cannot find adjoining triangle") # wrong!
@@ -345,7 +348,8 @@ class LoopStarBasis(LinearTriangleBasis):
             raise ValueError("Mesh edges must be part of exactly 1 or 2" +
                              "triangles for loop-star basis functions")
 
-        self.rwg_star = construct_stars(mesh, edges, triangles_shared_by_edges, sharing_count)
+        self.rwg_star = construct_stars(mesh, edges, triangles_shared_by_edges,
+                                        sharing_count)
 
         # Now start searching for loops
         num_nodes = len(mesh.nodes)        
@@ -438,10 +442,7 @@ class LoopStarBasis(LinearTriangleBasis):
 
     @property
     def rwg(self):
-#        return RWG(self.rwg_loop.tri_p + self.rwg_star.tri_p,
-#                   self.rwg_loop.tri_m + self.rwg_star.tri_m,
-#                   self.rwg_loop.node_p + self.rwg_star.node_p,
-#                   self.rwg_loop.node_m + self.rwg_star.node_m)
+        "Combine the loop and star lists"
         return RWG._make(a + b for a, b in zip(self.rwg_loop, self.rwg_star))
 
     @property
@@ -464,7 +465,7 @@ class LoopStarBasis(LinearTriangleBasis):
             num_basis = len(self)
             num_tri = len(self.mesh.polygons)
             #self.scalar_transform = np.zeros((num_basis, num_tri), np.float64)
-            #self.vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
+            #self.vector_transform=np.zeros((num_basis, 3*num_tri), np.float64)
 
             scalar_transform = dok_matrix((num_basis, num_tri), np.float64)
             vector_transform = dok_matrix((num_basis, 3*num_tri), np.float64)
@@ -480,7 +481,7 @@ class LoopStarBasis(LinearTriangleBasis):
                       
 #                # TODO: slicing dok_matrix may be quite slow
 #                norm = np.sqrt(scalar_transform[basis_count, :].multiply(
-#                                scalar_transform[basis_count, :]).sum())                    
+#                                scalar_transform[basis_count, :]).sum())
 #                scalar_transform[basis_count, :] /= norm
 #    
                 for tri_n, node_n in zip(tri_p, node_p):
@@ -490,15 +491,13 @@ class LoopStarBasis(LinearTriangleBasis):
                     vector_transform[basis_count, tri_n*3+node_n] += -1.0
 
 #                norm = np.sqrt(vector_transform[basis_count, :].multiply(
-#                                vector_transform[basis_count, :]).sum())                    
+#                                vector_transform[basis_count, :]).sum())
 #                vector_transform[basis_count, :] /= norm
                     
             self.vector_transform = vector_transform.tocsr()
             self.scalar_transform = scalar_transform.tocsr()
     
-            return self.vector_transform, self.scalar_transform
-            #return self.vector_transform.tocsr(), self.scalar_transform.tocsr()
-            
+            return self.vector_transform, self.scalar_transform            
 
 cached_basis_functions = {}      
         
