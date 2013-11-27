@@ -23,6 +23,7 @@ from __future__ import division#, print_function
 import numpy as np
 import scipy.linalg as la
 import itertools
+from scipy.optimize import nnls
 
 #from openmodes.constants import epsilon_0, mu_0    
 #from openmodes.utils import SingularSparse
@@ -262,6 +263,56 @@ class ImpedanceMatrix(object):
         else:
             raise AttributeError
 
+
+def delta_eig(s, j, part, Z_func, eps = None):
+    """Find the derivative of the eigenimpedance at the resonant frequency
+    
+    See section 5.7 of numerical recipes for calculating the step size h
+
+    Impedance derivative is based on
+    C. E. Baum, Proceedings of the IEEE 64, 1598 (1976).
+    """
+
+    if eps is None:
+        # find the machine precision (this should actually be the accuracy with which Z is calculated)
+        eps = np.finfo(s.dtype).eps
+    
+    # first determine the optimal value of h
+    h = abs(s)*eps**(1.0/3.0)*(1.0 + 1.0j)
+    
+    # make h exactly representable in floating point
+    temp = s + h
+    h = (temp - s)
+
+    delta_Z = (Z_func(s+h) - Z_func(s-h))/(2*h)
+    
+    return np.dot(j.T, np.dot(delta_Z, j))
+
+def fit_circuit(s_0, z_der):
+    """
+    Fit a circuit model to a resonant frequency and impedance derivative
+    To get reasonable condition number, omega_0 should be scaled to be near unity,
+    and z_der should be scaled by the inverse of this factor
+    """
+    M = np.zeros((4, 4), np.float64)
+    rhs = np.zeros(4, np.float64)
+    
+    # order of coefficients is C, R, L, R2
+    
+    # fit impedance being zero at resonance
+    eq1 = np.array([1/s_0, 1, s_0, -s_0**2]) # XXX: minus or not????
+    M[0, :] = eq1.real
+    M[1, :] = eq1.imag
+    
+    # fit impedance derivative at resonance
+    eq2 = np.array([1/s_0**2, 0, 1, -2*s_0])
+    M[2, :] = eq2.real
+    M[3, :] = eq2.imag
+    
+    rhs[2] = z_der.real
+    rhs[3] = z_der.imag
+    
+    return nnls(M, rhs)[0]
     
 
 class Simulation(object):
@@ -397,3 +448,17 @@ class Simulation(object):
 #            all_j.append(lin_currents)
 
         return all_s, all_j
+        
+    def circuit_models(self):
+        """
+        """
+        
+
+eig_derivs = []
+
+for part in xrange(n_parts):
+    eig_derivs.append(np.empty(n_modes, np.complex128))
+    for mode in xrange(n_modes):
+        eig_derivs[part][mode] = delta_eig(mode_omega[part][mode], mode_j[part][:, mode], part, loop_star=loop_star)
+
+            
