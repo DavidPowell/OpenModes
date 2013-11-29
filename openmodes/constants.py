@@ -17,7 +17,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------------
 """
-Various useful constants for electromagnetism. Most of these are already 
+Various useful constants for electromagnetism. Most of these are already
 defined in scipy.constants, but are duplicated here for convenience.
 """
 
@@ -26,6 +26,5 @@ import numpy as np
 pi = np.pi
 c = 299792458.0
 mu_0 = 4e-7*pi
-epsilon_0 = 1.0 / (mu_0*c*c) 
+epsilon_0 = 1.0 / (mu_0*c*c)
 eta_0 = mu_0*c
-
