@@ -47,7 +47,8 @@ def delta_eig(s, j, part, Z_func, eps = None):
     """
 
     if eps is None:
-        # find the machine precision (this should actually be the accuracy with which Z is calculated)
+        # find the machine precision (this should actually be the accuracy with
+        # which Z is calculated)
         eps = np.finfo(s.dtype).eps
     
     # first determine the optimal value of h
@@ -73,7 +74,7 @@ def fit_circuit(s_0, z_der):
     # order of coefficients is C, R, L, R2
     
     # fit impedance being zero at resonance
-    eq1 = np.array([1/s_0, 1, s_0, -s_0**2]) # XXX: minus or not????
+    eq1 = np.array([1/s_0, 1, s_0, -s_0**2])  # XXX: minus or not????
     M[0, :] = eq1.real
     M[1, :] = eq1.imag
     
@@ -103,14 +104,14 @@ class Simulation(object):
         integration_rule : integer
             the order of the integration rule on triangles
         """
-        
+
         self.quadrature_rule = integration.get_dunavant_rule(integration_rule)
-        
+
         self.triangle_quadrature = {}
         self.singular_integrals = {}
-               
+
         self.parts = []
-        
+
         self.basis_class = basis_class
         self.operator = operator_class(quadrature_rule=self.quadrature_rule,
                                        basis_class=basis_class, 
@@ -145,12 +146,12 @@ class Simulation(object):
         """Evaluate the self and mutual impedances of all parts  in the
         simulation. Return an impedance object which can calculate several
         derived impedance quantities
-        
+
         Parameters
         ----------        
         s : number
             complex frequency at which to calculate impedance (in rad/s)
-        
+
         Returns
         -------
         impedance_matrix : ImpedanceMatrix
@@ -159,7 +160,7 @@ class Simulation(object):
         """
 
         matrices = []
-        
+
         # TODO: cache individual part impedances to avoid repetition
         #parts_calculated = {}
 
@@ -172,21 +173,20 @@ class Simulation(object):
                 else:
                     res = self.operator.impedance_matrix(s, part_a, part_b)
                 matrices[-1].append(res)
-        
+
         return ImpedanceParts(s, len(self.parts), matrices)
-    
-            
+
     def source_plane_wave(self, e_inc, jk_inc):
         """Evaluate the source vectors due to an incident plane wave, returning
         separate vectors for each part.
-        
+
         Parameters
         ----------        
         e_inc: ndarray
             incident field polarisation in free space
         jk_inc: ndarray
             incident wave vector in free space
-            
+
         Returns
         -------
         V : list of ndarray
@@ -194,7 +194,7 @@ class Simulation(object):
         """
         return [self.operator.source_plane_wave(part, e_inc, jk_inc) for part 
                 in self.parts]
-                
+
     def part_singularities(self, s_start, num_modes):
         """Find the singularities of the system in the complex frequency plane
 
@@ -203,34 +203,46 @@ class Simulation(object):
         s_start : number
             The complex frequency at which to perform the estimate. Should be
             within the band of interest
-
         """
-        
+
         all_s = []
         all_j = []        
-        
-        for part in self.parts:
-            # first get an estimate of the pole locations
-            basis = get_basis_functions(part.mesh, self.basis_class)
-            Z = self.operator.impedance_matrix(s_start, part)
-            lin_s, lin_currents = eig_linearised(Z.L, Z.S, num_modes, basis)
-            #print lin_s/2/np.pi
 
-            mode_s = np.empty(num_modes, np.complex128)
-            mode_j = np.empty((len(basis), num_modes), np.complex128)
-        
-            Z_func = lambda s: self.operator.impedance_matrix(s, part)[:] #.evaluate()
-        
-            for mode in xrange(num_modes):
-                res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode], 
-                                 weight='max element', lambda_tol=1e-8, max_iter=200)
-                                 
-                print "Iterations", res['iter_count']
-                #print res['eigval']/2/np.pi
-                mode_s[mode] = res['eigval']
-                j_calc = res['eigvec']
-                mode_j[:, mode] = j_calc/np.sqrt(np.sum(j_calc**2))
-                
+        solved_parts = {}        
+
+        for part in self.parts:
+            # TODO: unique ID needs to be modified if different materials or
+            # placement above a layer are possible
+
+            unique_id = (part.id,) # cache identical parts 
+            if unique_id in solved_parts:
+                print "got from cache"
+                mode_s, mode_j = solved_parts[unique_id]
+            else:
+                # first get an estimate of the pole locations
+                basis = get_basis_functions(part.mesh, self.basis_class)
+                Z = self.operator.impedance_matrix(s_start, part)
+                lin_s, lin_currents = eig_linearised(Z.L, Z.S, num_modes, basis)
+                #print lin_s/2/np.pi
+
+                mode_s = np.empty(num_modes, np.complex128)
+                mode_j = np.empty((len(basis), num_modes), np.complex128)
+
+                Z_func = lambda s: self.operator.impedance_matrix(s, part)[:]
+
+                for mode in xrange(num_modes):
+                    res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode], 
+                                     weight='max element', lambda_tol=1e-8, max_iter=200)
+
+                    print "Iterations", res['iter_count']
+                    #print res['eigval']/2/np.pi
+                    mode_s[mode] = res['eigval']
+                    j_calc = res['eigvec']
+                    mode_j[:, mode] = j_calc/np.sqrt(np.sum(j_calc**2))
+
+                # add to cache
+                solved_parts[unique_id] = (mode_s, mode_j)
+
             all_s.append(mode_s)
             all_j.append(mode_j)
 
@@ -238,7 +250,7 @@ class Simulation(object):
 #            all_j.append(lin_currents)
 
         return all_s, all_j
-        
+
 #    def circuit_models(self):
 #        """
 #        """

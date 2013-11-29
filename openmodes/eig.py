@@ -17,7 +17,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------------
 """
-Routines for solving nonlinear eigenvalue problems
+Routines for solving linear and nonlinear eigenvalue problems
 """
 
 from openmodes.basis import LoopStarBasis

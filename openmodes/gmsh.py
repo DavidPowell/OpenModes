@@ -18,8 +18,8 @@
 #-----------------------------------------------------------------------------
 
 """
-Mesh routines for MOM code, for loading and manipulating raw meshes
-before they are processed to have basis functions etc
+Routines for using `gmsh` to mesh a geometry, and load the resulting mesh into
+a format which OpenModes recognises.
 """
 
 import subprocess

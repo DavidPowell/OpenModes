@@ -16,6 +16,10 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------------
+"""
+Routines and classes for storing a mesh, and querying it to calculate
+derived quantities
+"""
 
 import numpy as np
 import os.path as osp

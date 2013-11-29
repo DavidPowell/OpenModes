@@ -16,13 +16,8 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------------
-
 """
 Integration routines and quadrature rules over triangles
-
-Created on Fri Apr 27 09:57:42 2012
-
-@author: dap124
 """
 
 import numpy as np

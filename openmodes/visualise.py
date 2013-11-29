@@ -24,7 +24,7 @@ from openmodes.parts import Part
 
 def plot_parts(parts, figsize=(10, 4), view_angles = (20, 90)):
     """Create a simple 3D plot to show the location of loaded parts in space
-    
+
     Parameters
     ----------
     parts : list of `Mesh` or `Part`
@@ -32,7 +32,7 @@ def plot_parts(parts, figsize=(10, 4), view_angles = (20, 90)):
     figsize : tuple, optional
         The figsize (in inches) which will be passed to matplotlib
     viewangles : tuple, optional
-        The viewing angle of the 3D plot in degrees, will be passed to 
+        The viewing angle of the 3D plot in degrees, will be passed to
         matplotlib
         
     Requires that matplotlib is installed
@@ -40,7 +40,7 @@ def plot_parts(parts, figsize=(10, 4), view_angles = (20, 90)):
 
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D
-    
+
     fig = plt.figure(figsize=figsize)
     ax = fig.add_subplot(111, projection='3d')
     
