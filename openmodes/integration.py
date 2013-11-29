@@ -28,15 +28,16 @@ Created on Fri Apr 27 09:57:42 2012
 import numpy as np
 import numpy.linalg as la
 
+
 def get_dunavant_rule(tri_rule):
     """Calculate the symmetric quadrature rule over a triangle as given in
     D. A. Dunavant, Int. J. Numer. Methods Eng. 21, 1129 (1985).
-    
+
     Parameters
     ----------
     n : integer
         The order of the rule (maximum 20)
-        
+
     Returns
     -------
     xi_eta : array
@@ -48,30 +49,34 @@ def get_dunavant_rule(tri_rule):
     import dunavant
 
     dunavant_order = dunavant.dunavant_order_num(tri_rule)
-    xi_eta_eval, weights = dunavant.dunavant_rule(tri_rule, dunavant_order)    
+    xi_eta_eval, weights = dunavant.dunavant_rule(tri_rule, dunavant_order)
     xi_eta_eval = np.asfortranarray(xi_eta_eval.T)
-    weights = np.asfortranarray((weights[:, None]*0.5/sum(weights)).T) # scale the weights to 0.5
+    # scale the weights to 0.5
+    weights = np.asfortranarray((weights[:, None]*0.5/sum(weights)).T)
 
     return xi_eta_eval, weights
 
+
 def cartesian_to_barycentric(r, nodes):
-    """Convert cartesian coordinates to barycentric (area coordinates) in a triangle
-    
+    """Convert cartesian coordinates to barycentric (area coordinates) in a
+    triangle
+
     r - Nx2 array of cartesian coordinates
     nodes - 3x2 array of nodes of the triangle
     """
-    
+
     T = np.array(((nodes[0, 0] - nodes[2, 0], nodes[1, 0] - nodes[2, 0]),
                  (nodes[0, 1] - nodes[2, 1], nodes[1, 1] - nodes[2, 1])))
-                 
+
     bary_coords = np.empty((len(r), 3))
     bary_coords[:, :2] = la.solve(T, (r[:, :2]-nodes[None, 2, :2]).T).T
     bary_coords[:, 2] = 1.0 - bary_coords[:, 1] - bary_coords[:, 0]
     return bary_coords
 
+
 def triangle_electric_dipole(vertices, xi_eta, weights):
     """Calculate the dipole moment of a triangle with constant unit charge
-    
+
     Parameters
     ----------
     vertices : ndarray
@@ -80,16 +85,15 @@ def triangle_electric_dipole(vertices, xi_eta, weights):
         the points of the quadrature rule in barycentric form
     weights : ndarray
         the weights of the integration
-        
+
     Returns
     -------
     p : ndarray
         the electric dipole moment of the triangle
     """
 
-    r = ((vertices[0]-vertices[2])*xi_eta[:, 0, None] + 
+    r = ((vertices[0]-vertices[2])*xi_eta[:, 0, None] +
          (vertices[1]-vertices[2])*xi_eta[:, 1, None] +
-          vertices[2])
-          
-    return np.sum(weights[0, :, None]*r, axis=0)
+         vertices[2])
 
+    return np.sum(weights[0, :, None]*r, axis=0)
