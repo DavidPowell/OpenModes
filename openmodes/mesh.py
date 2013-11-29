@@ -96,6 +96,8 @@ class TriangularSurfaceMesh(object):
         
         self.nodes = np.asfortranarray(raw_mesh['nodes'])
         self.polygons = np.asfortranarray(raw_mesh['triangles'])
+        self.nodes.setflags(write=False)
+        self.polygons.setflags(write=False)
         
         try:
             self.physical_name = raw_mesh['physical_name']
