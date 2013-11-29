@@ -1,16 +1,16 @@
 !    -*- f90 -*-
 ! Note: the context of this file is case sensitive.
 
-python module openmodes_core ! in 
-    interface  ! in :openmodes_core
-        function scr_index(row,col,indices,indptr) ! in :openmodes_core:src/rwg.f90
+python module core ! in 
+    interface  ! in :core
+        function scr_index(row,col,indices,indptr) ! in :core:src/rwg.f90
             integer intent(in) :: row
             integer intent(in) :: col
             integer dimension(1),intent(in) :: indices
             integer dimension(1),intent(in) :: indptr
             integer :: scr_index
         end function scr_index
-        subroutine face_integrals_complex(n_s,xi_eta_s,weights_s,nodes_s_in,n_o,xi_eta_o,weights_o,nodes_o_in,jk_0,i_a,i_phi) ! in :openmodes_core:src/rwg.f90
+        subroutine face_integrals_complex(n_s,xi_eta_s,weights_s,nodes_s_in,n_o,xi_eta_o,weights_o,nodes_o_in,jk_0,i_a,i_phi) ! in :core:src/rwg.f90
             use core_for
             integer, optional,intent(in),check(shape(xi_eta_s,0)==n_s),depend(xi_eta_s) :: n_s=shape(xi_eta_s,0)
             real(kind=wp) dimension(n_s,2),intent(in) :: xi_eta_s
@@ -24,14 +24,14 @@ python module openmodes_core ! in
             complex(kind=wp) dimension(3,3),intent(out) :: i_a
             complex(kind=wp) intent(out) :: i_phi
         end subroutine face_integrals_complex
-        subroutine arcioni_singular(nodes,i_a,i_phi) ! in :openmodes_core:src/rwg.f90
+        subroutine arcioni_singular(nodes,i_a,i_phi) ! in :core:src/rwg.f90
             use vectors
             use constants
             real(kind=wp) dimension(3,3),intent(in) :: nodes
             real(kind=wp) dimension(3,3),intent(out) :: i_a
             real(kind=wp) intent(out) :: i_phi
         end subroutine arcioni_singular
-        subroutine face_integrals_smooth_complex(n_s,n_s2,xi_eta_s,weights_s,nodes_s,n_o,xi_eta_o,weights_o,nodes_o,jk_0,i_a,i_phi) ! in :openmodes_core:src/rwg.f90
+        subroutine face_integrals_smooth_complex(n_s,n_s2,xi_eta_s,weights_s,nodes_s,n_o,xi_eta_o,weights_o,nodes_o,jk_0,i_a,i_phi) ! in :core:src/rwg.f90
             use constants
             integer, optional,intent(in),check(shape(xi_eta_s,1)==n_s),depend(xi_eta_s) :: n_s=shape(xi_eta_s,1)
             integer, optional,intent(in),check(shape(xi_eta_s,0)==n_s2),depend(xi_eta_s) :: n_s2=shape(xi_eta_s,0)
@@ -46,7 +46,7 @@ python module openmodes_core ! in
             complex(kind=wp) dimension(3,3),intent(out) :: i_a
             complex(kind=wp) intent(out) :: i_phi
         end subroutine face_integrals_smooth_complex
-        subroutine z_efie_faces_self(num_nodes,num_triangles,num_integration,num_singular,nodes,triangle_nodes,s,xi_eta_eval,weights,phi_precalc,a_precalc,indices_precalc,indptr_precalc,a_face,phi_face) ! in :openmodes_core:src/rwg.f90
+        subroutine z_efie_faces_self(num_nodes,num_triangles,num_integration,num_singular,nodes,triangle_nodes,s,xi_eta_eval,weights,phi_precalc,a_precalc,indices_precalc,indptr_precalc,a_face,phi_face) ! in :core:src/rwg.f90
             use core_for
             integer, optional,intent(in),check(shape(nodes,0)==num_nodes),depend(nodes) :: num_nodes=shape(nodes,0)
             integer, optional,intent(in),check(shape(triangle_nodes,0)==num_triangles),depend(triangle_nodes) :: num_triangles=shape(triangle_nodes,0)
@@ -64,7 +64,7 @@ python module openmodes_core ! in
             complex(kind=wp) dimension(num_triangles,3,num_triangles,3),intent(out),depend(num_triangles,num_triangles) :: a_face
             complex(kind=wp) dimension(num_triangles,num_triangles),intent(out),depend(num_triangles,num_triangles) :: phi_face
         end subroutine z_efie_faces_self
-        subroutine z_efie_faces_mutual(num_nodes_o,num_triangles_o,num_nodes_s,num_triangles_s,num_integration,nodes_o,triangle_nodes_o,nodes_s,triangle_nodes_s,s,xi_eta_eval,weights,a_face,phi_face) ! in :openmodes_core:src/rwg.f90
+        subroutine z_efie_faces_mutual(num_nodes_o,num_triangles_o,num_nodes_s,num_triangles_s,num_integration,nodes_o,triangle_nodes_o,nodes_s,triangle_nodes_s,s,xi_eta_eval,weights,a_face,phi_face) ! in :core:src/rwg.f90
             use core_for
             integer, optional,intent(in),check(shape(nodes_o,0)==num_nodes_o),depend(nodes_o) :: num_nodes_o=shape(nodes_o,0)
             integer, optional,intent(in),check(shape(triangle_nodes_o,0)==num_triangles_o),depend(triangle_nodes_o) :: num_triangles_o=shape(triangle_nodes_o,0)
@@ -78,10 +78,10 @@ python module openmodes_core ! in
             complex(kind=wp) intent(in) :: s
             real(kind=wp) dimension(num_integration,2),intent(in) :: xi_eta_eval
             real(kind=wp) dimension(num_integration),intent(in),depend(num_integration) :: weights
-            complex(kind=wp) dimension(num_triangles_o,num_triangles_s,3,3),intent(out),depend(num_triangles_o,num_triangles_s) :: a_face
+            complex(kind=wp) dimension(num_triangles_o,3,num_triangles_s,3),intent(out),depend(num_triangles_o,num_triangles_s) :: a_face
             complex(kind=wp) dimension(num_triangles_o,num_triangles_s),intent(out),depend(num_triangles_o,num_triangles_s) :: phi_face
         end subroutine z_efie_faces_mutual
-        subroutine voltage_plane_wave(num_nodes,num_triangles,num_basis,num_integration,nodes,triangle_nodes,basis_tri_p,basis_tri_m,basis_node_p,basis_node_m,xi_eta_eval,weights,e_inc,jk_inc,v) ! in :openmodes_core:src/rwg.f90
+        subroutine voltage_plane_wave(num_nodes,num_triangles,num_basis,num_integration,nodes,triangle_nodes,basis_tri_p,basis_tri_m,basis_node_p,basis_node_m,xi_eta_eval,weights,e_inc,jk_inc,v) ! in :core:src/rwg.f90
             use core_for
             integer, optional,intent(in),check(shape(nodes,0)==num_nodes),depend(nodes) :: num_nodes=shape(nodes,0)
             integer, optional,intent(in),check(shape(triangle_nodes,0)==num_triangles),depend(triangle_nodes) :: num_triangles=shape(triangle_nodes,0)
@@ -99,7 +99,7 @@ python module openmodes_core ! in
             complex(kind=wp) dimension(3),intent(in) :: jk_inc
             complex(kind=wp) dimension(num_basis),intent(out),depend(num_basis) :: v
         end subroutine voltage_plane_wave
-        subroutine v_efie_faces_plane_wave(num_nodes,num_triangles,num_integration,nodes,triangle_nodes,xi_eta_eval,weights,e_inc,jk_inc,v_faces) ! in :openmodes_core:src/rwg.f90
+        subroutine v_efie_faces_plane_wave(num_nodes,num_triangles,num_integration,nodes,triangle_nodes,xi_eta_eval,weights,e_inc,jk_inc,v_faces) ! in :core:src/rwg.f90
             use core_for
             integer, optional,intent(in),check(shape(nodes,0)==num_nodes),depend(nodes) :: num_nodes=shape(nodes,0)
             integer, optional,intent(in),check(shape(triangle_nodes,0)==num_triangles),depend(triangle_nodes) :: num_triangles=shape(triangle_nodes,0)
@@ -112,7 +112,7 @@ python module openmodes_core ! in
             complex(kind=wp) dimension(3),intent(in) :: jk_inc
             complex(kind=wp) dimension(num_triangles,3),intent(out),depend(num_triangles) :: v_faces
         end subroutine v_efie_faces_plane_wave
-        subroutine face_integrals_hanninen(nodes_s,n_o,xi_eta_o,weights_o,nodes_o,i_a,i_phi) ! in :openmodes_core:src/rwg.f90
+        subroutine face_integrals_hanninen(nodes_s,n_o,xi_eta_o,weights_o,nodes_o,i_a,i_phi) ! in :core:src/rwg.f90
             use vectors
             use constants
             real(kind=wp) dimension(3,3),intent(in) :: nodes_s
@@ -123,7 +123,7 @@ python module openmodes_core ! in
             real(kind=wp) dimension(3,3),intent(out) :: i_a
             real(kind=wp) intent(out) :: i_phi
         end subroutine face_integrals_hanninen
-        subroutine triangle_face_to_rwg(num_triangles,num_basis,basis_tri_p,basis_tri_m,basis_node_p,basis_node_m,vector_face,scalar_face,vector_rwg,scalar_rwg) ! in :openmodes_core:src/rwg.f90
+        subroutine triangle_face_to_rwg(num_triangles,num_basis,basis_tri_p,basis_tri_m,basis_node_p,basis_node_m,vector_face,scalar_face,vector_rwg,scalar_rwg) ! in :core:src/rwg.f90
             use core_for
             integer, optional,intent(in),check(shape(vector_face,0)==num_triangles),depend(vector_face) :: num_triangles=shape(vector_face,0)
             integer, optional,intent(in),check(len(basis_tri_p)>=num_basis),depend(basis_tri_p) :: num_basis=len(basis_tri_p)
@@ -136,21 +136,21 @@ python module openmodes_core ! in
             complex(kind=wp) dimension(num_basis,num_basis),intent(out),depend(num_basis,num_basis) :: vector_rwg
             complex(kind=wp) dimension(num_basis,num_basis),intent(out),depend(num_basis,num_basis) :: scalar_rwg
         end subroutine triangle_face_to_rwg
-        module constants ! in :openmodes_core:src/common.f90
+        module constants ! in :core:src/common.f90
             integer, parameter,optional :: sp=4
             integer, parameter,optional :: dp=8
             integer, parameter,optional :: wp=8
         end module constants
-        subroutine set_threads(n) ! in :openmodes_core:src/common.f90
+        subroutine set_threads(n) ! in :core:src/common.f90
             use omp_lib
             integer intent(in) :: n
         end subroutine set_threads
-        subroutine get_threads(n) ! in :openmodes_core:src/common.f90
+        subroutine get_threads(n) ! in :core:src/common.f90
             use omp_lib
             integer intent(out) :: n
         end subroutine get_threads
     end interface 
-end python module openmodes_core
+end python module core
 
 ! This file was auto-generated with f2py (version:2).
 ! See http://cens.ioc.ee/projects/f2py2e/

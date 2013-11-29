@@ -69,8 +69,8 @@ fcompiler_dependent_options = {
     } 
 }
 
-openmodes_core = Extension(name = 'openmodes_core',
-                 sources = [join('src', 'openmodes_core.pyf'),
+core = Extension(name = 'core',
+                 sources = [join('src', 'core.pyf'),
                             join('src', 'common.f90'),
                             join('src', 'rwg.f90')], 
 #                 f2py_options=["only:",#"set_threads", "get_threads", 
@@ -143,7 +143,8 @@ setup(name = 'OpenModes',
     license ='',
     url = '',
     packages = ['openmodes'],
-    ext_modules = [dunavant, openmodes_core],
+    ext_package = 'openmodes',
+    ext_modules = [dunavant, core],
     version = '0.1dev',
     #install_requires = ['numpy >= 1.6.2', 'scipy'],
     long_description=long_description,

@@ -20,7 +20,7 @@
 
 import numpy as np
 
-import openmodes_core
+import openmodes.core
 
 from openmodes.constants import epsilon_0, mu_0, pi
 from openmodes.basis import LinearTriangleBasis, get_basis_functions
@@ -130,13 +130,13 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
             for q in sharing_triangles:
                 if q == p:
                     # calculate the self term using the exact formula
-                    res = openmodes_core.arcioni_singular(nodes_p,)
+                    res = openmodes.core.arcioni_singular(nodes_p,)
                     assert(np.all(np.isfinite(res[0])) and np.all(np.isfinite(res[1])))
                     singular_terms[p, p] = res
                 else:
                     # at least one node is shared
                     # calculate neighbour integrals semi-numerically
-                    res = openmodes_core.face_integrals_hanninen(
+                    res = openmodes.core.face_integrals_hanninen(
                                         nodes[polygons[q]], xi_eta_eval, weights, nodes_p)
                     assert(np.all(np.isfinite(res[0])) and np.all(np.isfinite(res[1])))
                     singular_terms[p, q] = res
@@ -163,7 +163,7 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
         #assert(sum(np.isnan(I_A_sing)) == 0)
 
         num_faces_s = num_faces_o
-        A_faces, phi_faces = openmodes_core.z_efie_faces_self(nodes_o,
+        A_faces, phi_faces = openmodes.core.z_efie_faces_self(nodes_o,
                                          basis_o.mesh.polygons, s, 
                                          xi_eta_eval, weights, *singular_terms)
                                 #I_phi_sing, I_A_sing, index_sing, indptr_sing)
@@ -175,7 +175,7 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
 
         num_faces_s = len(basis_s.mesh.polygons)
 
-        A_faces, phi_faces = openmodes_core.z_efie_faces_mutual(nodes_o,
+        A_faces, phi_faces = openmodes.core.z_efie_faces_mutual(nodes_o,
                                 basis_o.mesh.polygons, nodes_s, 
                                 basis_s.mesh.polygons, s, xi_eta_eval, weights)
 
@@ -253,7 +253,7 @@ class EfieOperator(object):
 
             xi_eta_eval, weights = self.quadrature_rule
 
-            incident_faces = openmodes_core.v_efie_faces_plane_wave(part.nodes,
+            incident_faces = openmodes.core.v_efie_faces_plane_wave(part.nodes,
                                         basis.mesh.polygons, xi_eta_eval,
                                         weights, e_inc, jk_inc)
 
