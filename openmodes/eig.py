@@ -18,9 +18,6 @@
 #-----------------------------------------------------------------------------
 """
 Routines for solving nonlinear eigenvalue problems
-
-[1] A. Ruhe, SIAM Journal on Numerical Analysis I, 674 (1973).
-
 """
 
 from openmodes.basis import LoopStarBasis
@@ -30,6 +27,8 @@ import numpy as np
 def eig_linearised(L, S, num_modes, basis):
     """Solves a linearised approximation to the eigenvalue problem from
     the impedance calculated at some fixed frequency.
+
+    The equation :math:`L = -s^2 S` is solved for `s`
     
     Parameters
     ----------
@@ -39,14 +38,13 @@ def eig_linearised(L, S, num_modes, basis):
     num_modes : int
         The number of modes required.
     basis : LoopStarBasis
-        Which object in the system to find modes for. If not specified, 
-        then modes of the entire system will be found
+        The basis function of the `Part`
         
     Returns
     -------
     s_mode : ndarray, complex
         The resonant frequencies of the modes (in Hz)
-        The complex pole s corresponding to the mode's eigenfrequency
+        The complex pole `s` corresponding to the mode's eigenfrequency
     j_mode : ndarray, complex
         Columns of this matrix contain the corresponding modal currents
     """
@@ -140,8 +138,11 @@ def eig_newton(func, lambda_0, x_0, lambda_tol = 1e-8, max_iter = 20,
 
 
     See:
-        P. Lancaster, Lambda Matrices and Vibrating Systems. Oxford: Pergamon, 1966.
-        A. Ruhe, “Algorithms for the Nonlinear Eigenvalue Problem,” SIAM J. Numer. Anal., vol. 10, no. 4, pp. 674–689, Sep. 1973.
+    1.  P. Lancaster, Lambda Matrices and Vibrating Systems. 
+        Oxford: Pergamon, 1966.
+        
+    2.  A. Ruhe, “Algorithms for the Nonlinear Eigenvalue Problem,” 
+        SIAM J. Numer. Anal., vol. 10, no. 4, pp. 674–689, Sep. 1973.
         
     """
 
