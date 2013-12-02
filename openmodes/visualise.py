@@ -19,8 +19,15 @@
 """
 Routines for displaying parts and solutions.
 """
+import numpy as np
 
 from openmodes.parts import Part
+
+
+def compress(func, factor):
+    "Compress a function to smooth out extreme values"
+    return np.tanh(func*factor/max(abs(func)))
+
 
 def plot_parts(parts, currents=None, figsize=(10, 4), view_angles = (40, 90)):
     """Create a simple 3D plot to show the location of loaded parts in space
@@ -61,44 +68,62 @@ def plot_parts(parts, currents=None, figsize=(10, 4), view_angles = (40, 90)):
     ax.autoscale()
     plt.show()
 
+
 def plot_mayavi(parts, vector_function=None, scalar_function=None, 
-                vector_points=None, vector_name="vector", scalar_name="scalar"):
+                vector_points=None, vector_name="vector", scalar_name="scalar",
+                compress_scalars=None, num_vectors=None):
     try:
         from mayavi import mlab
     except ImportError:
         raise ImportError("Please ensure that Enthought Mayavi is correctly " +
                           "installed before calling this function")
-    
+
+    if scalar_function is not None:
+        opacity = 0.0
+    else:
+        opacity = 1.0
+
     mlab.figure(bgcolor=(1.0, 1.0, 1.0))
     for part_num, part in enumerate(parts):
-    
+
         triangle_nodes = part.mesh.polygons
         nodes = part.nodes
         tri_plot = mlab.triangular_mesh(nodes[:, 0], nodes[:, 1], nodes[:, 2], 
                                     triangle_nodes, representation='wireframe', 
-                                    color=(0, 0, 0), line_width=0.5)
+                                    color=(0, 0, 0), line_width=0.5,
+                                    opacity=opacity)
         if scalar_function is not None:
+            if compress_scalars:
+                compressed_scalars=compress(scalar_function[part_num],
+                                            compress_scalars)
+            else:
+                compressed_scalars=scalar_function[part_num]
+
             cell_data = tri_plot.mlab_source.dataset.cell_data
-            cell_data.scalars = scalar_function[part_num]
+            cell_data.scalars = compressed_scalars
             cell_data.scalars.name = scalar_name
             cell_data.update()
-            
+
             mesh2 = mlab.pipeline.set_active_attribute(tri_plot,
                     cell_scalars=scalar_name)
             mlab.pipeline.surface(mesh2)
-            
-            
+
         if vector_function is not None:
             points = vector_points[part_num]
-            vectors = vector_function[part_num]            
+            vectors = vector_function[part_num]
+            if num_vectors is None:
+                mask_points = None
+            else:
+                mask_points = int(len(vectors)//num_vectors)
+            #print mask_points
+            mask_points=5
             mlab.quiver3d(points[:, 0], points[:, 1], points[:, 2], 
-                  vectors[:, 0], vectors[:, 1], vectors[:, 2], 
-                  color=(0, 0, 0), opacity=0.75)
+                          vectors[:, 0], vectors[:, 1], vectors[:, 2], 
+                          color=(0, 0, 0), opacity=0.75, line_width=1.0,
+                          mask_points=mask_points)
 
-        
     mlab.show()
 
- 
 
 def write_vtk(mesh, nodes, filename, vector_function=None, 
               scalar_function=None, vector_name="vector", 

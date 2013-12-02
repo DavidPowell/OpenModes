@@ -583,9 +583,8 @@ from openmodes.visualise import plot_mayavi
 
 def vis_eigencurrents():
     ring1 = openmodes.load_mesh(
-                        osp.join("..", "examples", "geometry", "SRR.geo"), mesh_tol=0.5e-3)
-    #ring1 = openmodes.load_mesh(osp.join("geometry", "SRR.msh"))
-    
+                        osp.join("..", "examples", "geometry", "SRR_wide.geo"),
+                        mesh_tol=0.5e-3)
     
     basis_class=LoopStarBasis
     #basis_class=DivRwgBasis
@@ -596,8 +595,6 @@ def vis_eigencurrents():
     sim.place_part(ring1, location=[20e-3, 0, 0])
     sim.place_part(ring1, location=[30e-3, 0, 0])
 
-    #part2 = sim.place_part(ring2)
-     
     start_freq = 2e9
     start_s = 2j*np.pi*start_freq
     
@@ -612,12 +609,6 @@ def vis_eigencurrents():
     
     basis = get_basis_functions(ring1, basis_class)
     
-    #nodes = ring1.nodes
-    #triangle_nodes = ring1.polygons
-    
-    #plot_mayavi(ring1, nodes)
-    #return    
-
     charges = []
     currents = []
     centres = []
@@ -629,17 +620,10 @@ def vis_eigencurrents():
         currents.append(face_current.real)
         centres.append(face_centre)
         
-    plot_mayavi(sim.parts, currents, charges, vector_points=centres)
+    plot_mayavi(sim.parts, currents, charges, vector_points=centres, compress_scalars=5, num_vectors=10)
+    #plot_mayavi(sim.parts, None, charges, compress_scalars=5)
     return
         
-##        x = face_centre[:, 0] 
-##        y = face_centre[:, 1] 
-##        z = face_centre[:, 2] 
-#        
-#        # normalise maximum charge for convenience of plotting
-#        face_charge /= max(abs(face_charge))
-#
-#        plot_mayavi(ring1, nodes, face_current, face_charge.real, vector_points=face_centre)
 
             
         #plot_parts(sim.parts)
