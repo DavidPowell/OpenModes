@@ -22,7 +22,7 @@ from __future__ import division#, print_function
 
 # numpy and scipy
 import numpy as np
-import scipy.linalg as la
+#import scipy.linalg as la
 #import itertools
 from scipy.optimize import nnls
 
@@ -65,8 +65,8 @@ def delta_eig(s, j, part, Z_func, eps = None):
 def fit_circuit(s_0, z_der):
     """
     Fit a circuit model to a resonant frequency and impedance derivative
-    To get reasonable condition number, omega_0 should be scaled to be near unity,
-    and z_der should be scaled by the inverse of this factor
+    To get reasonable condition number, omega_0 should be scaled to be near
+    unity, and z_der should be scaled by the inverse of this factor
     """
     M = np.zeros((4, 4), np.float64)
     rhs = np.zeros(4, np.float64)
@@ -143,9 +143,9 @@ class Simulation(object):
         return sim_part
 
     def calculate_impedance(self, s):
-        """Evaluate the self and mutual impedances of all parts  in the
-        simulation. Return an impedance object which can calculate several
-        derived impedance quantities
+        """Evaluate the self and mutual impedances of all parts in the
+        simulation. Return an `ImpedancePart` object which can calculate
+        several derived impedance quantities
 
         Parameters
         ----------        
@@ -154,7 +154,7 @@ class Simulation(object):
 
         Returns
         -------
-        impedance_matrix : ImpedanceMatrix
+        impedance_matrices : ImpedanceParts
             The impedance matrix object which can represent the impedance of
             the object in several ways.
         """
@@ -231,8 +231,9 @@ class Simulation(object):
                 Z_func = lambda s: self.operator.impedance_matrix(s, part)[:]
 
                 for mode in xrange(num_modes):
-                    res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode], 
-                                     weight='max element', lambda_tol=1e-8, max_iter=200)
+                    res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode],
+                                     weight='max element', lambda_tol=1e-8,
+                                     max_iter=200)
 
                     print "Iterations", res['iter_count']
                     #print res['eigval']/2/np.pi
