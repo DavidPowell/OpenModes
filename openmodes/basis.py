@@ -33,7 +33,8 @@ RWG = namedtuple('RWG', ('tri_p', 'tri_m', 'node_p', 'node_m'))
 
 # TODO: routines to integrate over a triangle, with no scaling by area
 
-def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True):
+def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True,
+                              nodes = None):
     """Interpolate a function on a triangular mesh with linear basis functions
     on each face
     
@@ -43,6 +44,8 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True):
         Return a 2D array, instead of a 3D array
     """
 
+    if nodes is None:
+        nodes = mesh.nodes
     points_per_tri = len(xi_eta)
 
     r = np.empty((num_tri, points_per_tri, 3), mesh.nodes.dtype)
@@ -50,22 +53,20 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True):
     scalar_func = np.zeros((num_tri, points_per_tri), tri_func.dtype)
 
     for tri_count, node_nums in enumerate(mesh.polygons):
-        #r, interp_func = interpolate_triangle(mesh.nodes[node_nums], 
-        #                                      tri_func[tri_count], xi_eta)
-                                    
-        nodes = mesh.nodes[node_nums]                                    
         for point_count, (xi, eta) in enumerate(xi_eta):
             # Barycentric coordinates of the observer
             zeta = 1.0 - eta - xi
     
             # Cartesian coordinates of the point
-            r[tri_count, point_count] = xi*nodes[0] + eta*nodes[1] + zeta*nodes[2]
+            r[tri_count, point_count] = xi*nodes[node_nums][0] + \
+                                        eta*nodes[node_nums][1] + \
+                                        zeta*nodes[node_nums][2]
 
             scalar_func[tri_count, point_count] = sum(tri_func[tri_count])
     
             for node_count in xrange(3):
                 # Vector rho within the observer triangle
-                rho = r[tri_count, point_count] - nodes[node_count]
+                rho = r[tri_count, point_count] - nodes[node_nums][node_count]
     
                 vector_func[tri_count, point_count] += rho*tri_func[tri_count,
                              node_count]
@@ -85,7 +86,7 @@ class LinearTriangleBasis(object):
         self.id = uuid.uuid4()
 
     def interpolate_function(self, linear_func, xi_eta = [[1.0/3, 1.0/3]], 
-                             flatten = True, return_scalar=False):
+                             flatten = True, return_scalar=False, nodes=None):
         """Interpolate a function defined in RWG or loop-star basis over the 
         complete mesh
         
@@ -105,6 +106,9 @@ class LinearTriangleBasis(object):
         flatten : bool, optional
             If false, data for each triangle will be identified by a specific
             index of the array, otherwise all points are identical
+        nodes : array, optional
+            Nodes of the Part, which may not correspond to the original nodes
+            of the mesh.
             
         Returns
         -------
@@ -125,7 +129,8 @@ class LinearTriangleBasis(object):
         tri_func /= 2*self.mesh.polygon_areas[:, None]
 
         r, vector_func, scalar_func = interpolate_triangle_mesh(self.mesh, 
-                                            tri_func, num_tri, xi_eta, flatten)
+                                            tri_func, num_tri, xi_eta, flatten,
+                                            nodes)
                                             
         if return_scalar:
             return r, vector_func, scalar_func
