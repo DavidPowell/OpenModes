@@ -591,8 +591,11 @@ def vis_eigencurrents():
     #basis_class=DivRwgBasis
     
     sim = openmodes.Simulation(basis_class=basis_class)
-    part1 = sim.place_part(ring1)
-    part2 = sim.place_part(ring1, location=[10e-3, 0, 0])
+    sim.place_part(ring1, location=[0e-3, 0, 0])
+    sim.place_part(ring1, location=[10e-3, 0, 0])
+    sim.place_part(ring1, location=[20e-3, 0, 0])
+    sim.place_part(ring1, location=[30e-3, 0, 0])
+
     #part2 = sim.place_part(ring2)
      
     start_freq = 2e9
@@ -609,23 +612,34 @@ def vis_eigencurrents():
     
     basis = get_basis_functions(ring1, basis_class)
     
-    nodes = ring1.nodes
-    triangle_nodes = ring1.polygons
+    #nodes = ring1.nodes
+    #triangle_nodes = ring1.polygons
     
     #plot_mayavi(ring1, nodes)
     #return    
+
+    charges = []
+    currents = []
+    centres = []
     
     for mode in xrange(num_modes):
         I = j_modes[0][:, mode]
-        face_centre, face_current, face_charge = basis.interpolate_function(I, return_scalar=True)
-#        x = face_centre[:, 0] 
-#        y = face_centre[:, 1] 
-#        z = face_centre[:, 2] 
+        face_centre, face_current, face_charge = basis.interpolate_function(I, return_scalar=True, nodes=sim.parts[mode].nodes)
+        charges.append(face_charge.real)
+        currents.append(face_current.real)
+        centres.append(face_centre)
         
-        # normalise maximum charge for convenience of plotting
-        face_charge /= max(abs(face_charge))
-
-        plot_mayavi(ring1, nodes, face_current, face_charge.real, vector_points=face_centre)
+    plot_mayavi(sim.parts, currents, charges, vector_points=centres)
+    return
+        
+##        x = face_centre[:, 0] 
+##        y = face_centre[:, 1] 
+##        z = face_centre[:, 2] 
+#        
+#        # normalise maximum charge for convenience of plotting
+#        face_charge /= max(abs(face_charge))
+#
+#        plot_mayavi(ring1, nodes, face_current, face_charge.real, vector_points=face_centre)
 
             
         #plot_parts(sim.parts)

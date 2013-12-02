@@ -61,36 +61,39 @@ def plot_parts(parts, currents=None, figsize=(10, 4), view_angles = (40, 90)):
     ax.autoscale()
     plt.show()
 
-def plot_mayavi(mesh, nodes, vector_function=None, scalar_function=None, 
-                vector_points=None ,vector_name="vector", scalar_name="scalar"):
-    #try:
-    from mayavi import mlab
+def plot_mayavi(parts, vector_function=None, scalar_function=None, 
+                vector_points=None, vector_name="vector", scalar_name="scalar"):
+    try:
+        from mayavi import mlab
+    except ImportError:
+        raise ImportError("Please ensure that Enthought Mayavi is correctly " +
+                          "installed before calling this function")
     
-#    if scalar_function is None:
-#        opacity = 1.0
-#    else:
-#        opacity = 0.0
-#        opacity=opacity, 
-    
-    triangle_nodes = mesh.polygons
     mlab.figure(bgcolor=(1.0, 1.0, 1.0))
-    tri_plot = mlab.triangular_mesh(nodes[:, 0], nodes[:, 1], nodes[:, 2], 
-                                triangle_nodes, representation='wireframe', 
-                                color=(0, 0, 0), line_width=0.5)
-    if scalar_function is not None:
-        cell_data = tri_plot.mlab_source.dataset.cell_data
-        cell_data.scalars = scalar_function
-        cell_data.scalars.name = scalar_name
-        cell_data.update()
-        
-        mesh2 = mlab.pipeline.set_active_attribute(tri_plot,
-                cell_scalars=scalar_name)
-        mlab.pipeline.surface(mesh2)
-        
-    if vector_function is not None:
-        mlab.quiver3d(vector_points[:, 0], vector_points[:, 1], vector_points[:, 2], 
-              vector_function[:, 0].real, vector_function[:, 1].real, vector_function[:, 2].real, 
-              color=(0, 0, 0), opacity=0.5)#, mode='cone')
+    for part_num, part in enumerate(parts):
+    
+        triangle_nodes = part.mesh.polygons
+        nodes = part.nodes
+        tri_plot = mlab.triangular_mesh(nodes[:, 0], nodes[:, 1], nodes[:, 2], 
+                                    triangle_nodes, representation='wireframe', 
+                                    color=(0, 0, 0), line_width=0.5)
+        if scalar_function is not None:
+            cell_data = tri_plot.mlab_source.dataset.cell_data
+            cell_data.scalars = scalar_function[part_num]
+            cell_data.scalars.name = scalar_name
+            cell_data.update()
+            
+            mesh2 = mlab.pipeline.set_active_attribute(tri_plot,
+                    cell_scalars=scalar_name)
+            mlab.pipeline.surface(mesh2)
+            
+            
+        if vector_function is not None:
+            points = vector_points[part_num]
+            vectors = vector_function[part_num]            
+            mlab.quiver3d(points[:, 0], points[:, 1], points[:, 2], 
+                  vectors[:, 0], vectors[:, 1], vectors[:, 2], 
+                  color=(0, 0, 0), opacity=0.75)
 
         
     mlab.show()
