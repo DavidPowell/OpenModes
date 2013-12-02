@@ -577,9 +577,13 @@ def test_nonlinear_eig_srr():
 #plt.plot(freqs*1e-9, extinction_tot.real)
 #plt.show()    
 
+#from mayavi import mlab
+
+from openmodes.visualise import plot_mayavi
+
 def vis_eigencurrents():
     ring1 = openmodes.load_mesh(
-                        osp.join("geometry", "SRR.geo"), mesh_tol=1e-3)
+                        osp.join("..", "examples", "geometry", "SRR.geo"), mesh_tol=0.5e-3)
     #ring1 = openmodes.load_mesh(osp.join("geometry", "SRR.msh"))
     
     
@@ -588,6 +592,7 @@ def vis_eigencurrents():
     
     sim = openmodes.Simulation(basis_class=basis_class)
     part1 = sim.place_part(ring1)
+    part2 = sim.place_part(ring1, location=[10e-3, 0, 0])
     #part2 = sim.place_part(ring2)
      
     start_freq = 2e9
@@ -595,7 +600,7 @@ def vis_eigencurrents():
     
     num_modes = 4
     
-    if False:
+    if True:
         s_modes, j_modes = sim.part_singularities(start_s, num_modes)
         #print np.array(s_modes)/2/np.pi
     else:
@@ -604,18 +609,31 @@ def vis_eigencurrents():
     
     basis = get_basis_functions(ring1, basis_class)
     
-    for mode in xrange(num_modes):    
+    nodes = ring1.nodes
+    triangle_nodes = ring1.polygons
+    
+    #plot_mayavi(ring1, nodes)
+    #return    
+    
+    for mode in xrange(num_modes):
         I = j_modes[0][:, mode]
         face_centre, face_current, face_charge = basis.interpolate_function(I, return_scalar=True)
+#        x = face_centre[:, 0] 
+#        y = face_centre[:, 1] 
+#        z = face_centre[:, 2] 
         
         # normalise maximum charge for convenience of plotting
         face_charge /= max(abs(face_charge))
+
+        plot_mayavi(ring1, nodes, face_current, face_charge.real, vector_points=face_centre)
+
             
-        write_vtk(part1.mesh, part1.nodes, osp.join("output", "srr-mode-%d.vtk" % mode), 
-                  vector_function = face_current, scalar_function=face_charge
-                  )
+        #plot_parts(sim.parts)
+#        write_vtk(part1.mesh, part1.nodes, osp.join("output", "srr-mode-%d.vtk" % mode), 
+#                  vector_function = face_current, scalar_function=face_charge
+#                  )
     
-test_nonlinear_eig_srr()
+#test_nonlinear_eig_srr()
 
 #loop_star_linear_eigenmodes()
 #srr_coupling()
@@ -624,4 +642,4 @@ test_nonlinear_eig_srr()
 #compare_source_terms()
 #test_rwg()
 #coupled_extinction()
-#vis_eigencurrents()
+vis_eigencurrents()

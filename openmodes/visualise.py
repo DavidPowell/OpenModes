@@ -22,7 +22,7 @@ Routines for displaying parts and solutions.
 
 from openmodes.parts import Part
 
-def plot_parts(parts, figsize=(10, 4), view_angles = (20, 90)):
+def plot_parts(parts, currents=None, figsize=(10, 4), view_angles = (40, 90)):
     """Create a simple 3D plot to show the location of loaded parts in space
 
     Parameters
@@ -53,11 +53,48 @@ def plot_parts(parts, figsize=(10, 4), view_angles = (20, 90)):
         for edge in mesh.get_edges():
             nodes = part.nodes[edge]
             ax.plot(nodes[:, 0], nodes[:, 1], nodes[:, 2], 'k')
+        #if currents is not None:
+        #    ax.quiver(
         #ax.scatter(part.nodes[:, 0], part.nodes[:, 1], part.nodes[:, 2], marker='x')
      
     ax.view_init(*view_angles)
     ax.autoscale()
     plt.show()
+
+def plot_mayavi(mesh, nodes, vector_function=None, scalar_function=None, 
+                vector_points=None ,vector_name="vector", scalar_name="scalar"):
+    #try:
+    from mayavi import mlab
+    
+#    if scalar_function is None:
+#        opacity = 1.0
+#    else:
+#        opacity = 0.0
+#        opacity=opacity, 
+    
+    triangle_nodes = mesh.polygons
+    mlab.figure(bgcolor=(1.0, 1.0, 1.0))
+    tri_plot = mlab.triangular_mesh(nodes[:, 0], nodes[:, 1], nodes[:, 2], 
+                                triangle_nodes, representation='wireframe', 
+                                color=(0, 0, 0), line_width=0.5)
+    if scalar_function is not None:
+        cell_data = tri_plot.mlab_source.dataset.cell_data
+        cell_data.scalars = scalar_function
+        cell_data.scalars.name = scalar_name
+        cell_data.update()
+        
+        mesh2 = mlab.pipeline.set_active_attribute(tri_plot,
+                cell_scalars=scalar_name)
+        mlab.pipeline.surface(mesh2)
+        
+    if vector_function is not None:
+        mlab.quiver3d(vector_points[:, 0], vector_points[:, 1], vector_points[:, 2], 
+              vector_function[:, 0].real, vector_function[:, 1].real, vector_function[:, 2].real, 
+              color=(0, 0, 0), opacity=0.5)#, mode='cone')
+
+        
+    mlab.show()
+
  
 
 def write_vtk(mesh, nodes, filename, vector_function=None, 
