@@ -214,7 +214,7 @@ class Simulation(object):
             # TODO: unique ID needs to be modified if different materials or
             # placement above a layer are possible
 
-            unique_id = (part.id,) # cache identical parts 
+            unique_id = (part.mesh.id,) # cache identical parts 
             if unique_id in solved_parts:
                 print "got from cache"
                 mode_s, mode_j = solved_parts[unique_id]
