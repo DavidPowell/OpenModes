@@ -620,7 +620,9 @@ def vis_eigencurrents():
         currents.append(face_current.real)
         centres.append(face_centre)
         
-    plot_mayavi(sim.parts, currents, charges, vector_points=centres, compress_scalars=5, num_vectors=10)
+    #plot_mayavi(sim.parts, currents, charges, vector_points=centres, compress_scalars=5)
+    plot_mayavi(sim.parts, currents, charges, vector_points=centres, 
+                compress_scalars=5)#, filename=osp.join("output", "test.png"))
     #plot_mayavi(sim.parts, None, charges, compress_scalars=5)
     return
         

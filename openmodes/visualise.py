@@ -69,19 +69,54 @@ def plot_parts(parts, currents=None, figsize=(10, 4), view_angles = (40, 90)):
     plt.show()
 
 
-def plot_mayavi(parts, vector_function=None, scalar_function=None, 
+def plot_mayavi(parts, scalar_function=None, vector_function=None,  
                 vector_points=None, vector_name="vector", scalar_name="scalar",
-                compress_scalars=None, num_vectors=None):
+                compress_scalars=None, filename=None):
+    """Generate a mayavi plot of the mesh of the parts, and optionally also
+    show a plot of vector and scalar functions defined on its surface.
+    
+    Parameters
+    ----------
+    parts : list of `Part`
+        All the parts to plot
+    scalar_function : list of real arrays, optional
+        A scalar function which will be plotted on the surface of the parts
+    vector_function : list of real arrays, optional
+        An optional vector function to plot as arrows
+    vector_points : list of real arrays, optional
+        The points at which the vector function is calculated
+    vector_name : string, optional
+        A name for the vector function
+    scalar_name : string, optional
+        A name for the scalar function
+    compress_scalars : real, optional
+        The parameter of a tanh function which will be used to scale the data
+        in a nonlinear fashion. This can smooth out the extreme values of the
+        function at certain points, allowing the user to see more detail in the
+        regions where the value is smaller.
+    filename : string, optional
+        If specified, the figure will be saved to this file, rather than
+        being plotted on screen.
+        
+    Note that the functions to be plotted must be real, not complex.
+    """
     try:
         from mayavi import mlab
     except ImportError:
         raise ImportError("Please ensure that Enthought Mayavi is correctly " +
                           "installed before calling this function")
 
+    # If plotting a scalar function, plotting the mesh lines tends to make
+    # the plot too busy, so switch them off.
     if scalar_function is not None:
         opacity = 0.0
     else:
         opacity = 1.0
+
+    if filename is not None:
+        # render to a file, so we don't need to display anything
+        offscreen = mlab.options.offscreen
+        mlab.options.offscreen = True
 
     mlab.figure(bgcolor=(1.0, 1.0, 1.0))
     for part_num, part in enumerate(parts):
@@ -111,18 +146,24 @@ def plot_mayavi(parts, vector_function=None, scalar_function=None,
         if vector_function is not None:
             points = vector_points[part_num]
             vectors = vector_function[part_num]
-            if num_vectors is None:
-                mask_points = None
-            else:
-                mask_points = int(len(vectors)//num_vectors)
+#            if num_vectors is None:
+#                mask_points = None
+#            else:
+#                mask_points = int(len(vectors)//num_vectors)
             #print mask_points
-            mask_points=5
+#            ,
+#                          mask_points=mask_points
+#            mask_points=2
             mlab.quiver3d(points[:, 0], points[:, 1], points[:, 2], 
                           vectors[:, 0], vectors[:, 1], vectors[:, 2], 
-                          color=(0, 0, 0), opacity=0.75, line_width=1.0,
-                          mask_points=mask_points)
+                          color=(0, 0, 0), opacity=0.75, line_width=1.0)
 
-    mlab.show()
+        mlab.view(distance='auto')
+    if filename is None:
+        mlab.show()
+    else:
+        mlab.savefig(filename)
+        mlab.options.offscreen = offscreen
 
 
 def write_vtk(mesh, nodes, filename, vector_function=None, 
