@@ -22,6 +22,7 @@ Routines for displaying parts and solutions.
 import numpy as np
 
 from openmodes.parts import Part
+from openmodes.mesh import combine_mesh
 
 
 def compress(func, factor):
@@ -70,7 +71,7 @@ def plot_parts(parts, currents=None, figsize=(10, 4), view_angles = (40, 90)):
 
 
 def plot_mayavi(parts, scalar_function=None, vector_function=None,  
-                vector_points=None, vector_name="vector", scalar_name="scalar",
+                vector_points=None, scalar_name="scalar", vector_name="vector",
                 compress_scalars=None, filename=None):
     """Generate a mayavi plot of the mesh of the parts, and optionally also
     show a plot of vector and scalar functions defined on its surface.
@@ -85,10 +86,10 @@ def plot_mayavi(parts, scalar_function=None, vector_function=None,
         An optional vector function to plot as arrows
     vector_points : list of real arrays, optional
         The points at which the vector function is calculated
-    vector_name : string, optional
-        A name for the vector function
     scalar_name : string, optional
         A name for the scalar function
+    vector_name : string, optional
+        A name for the vector function
     compress_scalars : real, optional
         The parameter of a tanh function which will be used to scale the data
         in a nonlinear fashion. This can smooth out the extreme values of the
@@ -123,19 +124,19 @@ def plot_mayavi(parts, scalar_function=None, vector_function=None,
 
         triangle_nodes = part.mesh.polygons
         nodes = part.nodes
-        tri_plot = mlab.triangular_mesh(nodes[:, 0], nodes[:, 1], nodes[:, 2], 
-                                    triangle_nodes, representation='wireframe', 
+        tri_plot = mlab.triangular_mesh(nodes[:, 0], nodes[:, 1], nodes[:, 2],
+                                    triangle_nodes, representation='wireframe',
                                     color=(0, 0, 0), line_width=0.5,
                                     opacity=opacity)
         if scalar_function is not None:
             if compress_scalars:
-                compressed_scalars=compress(scalar_function[part_num],
+                part_scalars=compress(scalar_function[part_num],
                                             compress_scalars)
             else:
-                compressed_scalars=scalar_function[part_num]
+                part_scalars=scalar_function[part_num]
 
             cell_data = tri_plot.mlab_source.dataset.cell_data
-            cell_data.scalars = compressed_scalars
+            cell_data.scalars = part_scalars
             cell_data.scalars.name = scalar_name
             cell_data.update()
 
@@ -146,16 +147,8 @@ def plot_mayavi(parts, scalar_function=None, vector_function=None,
         if vector_function is not None:
             points = vector_points[part_num]
             vectors = vector_function[part_num]
-#            if num_vectors is None:
-#                mask_points = None
-#            else:
-#                mask_points = int(len(vectors)//num_vectors)
-            #print mask_points
-#            ,
-#                          mask_points=mask_points
-#            mask_points=2
-            mlab.quiver3d(points[:, 0], points[:, 1], points[:, 2], 
-                          vectors[:, 0], vectors[:, 1], vectors[:, 2], 
+            mlab.quiver3d(points[:, 0], points[:, 1], points[:, 2],
+                          vectors[:, 0], vectors[:, 1], vectors[:, 2],
                           color=(0, 0, 0), opacity=0.75, line_width=1.0)
 
         mlab.view(distance='auto')
@@ -166,9 +159,10 @@ def plot_mayavi(parts, scalar_function=None, vector_function=None,
         mlab.options.offscreen = offscreen
 
 
-def write_vtk(mesh, nodes, filename, vector_function=None, 
-              scalar_function=None, vector_name="vector", 
-              scalar_name="scalar"):
+def write_vtk(parts, scalar_function=None, vector_function=None,  
+                vector_points=None, scalar_name="scalar", vector_name="vector",
+                compress_scalars=None, filename=None, autoscale_vectors=False,
+                compress_separately=False):
     """Write the mesh and solution data to a VTK file
     
     If the current vector is given, then currents and charges will be
@@ -185,30 +179,45 @@ def write_vtk(mesh, nodes, filename, vector_function=None,
         
     Requires that pyvtk is installed
     """
-    
-    from pyvtk import PolyData, VtkData, Scalars, CellData, Vectors
-    
-    polygons = mesh.polygons.tolist()
-    struct = PolyData(points=nodes, polygons=polygons)
+
+    try:    
+        from pyvtk import PolyData, VtkData, Scalars, CellData, Vectors
+    except ImportError:
+        raise ImportError("Please ensure that PyVTK is correctly installed")
 
     data = []
 
     if vector_function is not None:
+        if autoscale_vectors and compress_separately:
+            vector_function=[v/np.max(np.abs(v)) for v in vector_function]
+        vector_function = np.vstack(vector_function)
+        if autoscale_vectors and not compress_separately:
+            vector_function=vector_function/np.max(np.abs(vector_function))
         data.append(Vectors(vector_function.real, name=vector_name+"_real"))
         data.append(Vectors(vector_function.imag, name=vector_name+"_imag"))
-        
+
     if scalar_function is not None:
-        data.append(Scalars(scalar_function.real, name=scalar_name+"_real", 
+        if compress_scalars and compress_separately:
+            scalar_function=[compress(s, compress_scalars) for s in scalar_function]
+        scalar_function = np.hstack(scalar_function)
+        if compress_scalars and not compress_separately:
+            scalar_function=compress(scalar_function, compress_scalars)
+
+        data.append(Scalars(scalar_function.real, name=scalar_name+"_real",
                             lookup_table="default"))
-        data.append(Scalars(scalar_function.imag, name=scalar_name+"_imag", 
+        data.append(Scalars(scalar_function.imag, name=scalar_name+"_imag",
                             lookup_table="default"))
-    
+        
     cell_data = CellData(*data)
 
+    meshes = [part.mesh for part in parts]
+    nodes = [part.nodes for part in parts]    
+    mesh = combine_mesh(meshes, nodes)
+
+    polygons = mesh.polygons.tolist()
+    struct = PolyData(points=mesh.nodes, polygons=polygons)    
+    
     vtk = VtkData(struct, cell_data, "OpenModes mesh and data")
-    #else:
-    #    vtk = VtkData(struct, "MOM mesh")
-        
     vtk.tofile(filename, "ascii")
     
         

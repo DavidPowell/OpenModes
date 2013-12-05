@@ -23,6 +23,7 @@ The following software packages are the absolute minimum to run OpenModes:
 
 - python 2.7 (3.x not currently supported)
 - numpy (1.6.2 or later)
+- scipy
 - gmsh
 - matplotlib (to plot the results)
 
@@ -30,12 +31,12 @@ Strongly recommended packages
 
 - IPython (the notebook is used by many of the examples)
 - pyvtk (to export 3D plots to vtk file format)
+- ViSit or ParaView (3D plotting software to view vtk files)
 
 Other packages which may be useful
 
 - spyder (a GUI for editing python)
-- scipy (contains many useful computational python routines)
-- ViSit or ParaView (3D plotting software to view vtk files)
+- mayavi (a python package for producing 3D plots)
 
 OpenModes contains some core routines which are optimised using fortran.
 Therefore, on platforms where a binary package of OpenModes is not provided,
@@ -49,8 +50,8 @@ which may also be suitable
 - Anaconda
 - Enthought Python Distribution
 
-Due to the lack of good free fortran compilers for windows, you will need to
-install a 32 bit version of any of these distributions
+Due to the lack of reliable free 64 bit fortran compilers for windows, you will
+need to install a 32 bit version of any of these distributions
 
 Ubuntu Linux
 ------------

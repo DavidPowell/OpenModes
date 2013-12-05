@@ -32,9 +32,10 @@ from openmodes import integration
 from openmodes.parts import Part#, Triangles, RwgBasis
 
 from openmodes.impedance import ImpedanceParts
-from openmodes.basis import DivRwgBasis, get_basis_functions
+from openmodes.basis import LoopStarBasis, get_basis_functions
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
 from openmodes.eig import eig_linearised, eig_newton
+from openmodes.visualise import plot_mayavi, write_vtk
 
 
 def delta_eig(s, j, part, Z_func, eps = None):
@@ -95,7 +96,7 @@ class Simulation(object):
     used to solve the scattering problem.
     """
 
-    def __init__(self, integration_rule = 5, basis_class = DivRwgBasis,
+    def __init__(self, integration_rule = 5, basis_class = LoopStarBasis,
                  operator_class = EfieOperator, 
                  greens_function=FreeSpaceGreensFunction()):
         """       
@@ -216,7 +217,7 @@ class Simulation(object):
 
             unique_id = (part.mesh.id,) # cache identical parts 
             if unique_id in solved_parts:
-                print "got from cache"
+                #print "got from cache"
                 mode_s, mode_j = solved_parts[unique_id]
             else:
                 # first get an estimate of the pole locations
@@ -251,6 +252,41 @@ class Simulation(object):
 #            all_j.append(lin_currents)
 
         return all_s, all_j
+
+    def plot_solution(self, solution, output_format, filename=None,
+                      compress_scalars=None, compress_separately=False):
+        """Plot a solution on several parts"""
+
+        #if output_format
+
+        charges = []
+        currents = []
+        centres = []
+        
+        for part_num, part in enumerate(self.parts):
+            I = solution[part_num]
+            basis = get_basis_functions(part.mesh, self.basis_class)
+        
+            centre, current, charge = basis.interpolate_function(I, 
+                                                return_scalar=True, nodes=part.nodes)
+            charges.append(charge.real)
+            currents.append(current.real)
+            centres.append(centre)
+       
+        output_format = output_format.lower()
+        if output_format == 'mayavi':
+            plot_mayavi(self.parts, charges, currents, vector_points=centres,
+                       compress_scalars=compress_scalars, filename=filename)
+                       
+        elif output_format == 'vtk':
+            write_vtk(self.parts, charges, currents, filename=filename,
+                     compress_scalars=compress_scalars,
+                     autoscale_vectors=True,
+                     compress_separately=compress_separately)
+        else:
+            raise ValueError("Unknown output format")
+
+        
 
 #    def circuit_models(self):
 #        """
