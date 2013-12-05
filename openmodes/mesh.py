@@ -84,6 +84,8 @@ class TriangularSurfaceMesh(object):
     have been scaled or sheared.
 
     """
+    
+    polygon_name = 'triangles'
 
     def __init__(self, raw_mesh):
         """
@@ -101,7 +103,7 @@ class TriangularSurfaceMesh(object):
         """
 
         self.nodes = np.asfortranarray(raw_mesh['nodes'])
-        self.polygons = np.asfortranarray(raw_mesh['triangles'])
+        self.polygons = np.asfortranarray(raw_mesh[self.polygon_name])
         self.nodes.setflags(write=False)
         self.polygons.setflags(write=False)
 
@@ -215,6 +217,32 @@ class TriangularSurfaceMesh(object):
         # each edge is numbered according to its opposite node
         return np.sqrt(np.sum((np.roll(vertices, 1, axis=1) -
                        np.roll(vertices, 2, axis=1))**2, axis=2))
+
+
+def combine_mesh(meshes, nodes=None):
+    """Combine several meshes into one, optionally overriding their node
+    locations"""
+    
+    mesh_class = type(meshes[0])
+    all_nodes = []
+    all_polygons = []
+    node_offset = 0
+    
+    # using existing mesh nodes if not overridden
+    if nodes is None:
+        nodes = [mesh.nodes for mesh in meshes]
+    
+    for mesh, current_nodes in zip(meshes, nodes):
+        if type(mesh) != mesh_class:
+            raise TypeError("Cannot combine meshes of different types")
+        all_nodes.append(current_nodes)
+        all_polygons.append(mesh.polygons+node_offset)
+        node_offset += len(current_nodes)
+        
+    raw_mesh = {'nodes' : np.vstack(all_nodes), 
+                mesh_class.polygon_name : np.vstack(all_polygons)}
+                
+    return mesh_class(raw_mesh)
 
 
 def load_mesh(filename, mesh_tol=None, force_tuple=False):
