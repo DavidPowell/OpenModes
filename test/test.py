@@ -27,7 +27,7 @@ import scipy.linalg as la
 import scipy.sparse.linalg as spla
 
 import openmodes
-from openmodes.visualise import plot_parts, write_vtk
+from openmodes.visualise import plot_parts, write_vtk, plot_mayavi
 from openmodes.constants import c
 from openmodes.basis import DivRwgBasis, LoopStarBasis, get_basis_functions
 from openmodes.eig import eig_linearised
@@ -577,14 +577,10 @@ def test_nonlinear_eig_srr():
 #plt.plot(freqs*1e-9, extinction_tot.real)
 #plt.show()    
 
-#from mayavi import mlab
-
-from openmodes.visualise import plot_mayavi
-
 def vis_eigencurrents():
     ring1 = openmodes.load_mesh(
                         osp.join("..", "examples", "geometry", "SRR_wide.geo"),
-                        mesh_tol=0.5e-3)
+                        mesh_tol=0.25e-3)
     
     basis_class=LoopStarBasis
     #basis_class=DivRwgBasis
@@ -607,33 +603,101 @@ def vis_eigencurrents():
         impedance = sim.calculate_impedance(start_s)
         z_modes, j_modes = impedance.eigenmodes(num_modes)
     
-    basis = get_basis_functions(ring1, basis_class)
+    I = [j_modes[0][:, n] for n in xrange(num_modes)]
+    #sim.plot_solution(I, 'mayavi')
+    sim.plot_solution(I, 'vtk', filename='modes.vtk')
     
-    charges = []
-    currents = []
-    centres = []
-    
-    for mode in xrange(num_modes):
-        I = j_modes[0][:, mode]
-        face_centre, face_current, face_charge = basis.interpolate_function(I, return_scalar=True, nodes=sim.parts[mode].nodes)
-        charges.append(face_charge.real)
-        currents.append(face_current.real)
-        centres.append(face_centre)
-        
-    #plot_mayavi(sim.parts, currents, charges, vector_points=centres, compress_scalars=5)
-    plot_mayavi(sim.parts, currents, charges, vector_points=centres, 
-                compress_scalars=5)#, filename=osp.join("output", "test.png"))
-    #plot_mayavi(sim.parts, None, charges, compress_scalars=5)
     return
-        
 
-            
-        #plot_parts(sim.parts)
-#        write_vtk(part1.mesh, part1.nodes, osp.join("output", "srr-mode-%d.vtk" % mode), 
-#                  vector_function = face_current, scalar_function=face_charge
-#                  )
-    
-#test_nonlinear_eig_srr()
+#def fit_mode():
+ring1 = openmodes.load_mesh(
+                    osp.join("..", "examples", "geometry", "SRR.geo"),
+                    mesh_tol=1e-3)
+
+basis_class=LoopStarBasis
+#basis_class=DivRwgBasis
+
+sim = openmodes.Simulation(basis_class=basis_class)
+part = sim.place_part(ring1)
+
+start_freq = 2e9
+start_s = 2j*np.pi*start_freq
+
+num_modes = 3
+
+s_modes, j_modes = sim.part_singularities(start_s, num_modes)
+        
+from openmodes.solver import delta_eig, fit_circuit
+
+circuits = []
+
+print s_modes[0].imag/2/np.pi
+
+for mode_count in xrange(num_modes):
+
+    Z_func = lambda s: sim.operator.impedance_matrix(s, part)[:]
+
+    s_mode = s_modes[0][mode_count]
+    z_der = delta_eig(s_mode, j_modes[0][:, mode_count], Z_func)
+
+    #circ = fit_circuit(s_modes[0][mode_count], z_der)
+    #circuits.append((s_mode, fit_circuit(s_mode/s_mode.imag, z_der*s_mode.imag)))
+    circuits.append((s_mode, fit_circuit(s_mode, z_der)))
+    #print circ
+
+num_freqs = 101
+freqs = np.linspace(4e9, 20e9, num_freqs)
+
+#scale = circuits[1][0].imag
+#coeffs = circuits[1][1]
+
+#s_vals = 2j*np.pi*freqs/scale
+
+e_inc = np.array([1.0, 1.0, 0], dtype=np.complex128)/np.sqrt(2)
+k_hat = np.array([0, 0, 1], dtype=np.complex128)
+
+extinction = np.empty(num_freqs, np.complex128)
+extinction_modes = np.empty((num_freqs, num_modes), np.complex128)
+extinction_eig = np.empty((num_freqs, num_modes), np.complex128)
+z_mode = np.empty((num_freqs, num_modes), np.complex128)
+
+for freq_count, freq in enumerate(freqs):
+    s = 2j*np.pi*freq
+    Z = sim.calculate_impedance(s)
+    V = sim.source_plane_wave(e_inc, k_hat*s/c)
+    extinction[freq_count] = np.vdot(V[0], Z[0,0].solve(V[0]))
+
+    z_eig, j_eig = Z[0,0].eigenmodes(num_modes)
+
+
+    for mode in xrange(num_modes):
+        #s_vals = s/circuits[mode][0].imag
+        s_vals = s#/circuits[mode][0].imag
+        #z_mode = np.dot([1/s_vals, 1.0, s_vals, -s_vals**2], circuits[mode][1])
+        z_mode[freq_count, mode] = np.dot([1/s_vals, 1.0, s_vals, -s_vals**2], circuits[mode][1])
+        #z_mode[freq_count, mode] = np.dot([1/s_vals, 1.0, s_vals, 0], circuits[mode][1])
+        extinction_modes[freq_count, mode] = np.dot(V[0], j_modes[0][:, mode])*np.dot(V[0].conj(), j_modes[0][:, mode])/z_mode[freq_count, mode]
+        extinction_eig[freq_count, mode] = np.dot(V[0], j_eig[:, mode])*np.dot(V[0].conj(), j_eig[:, mode])/z_eig[mode]
+        #print np.dot(V[0], j_modes[0][:, mode])
+
+
+#s_powers = np.array([1/s_vals, np.ones(num_freqs), s_vals, -s_vals**2]).T
+
+#z = np.dot(s_powers, coeffs)
+y = 1/z_mode
+
+plt.figure()
+plt.plot(freqs*1e-9, extinction.real)
+#plt.plot(freqs*1e-9, extinction.imag)
+#plt.plot(freqs*1e-9, extinction_modes.real)
+#plt.plot(freqs*1e-9, np.sum(extinction_modes.real, axis=1), '+')
+#plt.plot(freqs*1e-9, np.sum(extinction_eig.real, axis=1), 'x')
+plt.plot(freqs*1e-9, extinction_modes.real, '-')
+plt.plot(freqs*1e-9, extinction_eig.real, '--')
+#plt.plot(freqs*1e-9, y.real)
+#plt.plot(freqs*1e-9, y.real)
+#plt.plot(freqs*1e-9, y.imag)
+plt.show()
 
 #loop_star_linear_eigenmodes()
 #srr_coupling()
@@ -642,4 +706,4 @@ def vis_eigencurrents():
 #compare_source_terms()
 #test_rwg()
 #coupled_extinction()
-vis_eigencurrents()
+#vis_eigencurrents()

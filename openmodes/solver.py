@@ -38,7 +38,7 @@ from openmodes.eig import eig_linearised, eig_newton
 from openmodes.visualise import plot_mayavi, write_vtk
 
 
-def delta_eig(s, j, part, Z_func, eps = None):
+def delta_eig(s, j, Z_func, eps = None):
     """Find the derivative of the eigenimpedance at the resonant frequency
     
     See section 5.7 of numerical recipes for calculating the step size h
@@ -80,7 +80,7 @@ def fit_circuit(s_0, z_der):
     M[1, :] = eq1.imag
     
     # fit impedance derivative at resonance
-    eq2 = np.array([1/s_0**2, 0, 1, -2*s_0])
+    eq2 = np.array([-1/s_0**2, 0, 1, -2*s_0])
     M[2, :] = eq2.real
     M[3, :] = eq2.imag
     
@@ -207,7 +207,7 @@ class Simulation(object):
         """
 
         all_s = []
-        all_j = []        
+        all_j = []   
 
         solved_parts = {}        
 
