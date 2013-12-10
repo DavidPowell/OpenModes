@@ -625,25 +625,28 @@ start_s = 2j*np.pi*start_freq
 
 num_modes = 3
 
-s_modes, j_modes = sim.part_singularities(start_s, num_modes)
+#s_modes, j_modes = sim.part_singularities(start_s, num_modes)
+mode_s, mode_j = sim.part_singularities(start_s, num_modes)
+
+scalar_models = sim.construct_models(mode_s, mode_j)
         
-from openmodes.solver import delta_eig, fit_circuit
-
-circuits = []
-
-print s_modes[0].imag/2/np.pi
-
-for mode_count in xrange(num_modes):
-
-    Z_func = lambda s: sim.operator.impedance_matrix(s, part)[:]
-
-    s_mode = s_modes[0][mode_count]
-    z_der = delta_eig(s_mode, j_modes[0][:, mode_count], Z_func)
-
-    #circ = fit_circuit(s_modes[0][mode_count], z_der)
-    #circuits.append((s_mode, fit_circuit(s_mode/s_mode.imag, z_der*s_mode.imag)))
-    circuits.append((s_mode, fit_circuit(s_mode, z_der)))
-    #print circ
+#from openmodes.solver import delta_eig, fit_circuit
+#
+#circuits = []
+#
+#print s_modes[0].imag/2/np.pi
+#
+#for mode_count in xrange(num_modes):
+#
+#    Z_func = lambda s: sim.operator.impedance_matrix(s, part)[:]
+#
+#    s_mode = s_modes[0][mode_count]
+#    z_der = delta_eig(s_mode, j_modes[0][:, mode_count], Z_func)
+#
+#    #circ = fit_circuit(s_modes[0][mode_count], z_der)
+#    #circuits.append((s_mode, fit_circuit(s_mode/s_mode.imag, z_der*s_mode.imag)))
+#    circuits.append((s_mode, fit_circuit(s_mode, z_der)))
+#    #print circ
 
 num_freqs = 101
 freqs = np.linspace(4e9, 20e9, num_freqs)
@@ -669,22 +672,25 @@ for freq_count, freq in enumerate(freqs):
 
     z_eig, j_eig = Z[0,0].eigenmodes(num_modes)
 
+    extinction_modes[freq_count] = [np.dot(V[0], scalar_models[0][mode].solve(s, V[0])) for mode in xrange(num_modes)]
 
-    for mode in xrange(num_modes):
-        #s_vals = s/circuits[mode][0].imag
-        s_vals = s#/circuits[mode][0].imag
-        #z_mode = np.dot([1/s_vals, 1.0, s_vals, -s_vals**2], circuits[mode][1])
-        z_mode[freq_count, mode] = np.dot([1/s_vals, 1.0, s_vals, -s_vals**2], circuits[mode][1])
-        #z_mode[freq_count, mode] = np.dot([1/s_vals, 1.0, s_vals, 0], circuits[mode][1])
-        extinction_modes[freq_count, mode] = np.dot(V[0], j_modes[0][:, mode])*np.dot(V[0].conj(), j_modes[0][:, mode])/z_mode[freq_count, mode]
-        extinction_eig[freq_count, mode] = np.dot(V[0], j_eig[:, mode])*np.dot(V[0].conj(), j_eig[:, mode])/z_eig[mode]
-        #print np.dot(V[0], j_modes[0][:, mode])
+
+#    for mode in xrange(num_modes):
+#        #s_vals = s/circuits[mode][0].imag
+#        #s_vals = s#/circuits[mode][0].imag
+#        #z_mode = np.dot([1/s_vals, 1.0, s_vals, -s_vals**2], circuits[mode][1])
+#        #z_mode[freq_count, mode] = np.dot([1/s_vals, 1.0, s_vals, -s_vals**2], circuits[mode][1])
+#        #z_mode[freq_count, mode] = np.dot([1/s_vals, 1.0, s_vals, 0], circuits[mode][1])
+#        extinction_modes[freq_count, mode] = np.dot(V[0], scalar_models[0][mode].solve(s, V[0]))
+#        #extinction_modes[freq_count, mode] = np.dot(V[0], j_modes[0][:, mode])*np.dot(V[0].conj(), j_modes[0][:, mode])/z_mode[freq_count, mode]
+#        #extinction_eig[freq_count, mode] = np.dot(V[0], j_eig[:, mode])*np.dot(V[0].conj(), j_eig[:, mode])/z_eig[mode]
+#        #print np.dot(V[0], j_modes[0][:, mode])
 
 
 #s_powers = np.array([1/s_vals, np.ones(num_freqs), s_vals, -s_vals**2]).T
 
 #z = np.dot(s_powers, coeffs)
-y = 1/z_mode
+#y = 1/z_mode
 
 plt.figure()
 plt.plot(freqs*1e-9, extinction.real)
@@ -693,7 +699,7 @@ plt.plot(freqs*1e-9, extinction.real)
 #plt.plot(freqs*1e-9, np.sum(extinction_modes.real, axis=1), '+')
 #plt.plot(freqs*1e-9, np.sum(extinction_eig.real, axis=1), 'x')
 plt.plot(freqs*1e-9, extinction_modes.real, '-')
-plt.plot(freqs*1e-9, extinction_eig.real, '--')
+#plt.plot(freqs*1e-9, extinction_eig.real, '--')
 #plt.plot(freqs*1e-9, y.real)
 #plt.plot(freqs*1e-9, y.real)
 #plt.plot(freqs*1e-9, y.imag)

@@ -36,6 +36,7 @@ from openmodes.basis import LoopStarBasis, get_basis_functions
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
 from openmodes.eig import eig_linearised, eig_newton
 from openmodes.visualise import plot_mayavi, write_vtk
+from openmodes.model import ScalarModel
 
 
 def delta_eig(s, j, Z_func, eps = None):
@@ -63,32 +64,6 @@ def delta_eig(s, j, Z_func, eps = None):
     
     return np.dot(j.T, np.dot(delta_Z, j))
 
-def fit_circuit(s_0, z_der):
-    """
-    Fit a circuit model to a resonant frequency and impedance derivative
-    To get reasonable condition number, omega_0 should be scaled to be near
-    unity, and z_der should be scaled by the inverse of this factor
-    """
-    M = np.zeros((4, 4), np.float64)
-    rhs = np.zeros(4, np.float64)
-    
-    # order of coefficients is C, R, L, R2
-    
-    # fit impedance being zero at resonance
-    eq1 = np.array([1/s_0, 1, s_0, -s_0**2])  # XXX: minus or not????
-    M[0, :] = eq1.real
-    M[1, :] = eq1.imag
-    
-    # fit impedance derivative at resonance
-    eq2 = np.array([-1/s_0**2, 0, 1, -2*s_0])
-    M[2, :] = eq2.real
-    M[3, :] = eq2.imag
-    
-    rhs[2] = z_der.real
-    rhs[3] = z_der.imag
-    
-    return nnls(M, rhs)[0]
-    
 
 class Simulation(object):
     """This object controls everything within the simluation. It contains all
@@ -162,8 +137,9 @@ class Simulation(object):
 
         matrices = []
 
-        # TODO: cache individual part impedances to avoid repetition
-        #parts_calculated = {}
+        # TODO: cache individual part impedances to avoid repetition?
+        # May not be worth it because mutual impedances cannot be cached
+        # except in specific cases such as arrays
 
         for index_a, part_a in enumerate(self.parts):
             matrices.append([])
@@ -209,7 +185,7 @@ class Simulation(object):
         all_s = []
         all_j = []   
 
-        solved_parts = {}        
+        solved_parts = {}
 
         for part in self.parts:
             # TODO: unique ID needs to be modified if different materials or
@@ -252,6 +228,46 @@ class Simulation(object):
 #            all_j.append(lin_currents)
 
         return all_s, all_j
+
+    def construct_models(self, mode_s, mode_j):
+        """Construct a scalar model for the modes of each part
+        
+        Parameters
+        ----------
+        mode_s : list of ndarray
+            The mode frequency of each part
+        mode_j : list of ndarray
+            The currents for the modes of each part
+            
+        Returns
+        -------
+        scalar_models : list
+            The scalar models
+        """
+
+        solved_parts = {}
+        scalar_models = []
+
+        for part_count, part in enumerate(self.parts):
+            # TODO: unique ID needs to be modified if different materials or
+            # placement above a layer are possible
+
+            unique_id = (part.mesh.id,) # cache identical parts 
+            if unique_id in solved_parts:
+                #print "got from cache"
+                scalar_models.append(solved_parts[unique_id])
+            else:
+                scalar_models.append([])
+                for s_n, j_n in zip(mode_s[part_count], mode_j[part_count].T):
+                    Z_func = lambda s: self.operator.impedance_matrix(s, part)[:]                
+                    z_der = delta_eig(s_n, j_n, Z_func)
+                    #scalar_models.append((s_n, j_n, fit_circuit(s_n, z_der)))
+                    scalar_models[-1].append(ScalarModel(s_n, j_n, z_der))
+
+                solved_parts[unique_id] = scalar_models[-1]
+
+            return scalar_models
+
 
     def plot_solution(self, solution, output_format, filename=None,
                       compress_scalars=None, compress_separately=False):
