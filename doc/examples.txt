@@ -1,0 +1,18 @@
+Using OpenModes
+===============
+
+The best way to understand OpenModes is to run the examples which
+are included. This is most conveniently done using the IPython notebook
+viewer. If you have installed it successfully, then you can go to a
+command prompt window, and change to the `example` directory of the
+OpenModes installation. Typing `ipython notebook --pylab=inline` should
+start the ipython notebook server, and automatically bring up a list
+of example notebooks, which enable you to interact with the examples
+presented here.
+
+.. toctree::
+   :maxdepth: 2
+   :glob:
+
+   examples/*
+   
