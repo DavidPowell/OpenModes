@@ -71,7 +71,7 @@ class Part(object):
             the vector about which to rotate
         angle : number
             angle of rotation in degrees
-        
+
         Algorithm taken from
         http://en.wikipedia.org/wiki/Euler%E2%80%93Rodrigues_parameters
         """
@@ -110,4 +110,3 @@ class Part(object):
     def shear(self):
         raise NotImplementedError
         # non-affine transform, will cause MAJOR problems
- 

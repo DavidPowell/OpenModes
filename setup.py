@@ -53,8 +53,8 @@ fcompiler_dependent_options = {
     # gnu gfortran (including under mingw)
     'gnu95' : {
         # -O3 is most desireable, but generate NaNs under mingw32
-        #'extra_f90_compile_args' : ["-g", "-fimplicit-none",  "-fopenmp", "-O1"],
-        'extra_f90_compile_args' : ["-g", "-fimplicit-none",  "-fopenmp", "-Og", "-Wall", "-Wextra", "-fcheck=all", "-ffpe-trap=invalid,zero,overflow"],
+        'extra_f90_compile_args' : ["-g", "-fimplicit-none",  "-fopenmp", "-O1"],
+        #'extra_f90_compile_args' : ["-g", "-fimplicit-none",  "-fopenmp", "-Og", "-Wall", "-Wextra", "-fcheck=all", "-ffpe-trap=invalid,zero,overflow"],
         'libraries' : ["gomp"]
      },
         
@@ -140,15 +140,15 @@ setup(name = 'OpenModes',
     description = "An eigenmode solver for open electromagnetic resonantors using the method of moments",
     author = "David Powell",
     author_email = 'david.a.powell@anu.edu.au',
-    license ='',
-    url = '',
+    license ='GPLv3+',
+    #url = '',
     packages = ['openmodes'],
     ext_package = 'openmodes',
     ext_modules = [dunavant, core],
     version = '0.1dev',
-    #install_requires = ['numpy >= 1.6.2', 'scipy'],
+    install_requires = ['numpy >= 1.6.2', 'scipy', 'matplotlib'],
     long_description=long_description,
-    platforms = "Unix, Windows",
+    platforms = "Windows, Linux",
     classifiers=[
           'Development Status :: 4 - Beta',
           'Environment :: Console',
