@@ -1,0 +1,9 @@
+Introduction
+============
+
+OpenModes is a code aimed at solving the modes of open electromagnetic structures.
+Potential applications include metamaterials, (nano) antennas and other systems
+based on scattering from resonant elements. It is based on a fully numerical model
+of the system created using the method of moments (MOM).
+
+A paper describing the method used to find the modes will be placed online soon.

@@ -1,0 +1,7 @@
+Acknowledgements
+================
+
+This code incorporates Fortran code for symmetric integration rules over triangles, written
+by John Burkardt, and distributed under the GNU LGPL license.
+
+http://people.sc.fsu.edu/~jburkardt/f_src/dunavant/dunavant.html

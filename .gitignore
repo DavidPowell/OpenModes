@@ -42,3 +42,4 @@ src/*.html
 *.vtk
 *.session
 *.session.gui
+doc/examples/

@@ -11,11 +11,17 @@ Contents:
 .. toctree::
    :maxdepth: 3
 
+   intro
+   
    install
 
+   examples
+   
    technical
 
-   modules
+   thanks
+   
+   #modules
 
 
 

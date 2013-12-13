@@ -14,8 +14,8 @@ libraries.
 Then install `gmsh <http://geuz.org/gmsh/>`_, and make sure that the gmsh
 executable is added to the windows PATH environment variable.
 
-Download the OpenModes executable package from ??? and install it using the
-WinPython/Python(x,y) package manager.
+Download the `OpenModes <http://pypi.python.org/pypi/OpenModes>`_ executable package and
+install it using the WinPython or Python(x,y) package manager.
 
 Requirements
 ------------
@@ -60,7 +60,11 @@ For ubuntu users, the appropriate packages can be installed using the following
 command
 
 ``sudo apt-get install python python-numpy python-matplotlib gmsh gfortran
-ipython python-dev pyvtk??``
+ipython python-dev pyvtk python-pip``
+
+OpenModes itself can then be installed using the command
+
+``sudo pip install OpenModes``
 
 Mac OSX
 -------
