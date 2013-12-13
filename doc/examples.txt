@@ -16,3 +16,5 @@ presented here.
 
    examples/*
    
+If the IPython notebook is not installed, you can run the python scripts
+contained in the examples directory using a regular python interpreter.

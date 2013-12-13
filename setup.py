@@ -51,20 +51,19 @@ ccompiler_dependent_options = {
 
 fcompiler_dependent_options = {
     # gnu gfortran (including under mingw)
-    'gnu95' : {
+    'gnu95': {
         # -O3 is most desireable, but generate NaNs under mingw32
-        'extra_f90_compile_args' : ["-g", "-fimplicit-none",  "-fopenmp", "-O1"],
-        #'extra_f90_compile_args' : ["-g", "-fimplicit-none",  "-fopenmp", "-Og", "-Wall", "-Wextra", "-fcheck=all", "-ffpe-trap=invalid,zero,overflow"],
-        'libraries' : ["gomp"]
+        'extra_f90_compile_args': ["-g", "-fimplicit-none", "-fopenmp", "-O1"],
+        'libraries': ["gomp"]
      },
         
     # intel x86 fortran
-    'intel' : {
-        'libraries' : ["iomp5"], 
+    'intel': {
+        'libraries': ["iomp5"], 
     },
     
     # intel x86_64 fortran
-    'intelem' : {
+    'intelem': {
         'libraries' : ["iomp5"], 
     } 
 }
@@ -73,18 +72,6 @@ core = Extension(name = 'core',
                  sources = [join('src', 'core.pyf'),
                             join('src', 'common.f90'),
                             join('src', 'rwg.f90')], 
-#                 f2py_options=["only:",#"set_threads", "get_threads", 
-#                                "face_integrals_hanninen",
-#                               "triangle_face_to_rwg", 
-#                               #"face_integrals_complex", "scr_index",
-#                               #"face_integrals_smooth_complex",
-#                               "impedance_core_hanninen", "z_efie_faces_self",
-#                               #"z_efie_faces_mutual",
-#                               "arcioni_singular", "voltage_plane_wave", 
-#                               "face_to_rwg", ":",
-#                               
-#                                "skip:", "vectors", ":"                               
-#                               ],
                 )
 
 dunavant = Extension(name = 'dunavant', sources=[join('src', 'dunavant.pyf'), 
@@ -131,19 +118,19 @@ class compiler_dependent_build_ext( build_ext ):
         
         build_ext.build_extensions(self)
 
-with open('README.txt') as file:
-    long_description = file.read()
-
-"-ffixed-form -fno-second-underscore -mno-cygwin -O2 -funroll-loops"
+with open('README.txt') as description_file:
+    long_description = description_file.read()
 
 setup(name = 'OpenModes',
-    description = "An eigenmode solver for open electromagnetic resonantors using the method of moments",
+    description = "An eigenmode solver for open electromagnetic resonantors "+
+                  "using the method of moments",
     author = "David Powell",
     author_email = 'david.a.powell@anu.edu.au',
     license ='GPLv3+',
     #url = '',
     packages = ['openmodes'],
-    ext_package = 'openmodes',
+    package_data={'openmodes': [join("..", "doc", "*.txt")]},
+    #ext_package = 'openmodes',
     ext_modules = [dunavant, core],
     version = '0.1dev',
     install_requires = ['numpy >= 1.6.2', 'scipy', 'matplotlib'],
@@ -153,7 +140,7 @@ setup(name = 'OpenModes',
           'Development Status :: 4 - Beta',
           'Environment :: Console',
           'Environment :: Web Environment',
-          'Intended Audience :: Science/Research'
+          'Intended Audience :: Science/Research',
           'Intended Audience :: Developers',
           'License :: OSI Approved :: Python Software Foundation License',
           'Operating System :: Microsoft :: Windows',

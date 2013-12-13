@@ -8,7 +8,7 @@ Windows Quick Install
 ---------------------
 
 The simplest way to get started is to download `Python(x,y) 
-<https://code.google.com/p/pythonxy/>`_, which includes all the required python 
+<https://code.google.com/p/pythonxy/>`_, which includes python and all the required python 
 libraries. 
 
 Then install `gmsh <http://geuz.org/gmsh/>`_, and make sure that the gmsh
