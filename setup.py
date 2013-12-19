@@ -122,8 +122,7 @@ with open('README.txt') as description_file:
     long_description = description_file.read()
 
 setup(name = 'OpenModes',
-    description = "An eigenmode solver for open electromagnetic resonantors "+
-                  "using the method of moments",
+    description = "An eigenmode solver for open electromagnetic resonantors",
     author = "David Powell",
     author_email = 'david.a.powell@anu.edu.au',
     license ='GPLv3+',

@@ -18,19 +18,13 @@
 #-----------------------------------------------------------------------------
 
 
-from __future__ import division#, print_function
+from __future__ import division
 
 # numpy and scipy
 import numpy as np
-#import scipy.linalg as la
-#import itertools
-from scipy.optimize import nnls
 
-#from openmodes.constants import epsilon_0, mu_0    
-#from openmodes.utils import SingularSparse
 from openmodes import integration
-from openmodes.parts import Part#, Triangles, RwgBasis
-
+from openmodes.parts import Part
 from openmodes.impedance import ImpedanceParts
 from openmodes.basis import LoopStarBasis, get_basis_functions
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
@@ -273,8 +267,6 @@ class Simulation(object):
                       compress_scalars=None, compress_separately=False):
         """Plot a solution on several parts"""
 
-        #if output_format
-
         charges = []
         currents = []
         centres = []
@@ -284,7 +276,8 @@ class Simulation(object):
             basis = get_basis_functions(part.mesh, self.basis_class)
         
             centre, current, charge = basis.interpolate_function(I, 
-                                                return_scalar=True, nodes=part.nodes)
+                                                            return_scalar=True,
+                                                            nodes=part.nodes)
             charges.append(charge.real)
             currents.append(current.real)
             centres.append(centre)
@@ -301,19 +294,3 @@ class Simulation(object):
                      compress_separately=compress_separately)
         else:
             raise ValueError("Unknown output format")
-
-        
-
-#    def circuit_models(self):
-#        """
-#        """
-#        
-#
-#eig_derivs = []
-#
-#for part in xrange(n_parts):
-#    eig_derivs.append(np.empty(n_modes, np.complex128))
-#    for mode in xrange(n_modes):
-#        eig_derivs[part][mode] = delta_eig(mode_omega[part][mode], mode_j[part][:, mode], part, loop_star=loop_star)
-
-            

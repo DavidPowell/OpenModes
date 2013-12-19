@@ -194,7 +194,7 @@ class ImpedanceParts(object):
 
         Returns
         -------
-        impedance : CombinedImpedance
+        impedance : impedance object of appropriate type
             An object containing the combined impedance matrices
         """
 
