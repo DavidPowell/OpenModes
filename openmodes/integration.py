@@ -92,3 +92,72 @@ def triangle_electric_dipole(vertices, xi_eta, weights):
          vertices[2])
 
     return np.sum(weights[0, :, None]*r, axis=0)
+
+
+#def sphere_sample(order):
+#    """Generate a rule for sampling points over the surface of a sphere
+#    
+#    These rules are more about sampling than integration
+#    
+#    Taken from:
+#    http://mathworld.wolfram.com/SpherePointPicking.html
+#    with a changed angle convention
+#
+#    Parameters
+#    ----------
+#    order : integer
+#        The order of the sampling in each dimension
+#        
+#    Returns
+#    -------
+#    theta : array of length order
+#        polar angle theta
+#    phi : array of length order
+#        azimuthal angle phi
+#    """
+#    
+#    theta = 2*pi*np.linspace(0, 2*np.pi, 
+   
+   
+def sphere_fibonacci(num_points, cartesian=False):
+    """Compute points on the surface of a sphere based on the Fibonacci spiral
+
+    Parameters
+    ----------
+    num_points : integer
+        The number of points to place on the sphere
+    cartesian : boolean, optional
+        If True, cartesian coordinates will be returned instead of spherical
+        
+    Returns
+    -------
+    phi, theta : array (if `cartesian` is False)
+        The polar and azimuthal angles of the points
+    x, y, z : array (if `cartesian` is True)
+        The cartesian coordinates of the points
+
+    Algorithm from:    
+    R. Swinbank and R. James Purser, “Fibonacci grids: A novel approach to
+    global modelling,” Q. J. R. Meteorol. Soc., vol. 132, no. 619, pp.
+    1769–1793, Jul. 2006.
+    """
+
+    n = num_points
+
+    phi = 0.5*(1 + np.sqrt(5))
+    i = -n+1 + 2*np.arange(num_points, dtype=np.float64)
+
+    theta = 2*np.pi*i / phi
+
+    sphi = i/n
+    cphi = np.sqrt((n + i) * (n-i))/ n
+
+    if cartesian:
+        x = cphi * np.sin(theta)
+        y = cphi * np.cos(theta)
+        z = sphi
+        return x, y, z
+    else:
+        phi = np.arctan2(sphi, cphi)
+        return theta, phi    
+   
