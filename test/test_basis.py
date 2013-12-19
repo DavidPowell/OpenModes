@@ -43,7 +43,7 @@ def test_interpolate_rwg():
     r, res = basis.interpolate_function(rwg_function , xi_eta)
     
     plt.figure(figsize=(6, 6))
-    plt.quiver(r[:, 0], r[:, 1], res[:, 0], res[:, 1], scale=0.03)
+    plt.quiver(r[:, 0], r[:, 1], res[:, 0], res[:, 1], scale=5e4)
     #plt.plot(r[:, 0], r[:, 1], 'x')
     plt.show()
 
@@ -126,5 +126,5 @@ def loop_star_to_vtk():
 #
 
 #test_interpolate_rwg()
-#test_interpolate_loop_star()
+test_interpolate_loop_star()
 #loop_star_to_vtk()

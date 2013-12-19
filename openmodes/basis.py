@@ -63,21 +63,21 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True,
                                         zeta*nodes[node_nums][2]
 
             scalar_func[tri_count, point_count] = sum(tri_func[tri_count])
-    
+
             for node_count in xrange(3):
                 # Vector rho within the observer triangle
                 rho = r[tri_count, point_count] - nodes[node_nums][node_count]
-    
+
                 vector_func[tri_count, point_count] += rho*tri_func[tri_count,
                              node_count]
 
-                                              
     if flatten:
         r = r.reshape((num_tri*points_per_tri, 3))
         vector_func = vector_func.reshape((num_tri*points_per_tri, 3))
         scalar_func = scalar_func.reshape((num_tri*points_per_tri,))
-    
+
     return r, vector_func, scalar_func
+
 
 class LinearTriangleBasis(object):
     "An abstract base class for 1st order basis functions on triangles"
@@ -89,7 +89,7 @@ class LinearTriangleBasis(object):
                              flatten = True, return_scalar=False, nodes=None):
         """Interpolate a function defined in RWG or loop-star basis over the 
         complete mesh
-        
+
         Parameters
         ----------
         ls_func : ndarray
@@ -109,7 +109,7 @@ class LinearTriangleBasis(object):
         nodes : array, optional
             Nodes of the Part, which may not correspond to the original nodes
             of the mesh.
-            
+
         Returns
         -------
         r_all : ndarray
@@ -118,20 +118,15 @@ class LinearTriangleBasis(object):
             The vector function at each interpolation point
         """
         num_tri = len(self.mesh.polygons)
-        #tri_func = rwg_to_triangle_face(linear_func, num_tri, self.rwg)
 
-        tri_func = np.zeros((num_tri, 3), linear_func.dtype)
-        
-        for count, func in enumerate(linear_func):
-            tri_func[self.rwg.tri_p[count], self.rwg.node_p[count]] += func
-            tri_func[self.rwg.tri_m[count], self.rwg.node_m[count]] -= func
-
-        tri_func /= 2*self.mesh.polygon_areas[:, None]
+        vector_transform, _ = self.transformation_matrices
+        tri_func = vector_transform.T.dot(linear_func) 
+        tri_func = tri_func.reshape((num_tri, 3))/(2*self.mesh.polygon_areas[:, None])
 
         r, vector_func, scalar_func = interpolate_triangle_mesh(self.mesh, 
                                             tri_func, num_tri, xi_eta, flatten,
                                             nodes)
-                                            
+
         if return_scalar:
             return r, vector_func, scalar_func
         else:
@@ -193,7 +188,7 @@ class DivRwgBasis(LinearTriangleBasis):
 
     @property
     def transformation_matrices(self):
-        """Returns the (sparse???) transformation matrix to turn quantities
+        """Returns the sparse transformation matrix to turn quantities
         defined on faces to loop-star basis
         
         For vector quantities, assumes that the face-based quantity has been 
@@ -510,22 +505,22 @@ def get_basis_functions(mesh, basis_class):
     """Generate basis functions for a mesh. Performs caching, so that if an
     identical mesh has already been generated, the basis functions will
     not be unnecessarily duplicated
-    
+
     Parameters
     ----------
     mesh : object
         The mesh to generate the basis functions for
-    
+
     basis_class : class
         Which class of basis function should be created
     """
-    
+
     # The following parameters are needed to determine if basis functions are
     # unique. Potentially this could be expanded to include non-affine mesh
     # transformations, or other parameters passed to the basis function
     # constructor
-    unique_key = (mesh.id, basis_class)    
-    
+    unique_key = (mesh.id, basis_class) 
+
     if unique_key in cached_basis_functions:
         #print "Basis functions retrieved from cache"
         return cached_basis_functions[unique_key]
@@ -534,4 +529,3 @@ def get_basis_functions(mesh, basis_class):
         result = basis_class(mesh)
         cached_basis_functions[unique_key] = result
         return result
-        
