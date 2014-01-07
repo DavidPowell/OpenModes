@@ -80,35 +80,34 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True,
 
 
 class LinearTriangleBasis(object):
-    "An abstract base class for 1st order basis functions on triangles"
+    "An abstract base class for first order basis functions on triangles"
 
     def __init__(self):
         self.id = uuid.uuid4()
 
     def interpolate_function(self, linear_func, xi_eta = [[1.0/3, 1.0/3]], 
-                             flatten = True, return_scalar=False, nodes=None):
+                             flatten=True, return_scalar=False, nodes=None,
+                             scale_area=True):
         """Interpolate a function defined in RWG or loop-star basis over the 
         complete mesh
 
         Parameters
         ----------
-        ls_func : ndarray
-            The function defined over loop-star basis functions
-        xi_eta : ndarray, optional
-            The barycentric coordinates to interpolate on each triangle. If not
-            specified, one point at the centre of each triangle will be used.        
-        Parameters
-        ----------
         linear_func : ndarray
             The function defined over linear basis functions
-        xi_eta : ndarray
-            The barycentric coordinates to interpolate on each triangle
+        xi_eta : ndarray, optional
+            The barycentric coordinates to interpolate on each triangle. If not
+            specified, one point at the centre of each triangle will be used.
         flatten : bool, optional
             If false, data for each triangle will be identified by a specific
             index of the array, otherwise all points are identical
         nodes : array, optional
-            Nodes of the Part, which may not correspond to the original nodes
+            Nodes of the Part, if they are not equal to the original nodes
             of the mesh.
+        scale_area : boolean, optional
+            Whether to include scaling by area. Normally this should be `True`,
+            however when integrating it should be `False` as the area
+            is already normalised out in the weights.
 
         Returns
         -------
@@ -121,7 +120,10 @@ class LinearTriangleBasis(object):
 
         vector_transform, _ = self.transformation_matrices
         tri_func = vector_transform.T.dot(linear_func) 
-        tri_func = tri_func.reshape((num_tri, 3))/(2*self.mesh.polygon_areas[:, None])
+        tri_func = tri_func.reshape((num_tri, 3))
+        
+        if scale_area:
+            tri_func /= 2*self.mesh.polygon_areas[:, None]
 
         r, vector_func, scalar_func = interpolate_triangle_mesh(self.mesh, 
                                             tri_func, num_tri, xi_eta, flatten,
