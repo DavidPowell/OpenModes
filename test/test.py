@@ -511,8 +511,8 @@ def test_nonlinear_eig_srr():
             osp.join("..", "examples", "geometry", "SRR.geo"), mesh_tol=2e-3)
     
     
-    #basis_class=LoopStarBasis
-    basis_class=DivRwgBasis
+    basis_class=LoopStarBasis
+    #basis_class=DivRwgBasis
     
     sim = openmodes.Simulation(basis_class=basis_class)
     part1 = sim.place_part(ring1)
@@ -526,11 +526,11 @@ def test_nonlinear_eig_srr():
     
     num_modes = 3
     
-    #s_modes, j_modes = sim.part_singularities(start_s, num_modes)
-    #
-    #print np.array(s_modes)/2/np.pi
+    s_modes, j_modes = sim.part_singularities(start_s, num_modes)
     
-    freqs = np.linspace(1e9, 20e9, 201)
+    print np.array(s_modes)/2/np.pi
+    
+    freqs = np.linspace(1e9, 25e9, 201)
     
 #    extinction_red = np.empty((len(freqs), num_modes), np.complex128)
 #    extinction_tot = np.empty(len(freqs), np.complex128)
@@ -538,6 +538,12 @@ def test_nonlinear_eig_srr():
 #    extinction_parts = np.empty((len(freqs), len(sim.parts)*num_modes), np.complex128)
 #    
     w_list = []
+    w2_list = []
+    
+    models = sim.construct_models(s_modes, j_modes)
+    
+    #print models[0][0].L
+    #print models[0][0].S
     
     for freq_count, freq in enumerate(freqs):
         s = 2j*np.pi*freq
@@ -549,6 +555,9 @@ def test_nonlinear_eig_srr():
         
         w, vr = impedance.eigenmodes(num_modes)
         w_list.append(w[0])
+        
+        w2 = [model.scalar_impedance(s) for model in models[0]]
+        w2_list.append(w2)
 #        impedance_red = impedance.impedance_modes(num_modes, vr)
 #        V_red = impedance.source_reduced(V, num_modes, vr)
 #        #extinction_red[freq_count] = np.vdot(V_red, la.solve(s*L_red + S_red/s, V_red))
@@ -560,14 +569,24 @@ def test_nonlinear_eig_srr():
 #        #extinction_tot[freq_count] = np.vdot(V_tot, la.solve(s*L_tot + S_tot/s, V_tot))
 #        extinction_tot[freq_count] = np.vdot(V_tot, impedance_tot.solve(V_tot))    
     
-    w_list = np.array(w_list)
+    w_list = 1.0/np.array(w_list)
+    w2_list = 1.0/np.array(w2_list)
     
      
     plt.figure(figsize=(10, 4))
     plt.subplot(1, 2, 1)
-    plt.plot(freqs*1e-9, w_list.real, 'x')
+#    plt.plot(freqs*1e-9, w_list.real, 'x')
+#    plt.plot(freqs*1e-9, w2_list.real)
+
+    plt.semilogy(freqs*1e-9, abs(w_list.real), 'x')
+    plt.semilogy(freqs*1e-9, abs(w2_list.real))
+
     plt.subplot(1, 2, 2)
-    plt.plot(freqs*1e-9, w_list.imag, 'x')
+    #plt.plot(freqs*1e-9, w_list.imag, 'x')
+    #plt.plot(freqs*1e-9, w2_list.imag)
+
+    plt.semilogy(freqs*1e-9, abs(w_list.imag), 'x')
+    plt.semilogy(freqs*1e-9, abs(w2_list.imag))
     #plt.ylim(-2, 1)
     plt.show()
 
@@ -609,101 +628,101 @@ def vis_eigencurrents():
     
     return
 
-#def fit_mode():
-ring1 = openmodes.load_mesh(
-                    osp.join("..", "examples", "geometry", "SRR.geo"),
-                    mesh_tol=1e-3)
-
-basis_class=LoopStarBasis
-#basis_class=DivRwgBasis
-
-sim = openmodes.Simulation(basis_class=basis_class)
-part = sim.place_part(ring1)
-
-start_freq = 2e9
-start_s = 2j*np.pi*start_freq
-
-num_modes = 3
-
-#s_modes, j_modes = sim.part_singularities(start_s, num_modes)
-mode_s, mode_j = sim.part_singularities(start_s, num_modes)
-
-scalar_models = sim.construct_models(mode_s, mode_j)
-        
-#from openmodes.solver import delta_eig, fit_circuit
-#
-#circuits = []
-#
-#print s_modes[0].imag/2/np.pi
-#
-#for mode_count in xrange(num_modes):
-#
-#    Z_func = lambda s: sim.operator.impedance_matrix(s, part)[:]
-#
-#    s_mode = s_modes[0][mode_count]
-#    z_der = delta_eig(s_mode, j_modes[0][:, mode_count], Z_func)
-#
-#    #circ = fit_circuit(s_modes[0][mode_count], z_der)
-#    #circuits.append((s_mode, fit_circuit(s_mode/s_mode.imag, z_der*s_mode.imag)))
-#    circuits.append((s_mode, fit_circuit(s_mode, z_der)))
-#    #print circ
-
-num_freqs = 101
-freqs = np.linspace(4e9, 20e9, num_freqs)
-
-#scale = circuits[1][0].imag
-#coeffs = circuits[1][1]
-
-#s_vals = 2j*np.pi*freqs/scale
-
-e_inc = np.array([1.0, 1.0, 0], dtype=np.complex128)/np.sqrt(2)
-k_hat = np.array([0, 0, 1], dtype=np.complex128)
-
-extinction = np.empty(num_freqs, np.complex128)
-extinction_modes = np.empty((num_freqs, num_modes), np.complex128)
-extinction_eig = np.empty((num_freqs, num_modes), np.complex128)
-z_mode = np.empty((num_freqs, num_modes), np.complex128)
-
-for freq_count, freq in enumerate(freqs):
-    s = 2j*np.pi*freq
-    Z = sim.calculate_impedance(s)
-    V = sim.source_plane_wave(e_inc, k_hat*s/c)
-    extinction[freq_count] = np.vdot(V[0], Z[0,0].solve(V[0]))
-
-    z_eig, j_eig = Z[0,0].eigenmodes(num_modes)
-
-    extinction_modes[freq_count] = [np.dot(V[0], scalar_models[0][mode].solve(s, V[0])) for mode in xrange(num_modes)]
-
-
-#    for mode in xrange(num_modes):
-#        #s_vals = s/circuits[mode][0].imag
-#        #s_vals = s#/circuits[mode][0].imag
-#        #z_mode = np.dot([1/s_vals, 1.0, s_vals, -s_vals**2], circuits[mode][1])
-#        #z_mode[freq_count, mode] = np.dot([1/s_vals, 1.0, s_vals, -s_vals**2], circuits[mode][1])
-#        #z_mode[freq_count, mode] = np.dot([1/s_vals, 1.0, s_vals, 0], circuits[mode][1])
-#        extinction_modes[freq_count, mode] = np.dot(V[0], scalar_models[0][mode].solve(s, V[0]))
-#        #extinction_modes[freq_count, mode] = np.dot(V[0], j_modes[0][:, mode])*np.dot(V[0].conj(), j_modes[0][:, mode])/z_mode[freq_count, mode]
-#        #extinction_eig[freq_count, mode] = np.dot(V[0], j_eig[:, mode])*np.dot(V[0].conj(), j_eig[:, mode])/z_eig[mode]
-#        #print np.dot(V[0], j_modes[0][:, mode])
-
-
-#s_powers = np.array([1/s_vals, np.ones(num_freqs), s_vals, -s_vals**2]).T
-
-#z = np.dot(s_powers, coeffs)
-#y = 1/z_mode
-
-plt.figure()
-plt.plot(freqs*1e-9, extinction.real)
-#plt.plot(freqs*1e-9, extinction.imag)
-#plt.plot(freqs*1e-9, extinction_modes.real)
-#plt.plot(freqs*1e-9, np.sum(extinction_modes.real, axis=1), '+')
-#plt.plot(freqs*1e-9, np.sum(extinction_eig.real, axis=1), 'x')
-plt.plot(freqs*1e-9, extinction_modes.real, '-')
-#plt.plot(freqs*1e-9, extinction_eig.real, '--')
-#plt.plot(freqs*1e-9, y.real)
-#plt.plot(freqs*1e-9, y.real)
-#plt.plot(freqs*1e-9, y.imag)
-plt.show()
+def fit_mode():
+    ring1 = openmodes.load_mesh(
+                        osp.join("..", "examples", "geometry", "SRR.geo"),
+                        mesh_tol=1e-3)
+    
+    basis_class=LoopStarBasis
+    #basis_class=DivRwgBasis
+    
+    sim = openmodes.Simulation(basis_class=basis_class)
+    part = sim.place_part(ring1)
+    
+    start_freq = 2e9
+    start_s = 2j*np.pi*start_freq
+    
+    num_modes = 3
+    
+    #s_modes, j_modes = sim.part_singularities(start_s, num_modes)
+    mode_s, mode_j = sim.part_singularities(start_s, num_modes)
+    
+    scalar_models = sim.construct_models(mode_s, mode_j)
+            
+    #from openmodes.solver import delta_eig, fit_circuit
+    #
+    #circuits = []
+    #
+    #print s_modes[0].imag/2/np.pi
+    #
+    #for mode_count in xrange(num_modes):
+    #
+    #    Z_func = lambda s: sim.operator.impedance_matrix(s, part)[:]
+    #
+    #    s_mode = s_modes[0][mode_count]
+    #    z_der = delta_eig(s_mode, j_modes[0][:, mode_count], Z_func)
+    #
+    #    #circ = fit_circuit(s_modes[0][mode_count], z_der)
+    #    #circuits.append((s_mode, fit_circuit(s_mode/s_mode.imag, z_der*s_mode.imag)))
+    #    circuits.append((s_mode, fit_circuit(s_mode, z_der)))
+    #    #print circ
+    
+    num_freqs = 101
+    freqs = np.linspace(4e9, 20e9, num_freqs)
+    
+    #scale = circuits[1][0].imag
+    #coeffs = circuits[1][1]
+    
+    #s_vals = 2j*np.pi*freqs/scale
+    
+    e_inc = np.array([1.0, 1.0, 0], dtype=np.complex128)/np.sqrt(2)
+    k_hat = np.array([0, 0, 1], dtype=np.complex128)
+    
+    extinction = np.empty(num_freqs, np.complex128)
+    extinction_modes = np.empty((num_freqs, num_modes), np.complex128)
+    extinction_eig = np.empty((num_freqs, num_modes), np.complex128)
+    z_mode = np.empty((num_freqs, num_modes), np.complex128)
+    
+    for freq_count, freq in enumerate(freqs):
+        s = 2j*np.pi*freq
+        Z = sim.calculate_impedance(s)
+        V = sim.source_plane_wave(e_inc, k_hat*s/c)
+        extinction[freq_count] = np.vdot(V[0], Z[0,0].solve(V[0]))
+    
+        z_eig, j_eig = Z[0,0].eigenmodes(num_modes)
+    
+        extinction_modes[freq_count] = [np.dot(V[0], scalar_models[0][mode].solve(s, V[0])) for mode in xrange(num_modes)]
+    
+    
+    #    for mode in xrange(num_modes):
+    #        #s_vals = s/circuits[mode][0].imag
+    #        #s_vals = s#/circuits[mode][0].imag
+    #        #z_mode = np.dot([1/s_vals, 1.0, s_vals, -s_vals**2], circuits[mode][1])
+    #        #z_mode[freq_count, mode] = np.dot([1/s_vals, 1.0, s_vals, -s_vals**2], circuits[mode][1])
+    #        #z_mode[freq_count, mode] = np.dot([1/s_vals, 1.0, s_vals, 0], circuits[mode][1])
+    #        extinction_modes[freq_count, mode] = np.dot(V[0], scalar_models[0][mode].solve(s, V[0]))
+    #        #extinction_modes[freq_count, mode] = np.dot(V[0], j_modes[0][:, mode])*np.dot(V[0].conj(), j_modes[0][:, mode])/z_mode[freq_count, mode]
+    #        #extinction_eig[freq_count, mode] = np.dot(V[0], j_eig[:, mode])*np.dot(V[0].conj(), j_eig[:, mode])/z_eig[mode]
+    #        #print np.dot(V[0], j_modes[0][:, mode])
+    
+    
+    #s_powers = np.array([1/s_vals, np.ones(num_freqs), s_vals, -s_vals**2]).T
+    
+    #z = np.dot(s_powers, coeffs)
+    #y = 1/z_mode
+    
+    plt.figure()
+    plt.plot(freqs*1e-9, extinction.real)
+    #plt.plot(freqs*1e-9, extinction.imag)
+    #plt.plot(freqs*1e-9, extinction_modes.real)
+    #plt.plot(freqs*1e-9, np.sum(extinction_modes.real, axis=1), '+')
+    #plt.plot(freqs*1e-9, np.sum(extinction_eig.real, axis=1), 'x')
+    plt.plot(freqs*1e-9, extinction_modes.real, '-')
+    #plt.plot(freqs*1e-9, extinction_eig.real, '--')
+    #plt.plot(freqs*1e-9, y.real)
+    #plt.plot(freqs*1e-9, y.real)
+    #plt.plot(freqs*1e-9, y.imag)
+    plt.show()
 
 #loop_star_linear_eigenmodes()
 #srr_coupling()
@@ -713,3 +732,4 @@ plt.show()
 #test_rwg()
 #coupled_extinction()
 #vis_eigencurrents()
+test_nonlinear_eig_srr()

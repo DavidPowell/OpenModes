@@ -30,7 +30,7 @@ from openmodes.basis import LoopStarBasis, get_basis_functions
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
 from openmodes.eig import eig_linearised, eig_newton
 from openmodes.visualise import plot_mayavi, write_vtk
-from openmodes.model import ScalarModel
+from openmodes.model import ScalarModel, ScalarModelLS
 
 
 def delta_eig(s, j, Z_func, eps = None):
@@ -255,8 +255,13 @@ class Simulation(object):
                 for s_n, j_n in zip(mode_s[part_count], mode_j[part_count].T):
                     Z_func = lambda s: self.operator.impedance_matrix(s, part)[:]                
                     z_der = delta_eig(s_n, j_n, Z_func)
-                    #scalar_models.append((s_n, j_n, fit_circuit(s_n, z_der)))
                     scalar_models[-1].append(ScalarModel(s_n, j_n, z_der))
+
+#                    Z = self.operator.impedance_matrix(s_n, part)
+#                    scalar_L = np.dot(j_n, np.dot(Z.L, j_n))
+#                    scalar_S = np.dot(j_n, np.dot(Z.S, j_n))
+#                    scalar_models[-1].append(ScalarModelLS(s_n, j_n, scalar_L, scalar_S))
+
 
                 solved_parts[unique_id] = scalar_models[-1]
 
