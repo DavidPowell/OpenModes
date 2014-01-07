@@ -110,3 +110,10 @@ class Part(object):
     def shear(self):
         raise NotImplementedError
         # non-affine transform, will cause MAJOR problems
+
+
+class PartContainer(object):
+    """A specialised list for containing parts. It allows arrays to be handled"""
+    def __init__(self):
+        self.individual_parts = []
+        self.part_arrays = []
