@@ -260,7 +260,47 @@ class EfieOperator(object):
             transform_L, _ = basis.transformation_matrices
             return transform_L.dot(incident_faces.flatten())
         else:
-            raise NotImplementedError
-            
+            raise NotImplementedError("%s, %s" % (str(type(basis)),
+                                              str(type(self.greens_function))))
+        
+    def far_field_radiation(self, s, part, current_vec, direction, xi_eta, weights):
+        """Calculate the far-field radiation in a given direction. Note that
+        all calculations will be referenced to the global origin. This means
+        that the contributions of different parts can be added together if
+        their current solutions were calculated consistently.
+
+        Parameters
+        ----------
+        s : complex
+            The complex frequency
+        part : Part
+            The part for which to calculate far-field radiation.
+        current_vec : ndarray
+            The current solution defined over basis functions
+        direction : (num_direction, 3) ndarray
+           The directions in which to calculate radiation as cartesian vectors
+        xi_eta : (num_points, 2) ndarray
+            The barycentric integration points
+        weights : (num_points) ndarray
+            The integration weights
+
+        Returns
+        -------
+        pattern : (num_direction, 3) ndarray
+            The radiation pattern in each direction. When multiplied by
+            $exp(jkr)/r$, this gives the far-field component of the 
+            electric field at distance r.
+        """
+
+        # ensure that all directions are unit vectors
+        direction = np.atleast_2d(direction)        
+        direction /= np.sqrt(np.sum(direction**2, axis=1))
+
+        basis = get_basis_functions(part.mesh, self.basis_class)
+        r, currents = basis.interpolate_function(current_vec, xi_eta, 
+                                                 nodes=part.mesh.nodes,
+                                                 scale_area=False)
+        
+        
 
 #def get_impedance(operator, part_o, part_s = None)
