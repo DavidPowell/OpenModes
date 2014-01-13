@@ -160,18 +160,29 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
     matrices correspond to the loops and stars.
     """
 
-    def __init__(self, s, L, S, num_loops):
-        super(EfieImpedanceMatrixLoopStar, self).__init__()
-        self.num_loops = num_loops
-        self.num_stars = self.shape[0]-num_loops
+    def __init__(self, s, L, S, num_loops_o, num_loops_s):
+        super(EfieImpedanceMatrixLoopStar, self).__init__(s, L, S)
+        self.num_loops_o = num_loops_o
+        self.num_stars_o = self.shape[0]-num_loops_o
+
+        self.num_loops_s = num_loops_s
+        self.num_stars_s = self.shape[1]-num_loops_s
         
     @property
-    def loop_range(self):
-        return slice(0, self.num_loops)
-        
+    def loop_range_o(self):
+        return slice(0, self.num_loops_o)
+
     @property
-    def star_range(self):
-        return slice(self.num_loops, self.shape[0])
+    def loop_range_s(self):
+        return slice(0, self.num_loops_s)
+
+    @property
+    def star_range_o(self):
+        return slice(self.num_loops_o, self.shape[0])
+
+    @property
+    def star_range_s(self):
+        return slice(self.num_loops_s, self.shape[1])
 
 
 class ImpedanceParts(object):

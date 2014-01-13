@@ -23,8 +23,10 @@ import numpy as np
 import openmodes.core
 
 from openmodes.constants import epsilon_0, mu_0, pi
-from openmodes.basis import LinearTriangleBasis, get_basis_functions
-from openmodes.impedance import EfieImpedanceMatrix
+from openmodes.basis import (LinearTriangleBasis, LoopStarBasis,
+                             get_basis_functions)
+from openmodes.impedance import (EfieImpedanceMatrix,
+                                 EfieImpedanceMatrixLoopStar)
 
 
 class FreeSpaceGreensFunction(object):
@@ -208,15 +210,18 @@ class EfieOperator(object):
         complex frequency s"""
 
         basis_o = get_basis_functions(part_o.mesh, self.basis_class)
+        num_loops_o = basis_o.num_loops
 
         if part_s is None or part_s.id == part_o.id:
             #print "self"
             basis_s = None
             nodes_s = None
+            num_loops_s = basis_o.num_loops
         else:
             #print "mutual"
             basis_s = get_basis_functions(part_s.mesh, self.basis_class)
             nodes_s = part_s.nodes
+            num_loops_s = basis_s.num_loops
 
         if isinstance(self.greens_function, FreeSpaceGreensFunction):
             if isinstance(basis_o, LinearTriangleBasis):
@@ -229,7 +234,11 @@ class EfieOperator(object):
         else:
             raise NotImplementedError
 
-        return EfieImpedanceMatrix(s, L, S)
+        if issubclass(self.basis_class, LoopStarBasis):
+            return EfieImpedanceMatrixLoopStar(s, L, S, num_loops_o,
+                                               num_loops_s)
+        else:
+            return EfieImpedanceMatrix(s, L, S)
 
     def source_plane_wave(self, part, e_inc, jk_inc):
         """Evaluate the source vector due to the incident wave
