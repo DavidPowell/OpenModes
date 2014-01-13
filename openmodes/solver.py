@@ -229,6 +229,74 @@ class Simulation(object):
 
         return all_s, all_j
 
+    def system_singularities(self, s_start, num_modes):
+        """Find the singularities of the whole system in the complex frequency
+        plane
+
+        Parameters
+        ----------        
+        s_start : number
+            The complex frequency at which to perform the estimate. Should be
+            within the band of interest
+            
+        Returns
+        -------
+        mode_s : 1D array
+            The singularities coresponding to the resonant frequencies
+        mode_j : 2D array
+            The eigencurrents, the columns of which corresponding to the
+            solutions of the system without excitation, at the frequencies
+            given by `mode_s`
+        """
+
+        # first get an estimate of the pole locations
+        Z = self.calculate_impedance(s_start).combine_parts()
+        lin_s, lin_currents = eig_linearised(Z, num_modes)
+        #print lin_s/2/np.pi
+
+        mode_s = np.empty_like(lin_s)
+        mode_j = np.empty_like(lin_currents)
+
+        Z_func = lambda s: self.calculate_impedance(s).combine_parts()[:]
+
+        for mode in xrange(num_modes):
+            res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode],
+                             weight='max element', lambda_tol=1e-8,
+                             max_iter=200)
+
+            print "Iterations", res['iter_count']
+            #print res['eigval']/2/np.pi
+            mode_s[mode] = res['eigval']
+            j_calc = res['eigvec']
+            mode_j[:, mode] = j_calc/np.sqrt(np.sum(j_calc**2))
+
+        return mode_s, mode_j
+
+    def construct_model_system(self, mode_s, mode_j):
+        """Construct a scalar model for the modes of the whole system
+        
+        Parameters
+        ----------
+        mode_s : ndarray
+            The mode frequency of the whole system
+        mode_j : list of ndarray
+            The currents for the modes of the whole system
+            
+        Returns
+        -------
+        scalar_models : list
+            The scalar models
+        """
+        
+        scalar_models = []        
+        
+        for s_n, j_n in zip(mode_s, mode_j.T):
+            Z_func = lambda s: self.calculate_impedance(s).combine_parts()[:]                
+            z_der = delta_eig(s_n, j_n, Z_func)
+            scalar_models.append(ScalarModel(s_n, j_n, z_der))
+        return scalar_models
+
+
     def construct_models(self, mode_s, mode_j):
         """Construct a scalar model for the modes of each part
         
