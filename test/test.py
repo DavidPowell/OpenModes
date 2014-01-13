@@ -67,7 +67,7 @@ def loop_star_linear_eigenmodes():
 
 def loop_star_combined():
     """"Confirm that combining impedance matrices in a loop-star basis gives
-    the same result as without combining.
+    the same result as with RWG, where combining is straightforward.
     """
 
     ring1, ring2 = openmodes.load_mesh(
@@ -112,7 +112,61 @@ def loop_star_combined():
     plt.plot(freqs*1e-9, ext_ls.imag, '--')
     plt.show()
 
- 
+
+def sem_eem_asrr():
+    """"Calculate the singularity expansion of a combined system.
+    """
+
+    ring1, ring2 = openmodes.load_mesh(
+                    osp.join("..", "examples", "geometry", "asymmetric_ring.geo"), mesh_tol=0.5e-3)
+
+    sim = openmodes.Simulation(basis_class=LoopStarBasis)
+    sim.place_part(ring1)
+    sim.place_part(ring2)
+
+    num_freqs = 201
+    freqs = np.linspace(4e9, 16e9, num_freqs)
+    e_inc = np.array([1, 0, 0], dtype=np.complex128)
+    k_hat = np.array([0, 1, 0], dtype=np.complex128)
+
+    num_modes = 2
+
+    ext = np.empty(num_freqs, np.complex128)
+    ext_sem = np.empty((num_freqs, num_modes), np.complex128)
+    ext_eem = np.empty((num_freqs, num_modes), np.complex128)
+
+    s_start = 2j*np.pi*10e9
+    mode_s, mode_j = sim.system_singularities(s_start, num_modes)
+    models = sim.construct_model_system(mode_s, mode_j)
+
+    for freq_count, freq in enumerate(freqs):
+        s = 2j*np.pi*freq
+        jk_0 = s/c
+
+        Z = sim.calculate_impedance(s)
+        V = sim.source_plane_wave(e_inc, jk_0*k_hat)
+        Z, V = Z.combine_parts(V)
+        if freq_count == 0:
+            print Z.num_loops_o, Z.num_loops_s
+            
+        ext[freq_count] = np.vdot(V, Z.solve(V))
+        
+        eem_z, eem_j = Z.eigenmodes(num_modes)
+        
+        for mode in xrange(num_modes):
+            ext_sem[freq_count, mode] = np.vdot(V, models[mode].solve(s, V))
+            ext_eem[freq_count, mode] = np.vdot(V, eem_j[:, mode])*np.dot(V, eem_j[:, mode])/eem_z[mode]
+
+    plt.figure()
+    plt.plot(freqs*1e-9, ext.real)
+    plt.plot(freqs*1e-9, np.sum(ext_sem.real, axis=1))
+    plt.plot(freqs*1e-9, np.sum(ext_eem.real, axis=1))
+    #plt.plot(freqs*1e-9, ext_modes.real, '--')
+    #plt.plot(freqs*1e-9, ext.imag, '--')
+    plt.show()
+    
+
+
 def srr_coupling():
     """
     Calculate coupling coefficients for a pair of SRRs
@@ -753,5 +807,6 @@ def fit_mode():
 #coupled_extinction()
 #vis_eigencurrents()
 #test_nonlinear_eig_srr()
-loop_star_combined()
+#loop_star_combined()
+sem_eem_asrr()
 
