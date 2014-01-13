@@ -351,3 +351,80 @@ class ImpedanceParts(object):
             V_red = V_red.reshape(self.num_parts*num_modes)
 
         return V_red
+
+
+def inc_slice(s, inc):
+    """Increment a slice so that it starts at the current stop, and the current
+    stop is incremented by some amount"""
+    return slice(s.stop, s.stop+inc)
+
+
+class ImpedancePartsLoopStar(ImpedanceParts):
+    """A specialised list of impedance matrices for holding results
+    calculated with loop-star basis functions. Ensures that when results are
+    combined, loops and stars are represented as global blocks for the whole
+    system, rather than being separated for each individual part
+    """
+    
+    def combine_parts(self, V=None):
+        """Evaluate the self and mutual impedances of all parts combined into
+        a pair of matrices for the whole system. Loops and stars are all
+        combined into global blocks.
+
+        Parameters
+        ----------
+        V : list of arrays, optional
+            The corresponding voltages, which can also be combined in the
+            same fashion
+
+        Returns
+        -------
+        impedance : EfieImpedanceMatrixLoopStar
+            An object containing the combined impedance matrices
+        V : array
+            If given as an input, the voltage vector will also be combined and
+            returned as an output            
+        """
+
+        total_size = sum(M[0].shape[0] for M in self.matrices)
+        num_loops = sum(M[0].num_loops_o for M in self.matrices)
+        L_tot = np.empty((total_size, total_size), np.complex128)
+        S_tot = np.zeros_like(L_tot)
+        if V is not None:
+            V_tot = np.empty(total_size, np.complex128)
+
+        loop_range_o = slice(0, 0)
+        star_range_o = slice(num_loops, num_loops)
+
+        for col_count, row in enumerate(self.matrices):
+            m = row[0]
+            loop_range_o = inc_slice(loop_range_o, m.num_loops_o)
+            star_range_o = inc_slice(star_range_o, m.num_stars_o)
+
+            loop_range_s = slice(0, 0)
+            star_range_s = slice(num_loops, num_loops)
+
+            if V is not None:
+                V_tot[loop_range_o] = V[col_count][m.loop_range_o]
+                V_tot[star_range_o] = V[col_count][m.star_range_o]
+
+            for m in row:
+                loop_range_s = inc_slice(loop_range_s, m.num_loops_s)
+                star_range_s = inc_slice(star_range_s, m.num_stars_s)
+
+                # S only has stars
+                S_tot[star_range_o, star_range_s] = m.S[m.star_range_o, m.star_range_s]
+
+                # Some of these arrays may have one dimension of size zero if
+                # there are no loops, but this is handled automatically.
+                L_tot[loop_range_o, loop_range_s] = m.L[m.loop_range_o, m.loop_range_s]                    
+                L_tot[loop_range_o, star_range_s] = m.L[m.loop_range_o, m.star_range_s]                    
+                L_tot[star_range_o, loop_range_s] = m.L[m.star_range_o, m.loop_range_s]
+                L_tot[star_range_o, star_range_s] = m.L[m.star_range_o, m.star_range_s]
+
+        Z = EfieImpedanceMatrixLoopStar(self.s, L_tot, S_tot, num_loops, num_loops)
+
+        if V is not None:
+            return Z, V_tot
+        else:
+            return Z

@@ -25,7 +25,7 @@ import numpy as np
 
 from openmodes import integration
 from openmodes.parts import Part
-from openmodes.impedance import ImpedanceParts
+from openmodes.impedance import ImpedanceParts, ImpedancePartsLoopStar
 from openmodes.basis import LoopStarBasis, get_basis_functions
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
 from openmodes.eig import eig_linearised, eig_newton
@@ -145,7 +145,12 @@ class Simulation(object):
                     res = self.operator.impedance_matrix(s, part_a, part_b)
                 matrices[-1].append(res)
 
-        return ImpedanceParts(s, len(self.parts), matrices)
+        if issubclass(self.basis_class, LoopStarBasis):
+            ImpedancePartsClass = ImpedancePartsLoopStar
+        else:
+            ImpedancePartsClass = ImpedanceParts
+
+        return ImpedancePartsClass(s, len(self.parts), matrices)
 
     def source_plane_wave(self, e_inc, jk_inc):
         """Evaluate the source vectors due to an incident plane wave, returning

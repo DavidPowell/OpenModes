@@ -65,6 +65,51 @@ def loop_star_linear_eigenmodes():
 
     sim.plot_solution(I, 'mayavi')
 
+def loop_star_combined():
+    """"Confirm that combining impedance matrices in a loop-star basis gives
+    the same result as without combining.
+    """
+
+    ring1, ring2 = openmodes.load_mesh(
+                    osp.join("..", "examples", "geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
+
+    sim_rwg = openmodes.Simulation(basis_class=DivRwgBasis)
+    sim_rwg.place_part(ring1)
+    sim_rwg.place_part(ring2)
+
+    sim_ls = openmodes.Simulation(basis_class=LoopStarBasis)
+    sim_ls.place_part(ring1)
+    sim_ls.place_part(ring2)
+
+    num_freqs = 101
+    freqs = np.linspace(4e9, 16e9, num_freqs)
+    e_inc = np.array([1, 0, 0], dtype=np.complex128)
+    k_hat = np.array([0, 1, 0], dtype=np.complex128)
+
+    ext_rwg = np.empty(num_freqs, np.complex128)
+    ext_ls = np.empty(num_freqs, np.complex128)
+
+    for freq_count, freq in enumerate(freqs):
+        s = 2j*np.pi*freq
+        jk_0 = s/c
+
+        Z = sim_rwg.calculate_impedance(s)
+        V = sim_rwg.source_plane_wave(e_inc, jk_0*k_hat)
+        Z, V = Z.combine_parts(V)
+        ext_rwg[freq_count] = np.vdot(V, Z.solve(V))
+
+        Z = sim_ls.calculate_impedance(s)
+        V = sim_ls.source_plane_wave(e_inc, jk_0*k_hat)
+        Z, V = Z.combine_parts(V)
+        ext_ls[freq_count] = np.vdot(V, Z.solve(V))
+
+    plt.figure()
+    plt.plot(freqs*1e-9, ext_rwg.real)
+    plt.plot(freqs*1e-9, ext_rwg.imag, '--')
+    plt.plot(freqs*1e-9, ext_ls.real)
+    plt.plot(freqs*1e-9, ext_ls.imag, '--')
+    plt.show()
+
  
 def srr_coupling():
     """
@@ -697,7 +742,7 @@ def fit_mode():
     #plt.plot(freqs*1e-9, y.imag)
     plt.show()
 
-loop_star_linear_eigenmodes()
+#loop_star_linear_eigenmodes()
 #srr_coupling()
 #srr_extinction()
 #test_plotting()
@@ -706,3 +751,5 @@ loop_star_linear_eigenmodes()
 #coupled_extinction()
 #vis_eigencurrents()
 #test_nonlinear_eig_srr()
+loop_star_combined()
+
