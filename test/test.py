@@ -36,62 +36,35 @@ from openmodes.eig import eig_linearised
 def loop_star_linear_eigenmodes():
     """"Solve the linearised eigenvalue problem in a loop-star basis.
     """
-    
+
     ring1, ring2 = openmodes.load_mesh(
                     osp.join("..", "examples", "geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
-    
+
     #ring1 = openmodes.load_mesh(
     #                osp.join("geometry", "SRR.geo"), mesh_tol=0.4e-3)
-    
+
     basis_class=LoopStarBasis
     #basis_class=DivRwgBasis
-    
+
     sim = openmodes.Simulation(basis_class=basis_class)
     part1 = sim.place_part(ring1)
     part2 = sim.place_part(ring2)
-       
+   
     freq = 7e9
     s = 2j*np.pi*freq
-    
-    L, S = sim.operator.impedance_matrix(s, part1)
-    V = sim.operator.source_plane_wave(part1, np.array([0, 1, 0]), np.array([0, 0, 0]))
-    
-    #I = la.solve(s*L + S/s, V)
-    
-    #power = np.dot(V.conj(), I)
-    
-    n_modes = 3
-    
-    basis = basis_class(ring1)
-    
-    w, vr = sim.eig_linearised(part1, L, S, n_modes)
-    
-    #I = np.zeros(len(basis), np.complex128)
-    #I[0] = 1.0
-    
-    I = vr[:, 0]
-    
-    #face_current = openmodes.basis.rwg_to_triangle_face(I, len(basis.mesh.polygons), basis.rwg)
-    face_centre, face_current, face_charge = basis.interpolate_function(I, return_scalar=True)
-    
-    
-    
-    write_vtk(part1.mesh, part1.nodes, osp.join("output", "test.vtk"), 
-              vector_function = face_current, scalar_function=face_charge
-              )
-    
-#plt.loglog(abs(w.real), abs(w.imag), 'x')
 
-#    power_modes = np.empty(n_modes, np.complex128)
-#
-#    for mode in xrange(n_modes):
-#
-#        S_mode = np.dot(vr[:, mode], np.dot(S, vr[:, mode]))
-#        L_mode = np.dot(vr[:, mode], np.dot(L, vr[:, mode]))
-#        power_modes[mode] = s*np.dot(vr[:, mode], V)*np.dot(vr[:, mode], V.conj())/(S_mode+s**2*L_mode)
-#
-#    print power, sum(power_modes)
-#    print power_modes
+    Z = sim.calculate_impedance(s)
+    num_modes = 3
+
+    _, vr0 = eig_linearised(Z[0][0], num_modes)
+    _, vr1 = eig_linearised(Z[1][1], num_modes)
+    I = [vr0[:, 0], vr1[:, 0]]
+
+    #w, vr = sim.part_singularities(Z, n_modes)
+    #I = [vr[0][:, 0], vr[1][:, 0]]
+
+    sim.plot_solution(I, 'mayavi')
+
  
 def srr_coupling():
     """
@@ -724,7 +697,7 @@ def fit_mode():
     #plt.plot(freqs*1e-9, y.imag)
     plt.show()
 
-#loop_star_linear_eigenmodes()
+loop_star_linear_eigenmodes()
 #srr_coupling()
 #srr_extinction()
 #test_plotting()
@@ -732,4 +705,4 @@ def fit_mode():
 #test_rwg()
 #coupled_extinction()
 #vis_eigencurrents()
-test_nonlinear_eig_srr()
+#test_nonlinear_eig_srr()

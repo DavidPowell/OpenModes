@@ -20,12 +20,13 @@
 Routines for solving linear and nonlinear eigenvalue problems
 """
 
-from openmodes.basis import LoopStarBasis
+#from openmodes.basis import LoopStarBasis
+from openmodes.impedance import EfieImpedanceMatrixLoopStar
 import scipy.linalg as la
 import numpy as np
 
 
-def eig_linearised(L, S, num_modes, basis):
+def eig_linearised(Z, num_modes):
     """Solves a linearised approximation to the eigenvalue problem from
     the impedance calculated at some fixed frequency.
 
@@ -33,13 +34,10 @@ def eig_linearised(L, S, num_modes, basis):
 
     Parameters
     ----------
-    L, S : ndarray
-        The two components of the impedance matrix. They *must* be
-        calculated in the loop-star basis.
+    Z : EfieImpedanceMatrixLoopStar
+        The impedance matrix calculated in a loop-star basis
     num_modes : int
         The number of modes required.
-    basis : LoopStarBasis
-        The basis function of the `Part`
 
     Returns
     -------
@@ -50,26 +48,26 @@ def eig_linearised(L, S, num_modes, basis):
         Columns of this matrix contain the corresponding modal currents
     """
 
-    if not isinstance(basis, LoopStarBasis):
+    if not isinstance(Z, EfieImpedanceMatrixLoopStar):
         raise ValueError(
             "Loop-star basis functions required for linearised eigenvalues")
 
-    star_range = slice(basis.num_loops, len(basis))
+    star_range = Z.star_range_o
 
-    if basis.num_loops == 0:
-        L_red = L
+    if Z.num_loops_o == 0:
+        L_red = Z.L
     else:
-        loop_range = slice(0, basis.num_loops)
+        loop_range = Z.loop_range_o
 
-        L_conv = la.solve(L[loop_range, loop_range],
-                          L[loop_range, star_range])
-        L_red = L[star_range, star_range] - np.dot(L[star_range, loop_range],
-                                                   L_conv)
+        L_conv = la.solve(Z.L[loop_range, loop_range],
+                          Z.L[loop_range, star_range])
+        L_red = Z.L[star_range, star_range] - np.dot(Z.L[star_range, loop_range],
+                                                   Z.L_conv)
 
     # find eigenvalues, and star part of eigenvectors, for LS combined modes
-    w, v_s = la.eig(S[star_range, star_range], -L_red)
+    w, v_s = la.eig(Z.S[star_range, star_range], -L_red)
 
-    if basis.num_loops == 0:
+    if Z.num_loops_o == 0:
         vr = v_s
     else:
         v_l = -np.dot(L_conv, v_s)

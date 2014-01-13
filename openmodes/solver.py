@@ -167,7 +167,8 @@ class Simulation(object):
                 in self.parts]
 
     def part_singularities(self, s_start, num_modes):
-        """Find the singularities of the system in the complex frequency plane
+        """Find the singularities of each part of the system in the complex
+        frequency plane
 
         Parameters
         ----------        
@@ -193,7 +194,7 @@ class Simulation(object):
                 # first get an estimate of the pole locations
                 basis = get_basis_functions(part.mesh, self.basis_class)
                 Z = self.operator.impedance_matrix(s_start, part)
-                lin_s, lin_currents = eig_linearised(Z.L, Z.S, num_modes, basis)
+                lin_s, lin_currents = eig_linearised(Z, num_modes)
                 #print lin_s/2/np.pi
 
                 mode_s = np.empty(num_modes, np.complex128)
