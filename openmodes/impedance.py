@@ -152,7 +152,7 @@ class EfieImpedanceMatrix(object):
     @property
     def T(self):
         "A transposed version of the impedance matrix"
-        return EfieImpedanceMatrix(self.s, self.L.T, self.S.T)
+        return self.__class__(self.s, self.L.T, self.S.T)
 
 class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
     """A specialised impedance matrix which contains the results calculated in
@@ -183,6 +183,13 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
     @property
     def star_range_s(self):
         return slice(self.num_loops_s, self.shape[1])
+
+    @property
+    def T(self):
+        "A transposed version of the impedance matrix"
+        # note that the number of loops in the two dimensions are inverted
+        return EfieImpedanceMatrixLoopStar(self.s, self.L.T, self.S.T,
+                                           self.num_loops_s, self.num_loops_o)
 
 
 class ImpedanceParts(object):
