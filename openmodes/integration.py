@@ -41,7 +41,7 @@ def get_dunavant_rule(tri_rule):
         The weights, normalised to sum to 1/2
     """
 
-    import dunavant
+    from openmodes import dunavant
 
     dunavant_order = dunavant.dunavant_order_num(tri_rule)
     xi_eta_eval, weights = dunavant.dunavant_rule(tri_rule, dunavant_order)
