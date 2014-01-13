@@ -210,18 +210,15 @@ class EfieOperator(object):
         complex frequency s"""
 
         basis_o = get_basis_functions(part_o.mesh, self.basis_class)
-        num_loops_o = basis_o.num_loops
 
         if part_s is None or part_s.id == part_o.id:
             #print "self"
             basis_s = None
             nodes_s = None
-            num_loops_s = basis_o.num_loops
         else:
             #print "mutual"
             basis_s = get_basis_functions(part_s.mesh, self.basis_class)
             nodes_s = part_s.nodes
-            num_loops_s = basis_s.num_loops
 
         if isinstance(self.greens_function, FreeSpaceGreensFunction):
             if isinstance(basis_o, LinearTriangleBasis):
@@ -235,6 +232,12 @@ class EfieOperator(object):
             raise NotImplementedError
 
         if issubclass(self.basis_class, LoopStarBasis):
+            num_loops_o = basis_o.num_loops
+            if basis_s is None:
+                num_loops_s = num_loops_o
+            else:
+                num_loops_s = basis_s.num_loops
+
             return EfieImpedanceMatrixLoopStar(s, L, S, num_loops_o,
                                                num_loops_s)
         else:
