@@ -225,14 +225,23 @@ class ImpedanceParts(object):
                 raise TypeError("Cannot slice the first dimension")
             return self.matrices[index[0]][index[1]]
 
-    def combine_parts(self):
+    def combine_parts(self, V = None):
         """Evaluate the self and mutual impedances of all parts combined into
         a pair of matrices for the whole system.
+
+        Parameters
+        ----------
+        V : list of arrays, optional
+            The corresponding voltages, which can also be combined in the
+            same fashion
 
         Returns
         -------
         impedance : impedance object of appropriate type
             An object containing the combined impedance matrices
+        V : array
+            If given as an input, the voltage vector will also be combined and
+            returned as an output
         """
 
         total_size = sum(M[0].shape[0] for M in self.matrices)
@@ -250,7 +259,12 @@ class ImpedanceParts(object):
                 col_offset += col_size
             row_offset += row_size
 
-        return EfieImpedanceMatrix(self.s, L_tot, S_tot)
+        Z = EfieImpedanceMatrix(self.s, L_tot, S_tot)
+        
+        if V is not None:
+            return Z, np.hstack(V)
+        else:
+            return Z
 
     def eigenmodes(self, num_modes):
         """Calculate the eigenimpedance and eigencurrents of each part's modes
