@@ -154,6 +154,25 @@ class EfieImpedanceMatrix(object):
         "A transposed version of the impedance matrix"
         return EfieImpedanceMatrix(self.s, self.L.T, self.S.T)
 
+class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
+    """A specialised impedance matrix which contains the results calculated in
+    a loop-star basis. It is able to report which regions of the impedance
+    matrices correspond to the loops and stars.
+    """
+
+    def __init__(self, s, L, S, num_loops):
+        super(EfieImpedanceMatrixLoopStar, self).__init__()
+        self.num_loops = num_loops
+        self.num_stars = self.shape[0]-num_loops
+        
+    @property
+    def loop_range(self):
+        return slice(0, self.num_loops)
+        
+    @property
+    def star_range(self):
+        return slice(self.num_loops, self.shape[0])
+
 
 class ImpedanceParts(object):
     """Holds a impedance matrices calculated at a specific frequency
