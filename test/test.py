@@ -71,7 +71,7 @@ def loop_star_combined():
     """
 
     ring1, ring2 = openmodes.load_mesh(
-                    osp.join("..", "examples", "geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
+                    osp.join("..", "examples", "geometry", "asymmetric_ring.geo"), mesh_tol=0.5e-3)
 
     sim_rwg = openmodes.Simulation(basis_class=DivRwgBasis)
     sim_rwg.place_part(ring1)
@@ -101,6 +101,8 @@ def loop_star_combined():
         Z = sim_ls.calculate_impedance(s)
         V = sim_ls.source_plane_wave(e_inc, jk_0*k_hat)
         Z, V = Z.combine_parts(V)
+        if freq_count == 0:
+            print Z.num_loops_o, Z.num_loops_s
         ext_ls[freq_count] = np.vdot(V, Z.solve(V))
 
     plt.figure()
