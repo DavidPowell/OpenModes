@@ -54,7 +54,7 @@ def eig_linearised(Z, num_modes):
 
     star_range = Z.star_range_o
 
-    if Z.num_loops_o == 0:
+    if Z.basis_o.num_loops == 0:
         L_red = Z.L
     else:
         loop_range = Z.loop_range_o
@@ -67,7 +67,7 @@ def eig_linearised(Z, num_modes):
     # find eigenvalues, and star part of eigenvectors, for LS combined modes
     w, v_s = la.eig(Z.S[star_range, star_range], -L_red)
 
-    if Z.num_loops_o == 0:
+    if Z.basis_o.num_loops == 0:
         vr = v_s
     else:
         v_l = -np.dot(L_conv, v_s)
