@@ -25,6 +25,16 @@ import scipy.linalg as la
 import itertools
 
 
+class DummyBasis(object):
+    """A minimal basis function data structure for combined impedance matrix
+    objects. Does not contain full basis functions, but serves as a place
+    holder for information which would be obtained form them
+    """
+    def __init__(self, **kwargs):
+        for kw, val in kwargs.iteritems():
+            setattr(self, kw, val)
+
+
 # TODO: ImpedanceMatrix may need to know about number of loops and stars?
 class EfieImpedanceMatrix(object):
     """Holds an impedance matrix from the electric field integral equation,
@@ -35,11 +45,14 @@ class EfieImpedanceMatrix(object):
     of the matrix should not be modified after being added to this object.
     """
 
-    def __init__(self, s, L, S):
+    def __init__(self, s, L, S, basis_o, basis_s):
         self.s = s
         assert(L.shape == S.shape)
         self.L = L
         self.S = S
+
+        self.basis_o = basis_o
+        self.basis_s = basis_s
 
         # prevent external modification, to allow caching
         L.setflags(write=False)
@@ -152,7 +165,10 @@ class EfieImpedanceMatrix(object):
     @property
     def T(self):
         "A transposed version of the impedance matrix"
-        return self.__class__(self.s, self.L.T, self.S.T)
+        # note interchange of source and observer basis functions
+        return self.__class__(self.s, self.L.T, self.S.T, self.basis_s,
+                              self.basis_o)
+
 
 class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
     """A specialised impedance matrix which contains the results calculated in
@@ -160,36 +176,21 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
     matrices correspond to the loops and stars.
     """
 
-    def __init__(self, s, L, S, num_loops_o, num_loops_s):
-        super(EfieImpedanceMatrixLoopStar, self).__init__(s, L, S)
-        self.num_loops_o = num_loops_o
-        self.num_stars_o = self.shape[0]-num_loops_o
-
-        self.num_loops_s = num_loops_s
-        self.num_stars_s = self.shape[1]-num_loops_s
-        
     @property
     def loop_range_o(self):
-        return slice(0, self.num_loops_o)
+        return slice(0, self.basis_o.num_loops)
 
     @property
     def loop_range_s(self):
-        return slice(0, self.num_loops_s)
+        return slice(0, self.basis_s.num_loops)
 
     @property
     def star_range_o(self):
-        return slice(self.num_loops_o, self.shape[0])
+        return slice(self.basis_o.num_loops, self.shape[0])
 
     @property
     def star_range_s(self):
-        return slice(self.num_loops_s, self.shape[1])
-
-    @property
-    def T(self):
-        "A transposed version of the impedance matrix"
-        # note that the number of loops in the two dimensions are inverted
-        return EfieImpedanceMatrixLoopStar(self.s, self.L.T, self.S.T,
-                                           self.num_loops_s, self.num_loops_o)
+        return slice(self.basis_s.num_loops, self.shape[1])
 
 
 class ImpedanceParts(object):
@@ -259,7 +260,11 @@ class ImpedanceParts(object):
                 col_offset += col_size
             row_offset += row_size
 
-        Z = EfieImpedanceMatrix(self.s, L_tot, S_tot)
+        # TODO: Note that combined impedance matrices lose all information
+        # about basis functions, so it has to be put into a dummy basis
+        # function object
+        basis = DummyBasis()
+        Z = EfieImpedanceMatrix(self.s, L_tot, S_tot, basis, basis)
         
         if V is not None:
             return Z, np.hstack(V)
@@ -387,7 +392,7 @@ class ImpedancePartsLoopStar(ImpedanceParts):
         """
 
         total_size = sum(M[0].shape[0] for M in self.matrices)
-        num_loops = sum(M[0].num_loops_o for M in self.matrices)
+        num_loops = sum(M[0].basis_o.num_loops for M in self.matrices)
         L_tot = np.empty((total_size, total_size), np.complex128)
         S_tot = np.zeros_like(L_tot)
         if V is not None:
@@ -398,8 +403,8 @@ class ImpedancePartsLoopStar(ImpedanceParts):
 
         for col_count, row in enumerate(self.matrices):
             m = row[0]
-            loop_range_o = inc_slice(loop_range_o, m.num_loops_o)
-            star_range_o = inc_slice(star_range_o, m.num_stars_o)
+            loop_range_o = inc_slice(loop_range_o, m.basis_o.num_loops)
+            star_range_o = inc_slice(star_range_o, m.basis_o.num_stars)
 
             loop_range_s = slice(0, 0)
             star_range_s = slice(num_loops, num_loops)
@@ -409,8 +414,8 @@ class ImpedancePartsLoopStar(ImpedanceParts):
                 V_tot[star_range_o] = V[col_count][m.star_range_o]
 
             for m in row:
-                loop_range_s = inc_slice(loop_range_s, m.num_loops_s)
-                star_range_s = inc_slice(star_range_s, m.num_stars_s)
+                loop_range_s = inc_slice(loop_range_s, m.basis_s.num_loops)
+                star_range_s = inc_slice(star_range_s, m.basis_s.num_stars)
 
                 # S only has stars
                 S_tot[star_range_o, star_range_s] = m.S[m.star_range_o, m.star_range_s]
@@ -422,7 +427,8 @@ class ImpedancePartsLoopStar(ImpedanceParts):
                 L_tot[star_range_o, loop_range_s] = m.L[m.star_range_o, m.loop_range_s]
                 L_tot[star_range_o, star_range_s] = m.L[m.star_range_o, m.star_range_s]
 
-        Z = EfieImpedanceMatrixLoopStar(self.s, L_tot, S_tot, num_loops, num_loops)
+        basis = DummyBasis(num_loops = num_loops)
+        Z = EfieImpedanceMatrixLoopStar(self.s, L_tot, S_tot, basis, basis)
 
         if V is not None:
             return Z, V_tot

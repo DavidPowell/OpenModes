@@ -430,6 +430,11 @@ class LoopStarBasis(LinearTriangleBasis):
         "The number of loops in the loop-star mesh"
         return len(self.rwg_loop.tri_p)
 
+    @property
+    def num_stars(self):
+        "The number of stars in the loop-star mesh"
+        return len(self.rwg_star.tri_p)
+
     def __getitem__(self, index):
         if index < 0:
             index += len(self)

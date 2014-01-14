@@ -102,7 +102,7 @@ def loop_star_combined():
         V = sim_ls.source_plane_wave(e_inc, jk_0*k_hat)
         Z, V = Z.combine_parts(V)
         if freq_count == 0:
-            print Z.num_loops_o, Z.num_loops_s
+            print Z.basis_o.num_loops, Z.basis_s.num_loops
         ext_ls[freq_count] = np.vdot(V, Z.solve(V))
 
     plt.figure()
@@ -893,7 +893,7 @@ def fit_mode():
 #coupled_extinction()
 #vis_eigencurrents()
 #test_nonlinear_eig_srr()
-#loop_star_combined()
+loop_star_combined()
 #sem_eem_asrr()
-sem_eem_bcsrr()
+#sem_eem_bcsrr()
 

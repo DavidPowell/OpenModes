@@ -231,17 +231,16 @@ class EfieOperator(object):
         else:
             raise NotImplementedError
 
-        if issubclass(self.basis_class, LoopStarBasis):
-            num_loops_o = basis_o.num_loops
-            if basis_s is None:
-                num_loops_s = num_loops_o
-            else:
-                num_loops_s = basis_s.num_loops
+        # For impedance calculation need basis_s to be None to indicate a
+        # self impedance, but for constructing the impedance matrix object
+        # it should be set the same
+        if basis_s is None:
+            basis_s = basis_o
 
-            return EfieImpedanceMatrixLoopStar(s, L, S, num_loops_o,
-                                               num_loops_s)
+        if issubclass(self.basis_class, LoopStarBasis):
+            return EfieImpedanceMatrixLoopStar(s, L, S, basis_o, basis_s)
         else:
-            return EfieImpedanceMatrix(s, L, S)
+            return EfieImpedanceMatrix(s, L, S, basis_o, basis_s)
 
     def source_plane_wave(self, part, e_inc, jk_inc):
         """Evaluate the source vector due to the incident wave
