@@ -22,6 +22,7 @@ Routines to construct the basis functions on a mesh
 
 from collections import namedtuple
 from scipy.sparse import dok_matrix
+import scipy.linalg as la
 import numpy as np
 import uuid
 
@@ -78,6 +79,25 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True,
 
     return r, vector_func, scalar_func
 
+def inner_product_triangle_face(nodes):
+    """Inner product of linear basis functions sharing the same triangle,
+    integrated by sympy"""
+
+    n0, n1, n2 = nodes
+    res = np.empty((3, 3), np.float64)
+
+    res[0, 0] = np.sum(n0**2/4 - n0*n1/4 - n0*n2/4 + n1**2/12 + n1*n2/12 + n2**2/12)
+    res[0, 1] = np.sum(-n0**2/12 + n0*n1/4 - n0*n2/12 - n1**2/12 - n1*n2/12 + n2**2/12)
+    res[0, 2] = np.sum(-n0**2/12 - n0*n1/12 + n0*n2/4 + n1**2/12 - n1*n2/12 - n2**2/12)
+    res[1, 0] = res[0, 1]
+    res[1, 1] = np.sum(n0**2/12 - n0*n1/4 + n0*n2/12 + n1**2/4 - n1*n2/4 + n2**2/12)
+    res[1, 2] = np.sum(n0**2/12 - n0*n1/12 - n0*n2/12 - n1**2/12 + n1*n2/4 - n2**2/12)
+    res[2, 0] = res[0, 2]
+    res[2, 1] = res[1, 2]
+    res[2, 2] = np.sum(n0**2/12 + n0*n1/12 - n0*n2/4 + n1**2/12 - n1*n2/4 + n2**2/4)
+
+    return res
+
 
 class LinearTriangleBasis(object):
     "An abstract base class for first order basis functions on triangles"
@@ -133,6 +153,55 @@ class LinearTriangleBasis(object):
             return r, vector_func, scalar_func
         else:
             return r, vector_func
+
+    @property
+    def gram_matrix(self):
+        """Calculate the Gram matrix which is the inner product between each
+        basis function
+
+        Returns
+        -------
+        G : ndarray
+            The Gram matrix, giving the inner product between each basis
+            function            
+        """
+        try:
+            return self.stored_gram
+        except AttributeError:   
+            G = np.zeros((len(self.mesh.tri), 3, len(self.mesh.tri), 3), dtype=np.float64)
+            for tri_count, (tri, area) in enumerate(zip(self.tri.nodes, self.tri.area)):
+                nodes = self.nodes[tri]
+                G[tri_count, :, tri_count, :] = inner_product_triangle_face(nodes)/(2*area)
+                 # factor of 1/(2*area) is for second integration
+    
+            # convert from faces to the appropriate basis functions
+            vector_transform, _ = self.transformation_matrices()
+            self.stored_gram = vector_transform.dot(vector_transform.dot(G.reshape(3*tri_count, 3*tri_count)).T).T
+            
+            return self.stored_gram
+
+    @property
+    def gram_factored(self):
+        """A an eigenvalue decomposed version of the Gram matrix
+        
+        Returns
+        -------
+        sqrt_val : ndarray
+            The square root of each eigenvalue
+        vec : ndarray
+            Each column is a correctly normalised eigenvector such that the
+            transpose of this matrix is equal to its inverse.
+        """
+        try:
+            return self.stored_factored_gram
+        except AttributeError:
+            G = self.gram_matrix()
+            Gw, Gv = la.eig(G)
+            Gv /= np.sqrt(np.sum(Gv**2, axis=0))
+            
+            self.stored_factored_gram = (np.sqrt(Gw), Gv)
+            return self.stored_factored_gram
+
 
 class DivRwgBasis(LinearTriangleBasis):
     """Divergence-conforming RWG basis functions
