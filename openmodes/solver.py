@@ -145,7 +145,7 @@ class Simulation(object):
         return [self.operator.source_plane_wave(part, e_inc, jk_inc) for part 
                 in self.parts]
 
-    def part_singularities(self, s_start, num_modes):
+    def part_singularities(self, s_start, num_modes, use_gram=False):
         """Find the singularities of each part of the system in the complex
         frequency plane
 
@@ -179,7 +179,12 @@ class Simulation(object):
                 mode_s = np.empty(num_modes, np.complex128)
                 mode_j = np.empty((len(basis), num_modes), np.complex128)
 
-                Z_func = lambda s: self.operator.impedance_matrix(s, part)[:]
+                if use_gram:
+                    Gw, Gv = basis.gram_factored
+                    Gwm = np.diag(1.0/Gw)
+                    Z_func = lambda s: Gwm.dot(Gv.T.dot(self.operator.impedance_matrix(s, part)[:].dot(Gv.dot(Gwm))))
+                else:                    
+                    Z_func = lambda s: self.operator.impedance_matrix(s, part)[:]
 
                 for mode in xrange(num_modes):
                     res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode],
@@ -191,6 +196,12 @@ class Simulation(object):
                     mode_s[mode] = res['eigval']
                     j_calc = res['eigvec']
                     mode_j[:, mode] = j_calc/np.sqrt(np.sum(j_calc**2))
+
+                if use_gram:
+                    Gw, Gv = basis.gram_factored
+                    Gwm = np.diag(1.0/Gw)
+                    mode_j = Gv.dot(Gwm.dot(mode_j))
+                    #mode_j = Gwm.dot(Gv.dot(mode_j))
 
                 # add to cache
                 solved_parts[unique_id] = (mode_s, mode_j)
