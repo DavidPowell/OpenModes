@@ -92,7 +92,11 @@ class EfieImpedanceMatrix(object):
         Therefore this routine can return junk results, particularly if the
         mesh is dense.
         """
-        z_all, v_all = la.eig(self[:])
+        
+        G = self.basis_o.gram_matrix        
+        z_all, v_all = la.eig(self[:], G)
+        
+        #z_all, v_all = la.eig(self[:])
         which_z = np.argsort(abs(z_all.imag))[:num_modes]
         eigenimpedance = z_all[which_z]
 

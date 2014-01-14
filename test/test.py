@@ -173,8 +173,8 @@ def sem_eem_bcsrr():
     srr = openmodes.load_mesh(
                     osp.join("..", "examples", "geometry", "SRR.geo"), mesh_tol=1e-3)
 
-    #sim = openmodes.Simulation(basis_class=LoopStarBasis)
-    sim = openmodes.Simulation(basis_class=DivRwgBasis)
+    sim = openmodes.Simulation(basis_class=LoopStarBasis)
+    #sim = openmodes.Simulation(basis_class=DivRwgBasis)
     srr1 = sim.place_part(srr)
     #srr2 = sim.place_part(srr, location=[0e-3, 0e-3, 2e-3])
     #srr2.rotate([0, 0, 1], 180)
@@ -213,7 +213,7 @@ def sem_eem_bcsrr():
         Z = Z[0][0]
         V = V[0]
         if freq_count == 0 and sim.basis_class==LoopStarBasis:
-            print Z.num_loops_o, Z.num_loops_s
+            print Z.basis_o.num_loops, Z.basis_s.num_loops
             
         ext[freq_count] = np.vdot(V, Z.solve(V))
         
@@ -893,7 +893,7 @@ def fit_mode():
 #coupled_extinction()
 #vis_eigencurrents()
 #test_nonlinear_eig_srr()
-loop_star_combined()
+#loop_star_combined()
 #sem_eem_asrr()
-#sem_eem_bcsrr()
+sem_eem_bcsrr()
 
