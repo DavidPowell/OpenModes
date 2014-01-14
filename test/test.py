@@ -171,10 +171,12 @@ def sem_eem_bcsrr():
     """
 
     srr = openmodes.load_mesh(
-                    osp.join("..", "examples", "geometry", "SRR.geo"), mesh_tol=1e-3)
+                    osp.join("..", "examples", "geometry", "SRR.geo"), mesh_tol=0.7e-3)
 
-    sim = openmodes.Simulation(basis_class=LoopStarBasis)
-    #sim = openmodes.Simulation(basis_class=DivRwgBasis)
+    basis_class = LoopStarBasis
+    #basis_class = DivRwgBasis
+
+    sim = openmodes.Simulation(basis_class=basis_class)
     srr1 = sim.place_part(srr)
     #srr2 = sim.place_part(srr, location=[0e-3, 0e-3, 2e-3])
     #srr2.rotate([0, 0, 1], 180)
@@ -184,22 +186,19 @@ def sem_eem_bcsrr():
     e_inc = np.array([1, 0, 0], dtype=np.complex128)
     k_hat = np.array([0, 1, 0], dtype=np.complex128)
 
-    num_modes = 3
+    num_modes = 6
 
     ext = np.empty(num_freqs, np.complex128)
     ext_modes = np.empty(num_freqs, np.complex128)
     ext_sem = np.empty((num_freqs, num_modes), np.complex128)
     ext_eem = np.empty((num_freqs, num_modes), np.complex128)
 
-    s_start = 2j*np.pi*10e9
-    #mode_s, mode_j = sim.system_singularities(s_start, num_modes)
-    #models = sim.construct_model_system(mode_s, mode_j)
-
-    mode_s, mode_j = sim.part_singularities(s_start, num_modes)
-    print [s/(2*np.pi) for s in mode_s]
-    models = sim.construct_models(mode_s, mode_j)[0]
-    
-    print [model.coefficients for model in models]
+    if basis_class == LoopStarBasis:
+        s_start = 2j*np.pi*10e9
+        mode_s, mode_j = sim.part_singularities(s_start, num_modes)
+        print [s/(2*np.pi) for s in mode_s]
+        models = sim.construct_models(mode_s, mode_j)[0]    
+        print [model.coefficients for model in models]
     
     z_eem = np.empty((num_freqs, num_modes), np.complex128)
     z_modes = np.empty((num_freqs, num_modes), np.complex128)
@@ -232,39 +231,40 @@ def sem_eem_bcsrr():
 
         
         for mode in xrange(num_modes):
-            ext_sem[freq_count, mode] = np.vdot(V, models[mode].solve(s, V))
             ext_eem[freq_count, mode] = np.vdot(V, eem_j[:, mode])*np.dot(V, eem_j[:, mode])/eem_z[mode]
+            
+            if basis_class == LoopStarBasis:
+                ext_sem[freq_count, mode] = np.vdot(V, models[mode].solve(s, V))
+                z_sem[freq_count, mode] = models[mode].scalar_impedance(s)
 
-            z_sem[freq_count, mode] = models[mode].scalar_impedance(s)
-
-#    plt.figure(figsize=(10, 5))
-#    plt.subplot(121)
-#    plt.plot(freqs*1e-9, ext.real)
-#    plt.plot(freqs*1e-9, ext_modes.real)
-#    #plt.plot(freqs*1e-9, np.sum(ext_sem.real, axis=1))
-#    plt.plot(freqs*1e-9, np.sum(ext_eem.real, axis=1))
-#    plt.subplot(122)
-#    plt.plot(freqs*1e-9, ext.imag)
-#    plt.plot(freqs*1e-9, ext_modes.imag)
-#    #plt.plot(freqs*1e-9, np.sum(ext_sem.imag, axis=1))
-#    plt.plot(freqs*1e-9, np.sum(ext_eem.imag, axis=1))
-#    plt.show()
+    plt.figure(figsize=(10, 5))
+    plt.subplot(121)
+    plt.plot(freqs*1e-9, ext.real)
+    plt.plot(freqs*1e-9, ext_modes.real)
+    #plt.plot(freqs*1e-9, np.sum(ext_sem.real, axis=1))
+    plt.plot(freqs*1e-9, np.sum(ext_eem.real, axis=1))
+    plt.subplot(122)
+    plt.plot(freqs*1e-9, ext.imag)
+    plt.plot(freqs*1e-9, ext_modes.imag)
+    #plt.plot(freqs*1e-9, np.sum(ext_sem.imag, axis=1))
+    plt.plot(freqs*1e-9, np.sum(ext_eem.imag, axis=1))
+    plt.show()
     
 #    z_eem = 1.0/z_eem
 #    z_sem = 1.0/z_sem    
     
-    plt.figure(figsize=(10, 5))
-    plt.subplot(121)
-    plt.plot(freqs*1e-9, z_eem.real, 'x')
-    plt.plot(freqs*1e-9, z_modes.real, '--')
-    #plt.plot(freqs*1e-9, z_sem.real, '--')
-    plt.subplot(122)
-    plt.semilogy(freqs*1e-9, abs(z_eem.imag), 'x')
-    plt.semilogy(freqs*1e-9, abs(z_modes.imag), '--')
-   # plt.semilogy(freqs*1e-9, abs(z_sem.imag), '--')
-    #plt.plot(freqs*1e-9, z_eem.imag, 'x')
-    #plt.plot(freqs*1e-9, z_sem.imag, '--')
-    plt.show()
+#    plt.figure(figsize=(10, 5))
+#    plt.subplot(121)
+#    plt.plot(freqs*1e-9, z_eem.real, 'x')
+#    plt.plot(freqs*1e-9, z_modes.real, '--')
+#    #plt.plot(freqs*1e-9, z_sem.real, '--')
+#    plt.subplot(122)
+#    plt.semilogy(freqs*1e-9, abs(z_eem.imag), 'x')
+#    plt.semilogy(freqs*1e-9, abs(z_modes.imag), '--')
+#   # plt.semilogy(freqs*1e-9, abs(z_sem.imag), '--')
+#    #plt.plot(freqs*1e-9, z_eem.imag, 'x')
+#    #plt.plot(freqs*1e-9, z_sem.imag, '--')
+#    plt.show()
 
 
 def srr_coupling():
