@@ -167,16 +167,17 @@ class LinearTriangleBasis(object):
         """
         try:
             return self.stored_gram
-        except AttributeError:   
-            G = np.zeros((len(self.mesh.tri), 3, len(self.mesh.tri), 3), dtype=np.float64)
-            for tri_count, (tri, area) in enumerate(zip(self.tri.nodes, self.tri.area)):
-                nodes = self.nodes[tri]
+        except AttributeError:
+            num_tri = len(self.mesh.polygons)
+            G = np.zeros((num_tri, 3, num_tri, 3), dtype=np.float64)
+            for tri_count, (tri, area) in enumerate(zip(self.mesh.polygons, self.mesh.polygon_areas)):
+                nodes = self.mesh.nodes[tri]
                 G[tri_count, :, tri_count, :] = inner_product_triangle_face(nodes)/(2*area)
                  # factor of 1/(2*area) is for second integration
     
             # convert from faces to the appropriate basis functions
-            vector_transform, _ = self.transformation_matrices()
-            self.stored_gram = vector_transform.dot(vector_transform.dot(G.reshape(3*tri_count, 3*tri_count)).T).T
+            vector_transform, _ = self.transformation_matrices
+            self.stored_gram = vector_transform.dot(vector_transform.dot(G.reshape(3*num_tri, 3*num_tri)).T).T
             
             return self.stored_gram
 
