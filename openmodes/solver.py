@@ -33,32 +33,6 @@ from openmodes.visualise import plot_mayavi, write_vtk
 from openmodes.model import ScalarModel, ScalarModelLS
 
 
-def delta_eig(s, j, Z_func, eps = None):
-    """Find the derivative of the eigenimpedance at the resonant frequency
-    
-    See section 5.7 of numerical recipes for calculating the step size h
-
-    Impedance derivative is based on
-    C. E. Baum, Proceedings of the IEEE 64, 1598 (1976).
-    """
-
-    if eps is None:
-        # find the machine precision (this should actually be the accuracy with
-        # which Z is calculated)
-        eps = np.finfo(s.dtype).eps
-    
-    # first determine the optimal value of h
-    h = abs(s)*eps**(1.0/3.0)*(1.0 + 1.0j)
-    
-    # make h exactly representable in floating point
-    temp = s + h
-    h = (temp - s)
-
-    delta_Z = (Z_func(s+h) - Z_func(s-h))/(2*h)
-    
-    return np.dot(j.T, np.dot(delta_Z, j))
-
-
 class Simulation(object):
     """This object controls everything within the simluation. It contains all
     the parts which have been placed, and the operator equation which is
@@ -287,26 +261,25 @@ class Simulation(object):
         scalar_models : list
             The scalar models
         """
-        
-        scalar_models = []        
-        
+
+        scalar_models = []
+
         for s_n, j_n in zip(mode_s, mode_j.T):
-            Z_func = lambda s: self.calculate_impedance(s).combine_parts()[:]                
-            z_der = delta_eig(s_n, j_n, Z_func)
-            scalar_models.append(ScalarModel(s_n, j_n, z_der))
+            Z_func = lambda s: self.calculate_impedance(s).combine_parts()          
+            scalar_models.append(ScalarModel(s_n, j_n, Z_func))
         return scalar_models
 
 
     def construct_models(self, mode_s, mode_j):
         """Construct a scalar model for the modes of each part
-        
+
         Parameters
         ----------
         mode_s : list of ndarray
             The mode frequency of each part
         mode_j : list of ndarray
             The currents for the modes of each part
-            
+
         Returns
         -------
         scalar_models : list
@@ -327,9 +300,8 @@ class Simulation(object):
             else:
                 scalar_models.append([])
                 for s_n, j_n in zip(mode_s[part_count], mode_j[part_count].T):
-                    Z_func = lambda s: self.operator.impedance_matrix(s, part)[:]                
-                    z_der = delta_eig(s_n, j_n, Z_func)
-                    scalar_models[-1].append(ScalarModel(s_n, j_n, z_der))
+                    Z_func = lambda s: self.operator.impedance_matrix(s, part)
+                    scalar_models[-1].append(ScalarModel(s_n, j_n, Z_func))
 
 #                    Z = self.operator.impedance_matrix(s_n, part)
 #                    scalar_L = np.dot(j_n, np.dot(Z.L, j_n))

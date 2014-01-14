@@ -22,6 +22,32 @@ import numpy as np
 from scipy.optimize import nnls
 
 
+def delta_eig(s, j, Z_func, eps = None):
+    """Find the derivative of the eigenimpedance at the resonant frequency
+    
+    See section 5.7 of numerical recipes for calculating the step size h
+
+    Impedance derivative is based on
+    C. E. Baum, Proceedings of the IEEE 64, 1598 (1976).
+    """
+
+    if eps is None:
+        # find the machine precision (this should actually be the accuracy with
+        # which Z is calculated)
+        eps = np.finfo(s.dtype).eps
+    
+    # first determine the optimal value of h
+    h = abs(s)*eps**(1.0/3.0)*(1.0 + 1.0j)
+    
+    # make h exactly representable in floating point
+    temp = s + h
+    h = (temp - s)
+
+    delta_Z = (Z_func(s+h)[:] - Z_func(s-h)[:])/(2*h)
+    
+    return np.dot(j.T, np.dot(delta_Z, j))
+
+
 def fit_four_term(s_0, z_der):
     """
     Fit a 4 term model to a resonant frequency and impedance derivative
@@ -55,13 +81,13 @@ class ScalarModel(object):
     and the derivative of the eigenimpedancec at resonance, as well as the
     condition of open-circuit impedance at zero frequency."""
     
-    def __init__(self, mode_s, mode_j, z_der):
+    def __init__(self, mode_s, mode_j, Z_func):
         "Construct the scalar model"
         self.mode_s = mode_s
         self.mode_j = mode_j
-        self.z_der = z_der
+        self.z_der = delta_eig(mode_s, mode_j, Z_func)
         self.scale_factor = abs(mode_s.imag)/10
-        self.coefficients = fit_four_term(mode_s/self.scale_factor, z_der*self.scale_factor)
+        self.coefficients = fit_four_term(mode_s/self.scale_factor, self.z_der*self.scale_factor)
     
     def scalar_impedance(self, s):
         "The scalar impedance of this mode"
