@@ -60,11 +60,12 @@ class ScalarModel(object):
         self.mode_s = mode_s
         self.mode_j = mode_j
         self.z_der = z_der
-        self.coefficients = fit_four_term(mode_s/mode_s.imag, z_der*mode_s.imag)
+        self.scale_factor = abs(mode_s.imag)/10
+        self.coefficients = fit_four_term(mode_s/self.scale_factor, z_der*self.scale_factor)
     
     def scalar_impedance(self, s):
         "The scalar impedance of this mode"
-        s = s/self.mode_s.imag
+        s = s/self.scale_factor
         powers = np.array([1/s, 1, s, -s**2])
         return np.dot(self.coefficients, powers.T)
     
