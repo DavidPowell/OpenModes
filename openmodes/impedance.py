@@ -92,10 +92,16 @@ class EfieImpedanceMatrix(object):
         Therefore this routine can return junk results, particularly if the
         mesh is dense.
         """
-        
+
         if use_gram:
-            G = self.basis_o.gram_matrix        
-            z_all, v_all = la.eig(self[:], G)
+            Gw, Gv = self.basis_o.gram_factored
+            Gwm = np.diag(1.0/Gw)
+            Zd = Gwm.dot(Gv.T.dot(self[:].dot(Gv.dot(Gwm))))
+            z_all, v_all = la.eig(Zd)
+            #v_all = Gwm.dot(Gv.T.dot(v_all))
+            #v_all = Gv.dot(Gwm.dot(v_all))
+            #G = self.basis_o.gram_matrix
+            #z_all, v_all = la.eig(self[:], G)
         else:
             z_all, v_all = la.eig(self[:])
 
@@ -104,6 +110,11 @@ class EfieImpedanceMatrix(object):
 
         v = v_all[:, which_z]
         eigencurrent = v/np.sqrt(np.sum(v**2, axis=0))
+
+        if use_gram:
+            eigencurrent = Gv.dot(Gwm.dot(eigencurrent))
+            #eigencurrent = Gwm.dot(Gv.T.dot(eigencurrent))
+
 
         return eigenimpedance, eigencurrent
 
