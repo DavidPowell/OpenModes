@@ -82,7 +82,7 @@ class EfieImpedanceMatrix(object):
                 self.factored_matrix = lu
         return la.lu_solve(lu, V)
 
-    def eigenmodes(self, num_modes):
+    def eigenmodes(self, num_modes, use_gram=False):
         """Calculate the eigenimpedance and eigencurrents of each part's modes
 
         The modes with the smallest imaginary part of their impedance will be
@@ -93,10 +93,12 @@ class EfieImpedanceMatrix(object):
         mesh is dense.
         """
         
-        G = self.basis_o.gram_matrix        
-        z_all, v_all = la.eig(self[:], G)
-        
-        #z_all, v_all = la.eig(self[:])
+        if use_gram:
+            G = self.basis_o.gram_matrix        
+            z_all, v_all = la.eig(self[:], G)
+        else:
+            z_all, v_all = la.eig(self[:])
+
         which_z = np.argsort(abs(z_all.imag))[:num_modes]
         eigenimpedance = z_all[which_z]
 
@@ -149,7 +151,7 @@ class EfieImpedanceMatrix(object):
         if return_arrays:
             return L_red, S_red
         else:
-            return EfieImpedanceMatrix(self.s, L_red, S_red)
+            return EfieImpedanceMatrix(self.s, L_red, S_red, None, None)
 
     def source_modes(self, V, num_modes, mode_currents):
         "Take a source field, and project it onto the modes of the system"
