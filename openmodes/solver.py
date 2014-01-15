@@ -76,6 +76,7 @@ class Simulation(object):
         
         #self.logger.setLevel(logging.CRITICAL)
         self.logger.setLevel(logging.INFO)
+        self.logger.propagate = False
         print "Logging info in %s" % self.logfile.name
 
 
