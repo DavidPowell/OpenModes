@@ -82,7 +82,7 @@ class EfieImpedanceMatrix(object):
                 self.factored_matrix = lu
         return la.lu_solve(lu, V)
 
-    def eigenmodes(self, num_modes, use_gram=False):
+    def eigenmodes(self, num_modes, use_gram=True):
         """Calculate the eigenimpedance and eigencurrents of each part's modes
 
         The modes with the smallest imaginary part of their impedance will be
@@ -91,6 +91,14 @@ class EfieImpedanceMatrix(object):
         Note that the impedance matrix is typically *ill-conditioned*.
         Therefore this routine can return junk results, particularly if the
         mesh is dense.
+        
+        Parameters
+        ----------
+        num_modes : integer
+            The number of modes to find for each part
+        use_gram : boolean, optional
+            Solve a generalised problem involving the Gram matrix, which scales
+            out the basis functions to get the physical eigenimpedances         
         """
 
         if use_gram:
@@ -98,8 +106,6 @@ class EfieImpedanceMatrix(object):
             Gwm = np.diag(1.0/Gw)
             Zd = Gwm.dot(Gv.T.dot(self[:].dot(Gv.dot(Gwm))))
             z_all, v_all = la.eig(Zd)
-            #v_all = Gwm.dot(Gv.T.dot(v_all))
-            #v_all = Gv.dot(Gwm.dot(v_all))
             #G = self.basis_o.gram_matrix
             #z_all, v_all = la.eig(self[:], G)
         else:
@@ -113,8 +119,6 @@ class EfieImpedanceMatrix(object):
 
         if use_gram:
             eigencurrent = Gv.dot(Gwm.dot(eigencurrent))
-            #eigencurrent = Gwm.dot(Gv.T.dot(eigencurrent))
-
 
         return eigenimpedance, eigencurrent
 

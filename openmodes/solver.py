@@ -165,15 +165,20 @@ class Simulation(object):
         return [self.operator.source_plane_wave(part, e_inc, jk_inc) for part 
                 in self.parts]
 
-    def part_singularities(self, s_start, num_modes, use_gram=False):
+    def part_singularities(self, s_start, num_modes, use_gram=True):
         """Find the singularities of each part of the system in the complex
         frequency plane
 
         Parameters
         ----------        
-        s_start : number
+        s_start : complex
             The complex frequency at which to perform the estimate. Should be
             within the band of interest
+        num_modes : integer
+            The number of modes to find for each part
+        use_gram : boolean, optional
+            Solve a generalised problem involving the Gram matrix, which scales
+            out the basis functions to get the physical eigenimpedances 
         """
 
         all_s = []
