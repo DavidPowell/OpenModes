@@ -173,24 +173,13 @@ class Simulation(object):
                 # first get an estimate of the pole locations
                 basis = get_basis_functions(part.mesh, self.basis_class)
                 Z = self.operator.impedance_matrix(s_start, part)
-                if use_gram:
-                    # TODO: it seems that the square root of the Gram matrix
-                    # does not mix together loops and star basis functions,
-                    # so this quick and dirty approach to the linear problem
-                    # is okay
-                    Gw, Gv = basis.gram_factored
-                    Gwm = np.diag(1.0/Gw)
-                    Z.L = Gwm.dot(Gv.T.dot(Z.L.dot(Gv.dot(Gwm))))
-                    Z.S = Gwm.dot(Gv.T.dot(Z.S.dot(Gv.dot(Gwm))))
-
                 lin_s, lin_currents = eig_linearised(Z, num_modes)
 
-#                if use_gram:
-#                    Gw, Gv = basis.gram_factored
-#                    Gwm = np.diag(1.0/Gw)
-#                    Z.L = Gwm.dot(Gv.T.dot(Z.L.dot(Gv.dot(Gwm))))
-#                    Z.S = Gwm.dot(Gv.T.dot(Z.S.dot(Gv.dot(Gwm))))
-
+                if use_gram:
+                    Gw, Gv = basis.gram_factored
+                    Gwm = np.diag(Gw)
+                    lin_currents = Gwm.dot(Gv.T.dot(lin_currents))
+                    Gwm = np.diag(1.0/Gw)
 
                 #print lin_s/2/np.pi
 
@@ -198,8 +187,6 @@ class Simulation(object):
                 mode_j = np.empty((len(basis), num_modes), np.complex128)
 
                 if use_gram:
-                    #Gw, Gv = basis.gram_factored
-                    #Gwm = np.diag(1.0/Gw)
                     Z_func = lambda s: Gwm.dot(Gv.T.dot(self.operator.impedance_matrix(s, part)[:].dot(Gv.dot(Gwm))))
                 else:                    
                     Z_func = lambda s: self.operator.impedance_matrix(s, part)[:]
@@ -219,7 +206,6 @@ class Simulation(object):
                     Gw, Gv = basis.gram_factored
                     Gwm = np.diag(1.0/Gw)
                     mode_j = Gv.dot(Gwm.dot(mode_j))
-                    #mode_j = Gwm.dot(Gv.dot(mode_j))
 
                 # add to cache
                 solved_parts[unique_id] = (mode_s, mode_j)

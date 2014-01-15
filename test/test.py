@@ -996,6 +996,27 @@ def fit_mode():
     #plt.plot(freqs*1e-9, y.imag)
     plt.show()
 
+def plot_sem_currents():
+    """"Calculate the eigencurrent expansion of a single ring.
+    """
+
+    srr = openmodes.load_mesh(
+                    osp.join("..", "examples", "geometry", "SRR_wide.geo"), mesh_tol=0.5e-3)
+
+    basis_class = LoopStarBasis
+    #basis_class = DivRwgBasis
+
+    sim = openmodes.Simulation(basis_class=basis_class)
+    sim.place_part(srr)
+
+    num_modes = 3
+
+    s_start = 2j*np.pi*10e9
+    mode_s, mode_j = sim.part_singularities(s_start, num_modes, use_gram=True)
+    print [s/(2*np.pi) for s in mode_s]
+    sim.plot_solution([mode_j[0][:, 1]], 'mayavi')
+
+
 #loop_star_linear_eigenmodes()
 #srr_coupling()
 #srr_extinction()
@@ -1007,5 +1028,7 @@ def fit_mode():
 #test_nonlinear_eig_srr()
 #loop_star_combined()
 #sem_eem_asrr()
-sem_eem_bcsrr()
+#sem_eem_bcsrr()
+plot_sem_currents()
+
 
