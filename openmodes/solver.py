@@ -20,6 +20,10 @@
 
 from __future__ import division
 
+import logging
+import time
+import tempfile
+
 # numpy and scipy
 import numpy as np
 
@@ -61,6 +65,20 @@ class Simulation(object):
                                        basis_class=basis_class, 
                                        greens_function=greens_function)
 
+        # create a unique logger for each simulation object
+        self.logger = logging.getLogger(repr(self))
+        self.logfile = tempfile.NamedTemporaryFile(mode='wt',
+                                prefix=time.strftime("%Y-%m-%d--%H-%M-%S"),
+                                suffix=".log", delete=False)
+        handler = logging.StreamHandler(self.logfile)
+        handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        self.logger.addHandler(handler)
+        
+        #self.logger.setLevel(logging.CRITICAL)
+        self.logger.setLevel(logging.INFO)
+        print "Logging info in %s" % self.logfile.name
+
+
     def place_part(self, mesh, location=None):
         """Add a part to the simulation domain
         
@@ -83,6 +101,8 @@ class Simulation(object):
         
         sim_part = Part(mesh, location=location) 
         self.parts.append(sim_part)
+        
+        #self.logger.info("Placed part %s" % repr(sim_part))
 
         return sim_part
 
@@ -170,18 +190,20 @@ class Simulation(object):
                 #print "got from cache"
                 mode_s, mode_j = solved_parts[unique_id]
             else:
+                self.logger.info("Finding singularities for part %s" % str(unique_id))
                 # first get an estimate of the pole locations
                 basis = get_basis_functions(part.mesh, self.basis_class)
                 Z = self.operator.impedance_matrix(s_start, part)
                 lin_s, lin_currents = eig_linearised(Z, num_modes)
+                
+                #freqs_text = " ".join(str(s/2/np.pi) for s in lin_s)
+                #self.logger.info("Linearised singularities (Hz)  %s\n" % freqs_text)
 
                 if use_gram:
                     Gw, Gv = basis.gram_factored
                     Gwm = np.diag(Gw)
                     lin_currents = Gwm.dot(Gv.T.dot(lin_currents))
                     Gwm = np.diag(1.0/Gw)
-
-                #print lin_s/2/np.pi
 
                 mode_s = np.empty(num_modes, np.complex128)
                 mode_j = np.empty((len(basis), num_modes), np.complex128)
@@ -195,9 +217,16 @@ class Simulation(object):
                     res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode],
                                      weight='max element', lambda_tol=1e-8,
                                      max_iter=200)
-
-                    print "Iterations", res['iter_count']
-                    #print res['eigval']/2/np.pi
+                                     
+                    lin_hz = lin_s[mode]/2/np.pi
+                    nl_hz = res['eigval']/2/np.pi
+                    self.logger.info("Converged after %d iterations\n"
+                                     "%+.4e %+.4ej (linearised solution)\n"
+                                     "%+.4e %+.4ej (nonlinear solution)"
+                                     % (res['iter_count'], 
+                                        lin_hz.real, lin_hz.imag, 
+                                        nl_hz.real, nl_hz.imag))
+                            
                     mode_s[mode] = res['eigval']
                     j_calc = res['eigvec']
                     mode_j[:, mode] = j_calc/np.sqrt(np.sum(j_calc**2))
@@ -212,9 +241,6 @@ class Simulation(object):
 
             all_s.append(mode_s)
             all_j.append(mode_j)
-
-#            all_s.append(lin_s)
-#            all_j.append(lin_currents)
 
         return all_s, all_j
 
