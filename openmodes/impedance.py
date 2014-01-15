@@ -88,7 +88,7 @@ class EfieImpedanceMatrix(object):
         The modes with the smallest imaginary part of their impedance will be
         returned.
 
-        Note that the impedance matrix is typically *ill-conditioned*.
+        Note that the impedance matrix can easily be *ill-conditioned*.
         Therefore this routine can return junk results, particularly if the
         mesh is dense.
         
@@ -292,7 +292,7 @@ class ImpedanceParts(object):
         else:
             return Z
 
-    def eigenmodes(self, num_modes):
+    def eigenmodes(self, num_modes, use_gram=True):
         """Calculate the eigenimpedance and eigencurrents of each part's modes
 
         The modes with the smallest imaginary part of their impedance will be
@@ -301,6 +301,14 @@ class ImpedanceParts(object):
         Note that the impedance matrix is typically *ill-conditioned*.
         Therefore this routine can return junk results, particularly if the
         mesh is dense.
+
+        Parameters
+        ----------
+        num_modes : integer
+            The number of modes to find for each part
+        use_gram : boolean, optional
+            Solve a generalised problem involving the Gram matrix, which scales
+            out the basis functions to get the physical eigenimpedances         
         """
 
         # TODO: cache this if parts are identical (should be upstream caching
@@ -308,7 +316,7 @@ class ImpedanceParts(object):
         mode_impedances = []
         mode_currents = []
         for count in xrange(self.num_parts):
-            eig_z, eig_current = self.matrices[count][count].eigenmodes(num_modes)
+            eig_z, eig_current = self.matrices[count][count].eigenmodes(num_modes, use_gram)
 
             mode_impedances.append(eig_z)
             mode_currents.append(eig_current)
