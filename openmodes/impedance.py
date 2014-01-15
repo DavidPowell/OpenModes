@@ -368,7 +368,7 @@ class ImpedanceParts(object):
         if combine:
             L_red = L_red.reshape((num_parts*num_modes, num_parts*num_modes))
             S_red = S_red.reshape((num_parts*num_modes, num_parts*num_modes))
-            return EfieImpedanceMatrix(self.s, L_red, S_red)
+            return EfieImpedanceMatrix(self.s, L_red, S_red, None, None)
         else:
             raise NotImplementedError
 
