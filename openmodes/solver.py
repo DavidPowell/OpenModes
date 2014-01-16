@@ -273,20 +273,28 @@ class Simulation(object):
         # first get an estimate of the pole locations
         Z = self.calculate_impedance(s_start).combine_parts()
         lin_s, lin_currents = eig_linearised(Z, num_modes)
-        #print lin_s/2/np.pi
 
         mode_s = np.empty_like(lin_s)
         mode_j = np.empty_like(lin_currents)
 
         Z_func = lambda s: self.calculate_impedance(s).combine_parts()[:]
 
+        self.logger.info("Finding singularities for the whole system")
+
         for mode in xrange(num_modes):
             res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode],
                              weight='max element', lambda_tol=1e-8,
                              max_iter=200)
 
-            print "Iterations", res['iter_count']
-            #print res['eigval']/2/np.pi
+            lin_hz = lin_s[mode]/2/np.pi
+            nl_hz = res['eigval']/2/np.pi
+            self.logger.info("Converged after %d iterations\n"
+                             "%+.4e %+.4ej (linearised solution)\n"
+                             "%+.4e %+.4ej (nonlinear solution)"
+                             % (res['iter_count'], 
+                                lin_hz.real, lin_hz.imag, 
+                                nl_hz.real, nl_hz.imag))
+
             mode_s[mode] = res['eigval']
             j_calc = res['eigvec']
             mode_j[:, mode] = j_calc/np.sqrt(np.sum(j_calc**2))
