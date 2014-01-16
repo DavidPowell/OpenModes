@@ -272,13 +272,13 @@ class DivRwgBasis(LinearTriangleBasis):
         """
         
         try:
-            return self.vector_transform, self.scalar_transform
+            return self.__vector_transform, self.__scalar_transform
         except AttributeError:
         
             num_basis = len(self)
             num_tri = len(self.mesh.polygons)
-            #self.scalar_transform = np.zeros((num_basis, num_tri), np.float64)
-            #self.vector_transform=np.zeros((num_basis, 3*num_tri), np.float64)
+            # scalar_transform = np.zeros((num_basis, num_tri), np.float64)
+            # vector_transform=np.zeros((num_basis, 3*num_tri), np.float64)
             scalar_transform = dok_matrix((num_basis, num_tri), np.float64)
             vector_transform = dok_matrix((num_basis, 3*num_tri), np.float64)
             
@@ -289,9 +289,9 @@ class DivRwgBasis(LinearTriangleBasis):
                 vector_transform[basis_count, tri_p*3+node_p] = 1.0
                 vector_transform[basis_count, tri_m*3+node_m] = -1.0
     
-            self.vector_transform = vector_transform.tocsr()
-            self.scalar_transform = scalar_transform.tocsr()
-            return self.vector_transform, self.scalar_transform
+            self.__vector_transform = vector_transform.tocsr()
+            self.__scalar_transform = scalar_transform.tocsr()
+            return self.__vector_transform, self.__scalar_transform
      
     def __len__(self):
         return len(self.rwg.tri_p)
@@ -536,13 +536,13 @@ class LoopStarBasis(LinearTriangleBasis):
         """
         
         try:
-            return self.vector_transform, self.scalar_transform
+            return self.__vector_transform, self.__scalar_transform
         except AttributeError:
         
             num_basis = len(self)
             num_tri = len(self.mesh.polygons)
-            #self.scalar_transform = np.zeros((num_basis, num_tri), np.float64)
-            #self.vector_transform=np.zeros((num_basis, 3*num_tri), np.float64)
+            # scalar_transform = np.zeros((num_basis, num_tri), np.float64)
+            # vector_transform=np.zeros((num_basis, 3*num_tri), np.float64)
 
             scalar_transform = dok_matrix((num_basis, num_tri), np.float64)
             vector_transform = dok_matrix((num_basis, 3*num_tri), np.float64)
@@ -571,10 +571,10 @@ class LoopStarBasis(LinearTriangleBasis):
 #                                vector_transform[basis_count, :]).sum())
 #                vector_transform[basis_count, :] /= norm
                     
-            self.vector_transform = vector_transform.tocsr()
-            self.scalar_transform = scalar_transform.tocsr()
+            self.__vector_transform = vector_transform.tocsr()
+            self.__scalar_transform = scalar_transform.tocsr()
     
-            return self.vector_transform, self.scalar_transform            
+            return self.__vector_transform, self.__scalar_transform            
 
 cached_basis_functions = {}      
         
