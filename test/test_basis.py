@@ -22,7 +22,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os.path as osp
 
-from openmodes.basis import DivRwgBasis, LoopStarBasis
+from openmodes.basis import DivRwgBasis, LoopStarBasis, DivRwgGramBasis
 from openmodes.integration import get_dunavant_rule
 from openmodes import load_mesh
 from openmodes.visualise import write_vtk
@@ -125,6 +125,18 @@ def loop_star_to_vtk():
 #        plt.show()
 #
 
+
+mesh_tol = 0.5e-3
+srr = load_mesh(osp.join("..", "examples", "geometry", "SRR.geo"), mesh_tol)
+
+basis = DivRwgGramBasis(srr)
+#basis = DivRwgBasis(srr)
+
+t1, t2 = basis.transformation_matrices
+
+#print basis.transformation_matrices
+
+
 #test_interpolate_rwg()
-test_interpolate_loop_star()
+#test_interpolate_loop_star()
 #loop_star_to_vtk()
