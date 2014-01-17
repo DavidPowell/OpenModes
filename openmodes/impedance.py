@@ -82,7 +82,7 @@ class EfieImpedanceMatrix(object):
                 self.factored_matrix = lu
         return la.lu_solve(lu, V)
 
-    def eigenmodes(self, num_modes, use_gram=True):
+    def eigenmodes(self, num_modes, use_gram=False):
         """Calculate the eigenimpedance and eigencurrents of each part's modes
 
         The modes with the smallest imaginary part of their impedance will be
@@ -292,7 +292,7 @@ class ImpedanceParts(object):
         else:
             return Z
 
-    def eigenmodes(self, num_modes, use_gram=True):
+    def eigenmodes(self, num_modes, use_gram=False):
         """Calculate the eigenimpedance and eigencurrents of each part's modes
 
         The modes with the smallest imaginary part of their impedance will be

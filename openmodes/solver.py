@@ -166,7 +166,7 @@ class Simulation(object):
         return [self.operator.source_plane_wave(part, e_inc, jk_inc) for part 
                 in self.parts]
 
-    def part_singularities(self, s_start, num_modes, use_gram=True):
+    def part_singularities(self, s_start, num_modes, use_gram=False):
         """Find the singularities of each part of the system in the complex
         frequency plane
 
