@@ -154,6 +154,17 @@ class LinearTriangleBasis(object):
         else:
             return r, vector_func
 
+    def gram_matrix_faces(self):
+        "Return the gram matrix defined between faces"
+        num_tri = len(self.mesh.polygons)
+        G = np.zeros((num_tri, 3, num_tri, 3), dtype=np.float64)
+        for tri_count, (tri, area) in enumerate(zip(self.mesh.polygons, self.mesh.polygon_areas)):
+            nodes = self.mesh.nodes[tri]
+            G[tri_count, :, tri_count, :] = inner_product_triangle_face(nodes)/(2*area)
+            # factor of 1/(2*area) is for second integration
+            
+        return G
+
     @property
     def gram_matrix(self):
         """Calculate the Gram matrix which is the inner product between each
@@ -168,12 +179,8 @@ class LinearTriangleBasis(object):
         try:
             return self.stored_gram
         except AttributeError:
+            G = self.gram_matrix_faces()
             num_tri = len(self.mesh.polygons)
-            G = np.zeros((num_tri, 3, num_tri, 3), dtype=np.float64)
-            for tri_count, (tri, area) in enumerate(zip(self.mesh.polygons, self.mesh.polygon_areas)):
-                nodes = self.mesh.nodes[tri]
-                G[tri_count, :, tri_count, :] = inner_product_triangle_face(nodes)/(2*area)
-                 # factor of 1/(2*area) is for second integration
     
             # convert from faces to the appropriate basis functions
             vector_transform, _ = self.transformation_matrices
