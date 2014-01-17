@@ -204,7 +204,7 @@ class LinearTriangleBasis(object):
             return self.stored_factored_gram
         except AttributeError:
             G = self.gram_matrix
-            Gw, Gv = la.eig(G)
+            Gw, Gv = la.eigh(G)
             Gv /= np.sqrt(np.sum(Gv**2, axis=0))
             
             self.stored_factored_gram = (np.sqrt(Gw), Gv)
