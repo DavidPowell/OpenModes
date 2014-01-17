@@ -605,12 +605,7 @@ def gram_wrapped_transformation_matrices(self):
         # Compute the square root of the Gram matrix through an eigenvalue
         # decomposition
         Gw, Gv = la.eigh(G)
-        print Gw
         Gv /= np.sqrt(np.sum(Gv**2, axis=0))
-        #Gw = np.diag(1.0/np.sqrt(Gw))
-
-        #sqrt_G = Gw.dot(Gv.T)
-        #sqrt_G = Gv.T.dot(np.diag(1.0/np.sqrt(Gw)))
         sqrt_G = np.diag(1.0/np.sqrt(Gw)).dot(Gv.T)
 
         self.__vector_transform = vector_transform.T.dot(sqrt_G.T).T
