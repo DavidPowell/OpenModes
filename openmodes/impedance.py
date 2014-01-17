@@ -247,7 +247,7 @@ class ImpedanceParts(object):
                 raise TypeError("Cannot slice the first dimension")
             return self.matrices[index[0]][index[1]]
 
-    def combine_parts(self, V=None, calculate_gram=False):
+    def combine_parts(self, V = None):
         """Evaluate the self and mutual impedances of all parts combined into
         a pair of matrices for the whole system.
 
@@ -269,16 +269,11 @@ class ImpedanceParts(object):
         total_size = sum(M[0].shape[0] for M in self.matrices)
         L_tot = np.empty((total_size, total_size), np.complex128)
         S_tot = np.empty_like(L_tot)
-        if calculate_gram:
-            G_tot = np.zeros((total_size, total_size))
 
         row_offset = 0
         for row in self.matrices:
             row_size = row[0].shape[0]
             col_offset = 0
-            if calculate_gram:
-                G_tot[row_offset:row_offset+row_size, row_offset:row_offset+row_size] = row[0].basis_o.gram_matrix
-                
             for matrix in row:
                 col_size = matrix.shape[1]
                 L_tot[row_offset:row_offset+row_size, col_offset:col_offset+col_size] = matrix.L
