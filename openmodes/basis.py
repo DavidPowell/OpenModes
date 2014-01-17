@@ -277,7 +277,7 @@ class DivRwgBasis(LinearTriangleBasis):
         packed to a 2D array of size (n_basis, n_basis)
 
         """
-        
+
         try:
             return self.__vector_transform, self.__scalar_transform
         except AttributeError:
@@ -541,15 +541,15 @@ class LoopStarBasis(LinearTriangleBasis):
         packed to a 2D array of size (n_basis, n_basis)
 
         """
-        
+
         try:
             return self.__vector_transform, self.__scalar_transform
         except AttributeError:
-        
+
             num_basis = len(self)
             num_tri = len(self.mesh.polygons)
             # scalar_transform = np.zeros((num_basis, num_tri), np.float64)
-            # vector_transform=np.zeros((num_basis, 3*num_tri), np.float64)
+            # vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
 
             scalar_transform = dok_matrix((num_basis, num_tri), np.float64)
             vector_transform = dok_matrix((num_basis, 3*num_tri), np.float64)

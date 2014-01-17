@@ -202,9 +202,6 @@ class Simulation(object):
                 Z = self.operator.impedance_matrix(s_start, part)
                 lin_s, lin_currents = eig_linearised(Z, num_modes)
                 
-                #freqs_text = " ".join(str(s/2/np.pi) for s in lin_s)
-                #self.logger.info("Linearised singularities (Hz)  %s\n" % freqs_text)
-
                 if use_gram:
                     Gw, Gv = basis.gram_factored
                     Gwm = np.diag(Gw)
