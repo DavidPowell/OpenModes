@@ -222,7 +222,7 @@ class DivRwgBasis(LinearTriangleBasis):
     they can be re-used for the same mesh placed in a different location.
     """
 
-    def __init__(self, mesh, edge_cache=None):
+    def __init__(self, mesh):
         """Generate basis functions for a particular mesh. Note that the mesh
         will be referenced, so it should not be modified after generating the
         basis functions.
@@ -230,10 +230,7 @@ class DivRwgBasis(LinearTriangleBasis):
         super(DivRwgBasis, self).__init__()
         self.mesh = mesh
 
-        if edge_cache is None:
-            edges, triangles_shared_by_edges = mesh.get_edges(True)
-        else:
-            edges, triangles_shared_by_edges = edge_cache
+        edges, triangles_shared_by_edges = mesh.get_edges(True)
 
         sharing_count = np.array([len(n) for n in triangles_shared_by_edges])
 
