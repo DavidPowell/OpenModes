@@ -34,11 +34,12 @@ RWG = namedtuple('RWG', ('tri_p', 'tri_m', 'node_p', 'node_m'))
 
 # TODO: routines to integrate over a triangle, with no scaling by area
 
+
 def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True,
-                              nodes = None):
+                              nodes=None):
     """Interpolate a function on a triangular mesh with linear basis functions
     on each face
-    
+
     Parameters
     ----------
     flatten : boolean, optional
@@ -57,7 +58,7 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True,
         for point_count, (xi, eta) in enumerate(xi_eta):
             # Barycentric coordinates of the observer
             zeta = 1.0 - eta - xi
-    
+
             # Cartesian coordinates of the point
             r[tri_count, point_count] = xi*nodes[node_nums][0] + \
                                         eta*nodes[node_nums][1] + \
@@ -70,7 +71,7 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True,
                 rho = r[tri_count, point_count] - nodes[node_nums][node_count]
 
                 vector_func[tri_count, point_count] += rho*tri_func[tri_count,
-                             node_count]
+                                                                    node_count]
 
     if flatten:
         r = r.reshape((num_tri*points_per_tri, 3))
@@ -78,6 +79,7 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True,
         scalar_func = scalar_func.reshape((num_tri*points_per_tri,))
 
     return r, vector_func, scalar_func
+
 
 def inner_product_triangle_face(nodes):
     """Inner product of linear basis functions sharing the same triangle,
@@ -105,10 +107,10 @@ class LinearTriangleBasis(object):
     def __init__(self):
         self.id = uuid.uuid4()
 
-    def interpolate_function(self, linear_func, xi_eta = [[1.0/3, 1.0/3]], 
+    def interpolate_function(self, linear_func, xi_eta=[[1.0/3, 1.0/3]],
                              flatten=True, return_scalar=False, nodes=None,
                              scale_area=True):
-        """Interpolate a function defined in RWG or loop-star basis over the 
+        """Interpolate a function defined in RWG or loop-star basis over the
         complete mesh
 
         Parameters
@@ -139,13 +141,13 @@ class LinearTriangleBasis(object):
         num_tri = len(self.mesh.polygons)
 
         vector_transform, _ = self.transformation_matrices
-        tri_func = vector_transform.T.dot(linear_func) 
+        tri_func = vector_transform.T.dot(linear_func)
         tri_func = tri_func.reshape((num_tri, 3))
-        
+
         if scale_area:
             tri_func /= 2*self.mesh.polygon_areas[:, None]
 
-        r, vector_func, scalar_func = interpolate_triangle_mesh(self.mesh, 
+        r, vector_func, scalar_func = interpolate_triangle_mesh(self.mesh,
                                             tri_func, num_tri, xi_eta, flatten,
                                             nodes)
 
@@ -162,7 +164,7 @@ class LinearTriangleBasis(object):
             nodes = self.mesh.nodes[tri]
             G[tri_count, :, tri_count, :] = inner_product_triangle_face(nodes)/(2*area)
             # factor of 1/(2*area) is for second integration
-            
+
         return G
 
     @property
@@ -174,24 +176,24 @@ class LinearTriangleBasis(object):
         -------
         G : ndarray
             The Gram matrix, giving the inner product between each basis
-            function            
+            function
         """
         try:
             return self.stored_gram
         except AttributeError:
             G = self.gram_matrix_faces()
             num_tri = len(self.mesh.polygons)
-    
+
             # convert from faces to the appropriate basis functions
             vector_transform, _ = self.transformation_matrices
             self.stored_gram = vector_transform.dot(vector_transform.dot(G.reshape(3*num_tri, 3*num_tri)).T).T
-            
+
             return self.stored_gram
 
     @property
     def gram_factored(self):
         """A an eigenvalue decomposed version of the Gram matrix
-        
+
         Returns
         -------
         sqrt_val : ndarray
@@ -206,22 +208,22 @@ class LinearTriangleBasis(object):
             G = self.gram_matrix
             Gw, Gv = la.eigh(G)
             Gv /= np.sqrt(np.sum(Gv**2, axis=0))
-            
+
             self.stored_factored_gram = (np.sqrt(Gw), Gv)
             return self.stored_factored_gram
 
 
 class DivRwgBasis(LinearTriangleBasis):
     """Divergence-conforming RWG basis functions
-    
+
     The simplest basis functions which can be defined on a triangular mesh.
-    
+
     The basis functions are defined in a coordinate independent manner, so that
-    they can be re-used for the same mesh placed in a different location    
+    they can be re-used for the same mesh placed in a different location.
     """
-    
-    def __init__(self, mesh, edge_cache = None):
-        """Generate basis functions for a meshicular mesh. Note that the mesh
+
+    def __init__(self, mesh, edge_cache=None):
+        """Generate basis functions for a particular mesh. Note that the mesh
         will be referenced, so it should not be modified after generating the
         basis functions.
         """
@@ -255,7 +257,7 @@ class DivRwgBasis(LinearTriangleBasis):
             # set the RWG basis function triangles
             tri_p[basis_count] = triangles_shared_by_edges[edge_count][0]
             tri_m[basis_count] = triangles_shared_by_edges[edge_count][1]
-            
+
             # determine the indices of the unshared nodes, indexed within the
             # sharing triangles (i.e. 0, 1 or 2)
             node_p[basis_count] = nodes_not_in_edge(
@@ -269,49 +271,49 @@ class DivRwgBasis(LinearTriangleBasis):
     def transformation_matrices(self):
         """Returns the sparse transformation matrix to turn quantities
         defined on faces to loop-star basis
-        
-        For vector quantities, assumes that the face-based quantity has been 
+
+        For vector quantities, assumes that the face-based quantity has been
         packed to a 2D array of size (n_basis*3, n_basis*3)
 
-        For scalar quantities, assumes that the face-based quantity has been 
+        For scalar quantities, assumes that the face-based quantity has been
         packed to a 2D array of size (n_basis, n_basis)
-
         """
 
         try:
             return self.__vector_transform, self.__scalar_transform
         except AttributeError:
-        
+
             num_basis = len(self)
             num_tri = len(self.mesh.polygons)
             # scalar_transform = np.zeros((num_basis, num_tri), np.float64)
             # vector_transform=np.zeros((num_basis, 3*num_tri), np.float64)
             scalar_transform = dok_matrix((num_basis, num_tri), np.float64)
             vector_transform = dok_matrix((num_basis, 3*num_tri), np.float64)
-            
+
             for basis_count, (tri_p, tri_m, node_p, node_m) in enumerate(self):
                 scalar_transform[basis_count, tri_p] = 1.0
                 scalar_transform[basis_count, tri_m] = -1.0
-    
+
                 vector_transform[basis_count, tri_p*3+node_p] = 1.0
                 vector_transform[basis_count, tri_m*3+node_m] = -1.0
-    
+
             self.__vector_transform = vector_transform.tocsr()
             self.__scalar_transform = scalar_transform.tocsr()
             return self.__vector_transform, self.__scalar_transform
-     
+
     def __len__(self):
         return len(self.rwg.tri_p)
-        
+
     def __getitem__(self, index):
-        return RWG(self.rwg.tri_p[index], self.rwg.tri_m[index], 
+        return RWG(self.rwg.tri_p[index], self.rwg.tri_m[index],
                    self.rwg.node_p[index], self.rwg.node_m[index])
+
 
 def construct_stars(mesh, edges, triangles_shared_by_edges, sharing_count):
     """Construct star basis functions on a triangular mesh. The star
     corresponding to one triangle faces will be arbitrarily dropped"""
-    
-    num_tri = len(mesh.polygons)        
+
+    num_tri = len(mesh.polygons)
 
     shared_edge_indices = np.where(sharing_count == 2)[0]
 
@@ -319,7 +321,7 @@ def construct_stars(mesh, edges, triangles_shared_by_edges, sharing_count):
     tri_m = [list() for _ in xrange(num_tri)]
     node_p = [list() for _ in xrange(num_tri)]
     node_m = [list() for _ in xrange(num_tri)]
-    
+
     # Go through shared edges, and update both star-basis functions
     # to add the influence of this shared edge.
     for edge_count in shared_edge_indices:
@@ -331,17 +333,18 @@ def construct_stars(mesh, edges, triangles_shared_by_edges, sharing_count):
         tri_m[tri1].append(tri2)
         tri_m[tri2].append(tri1)
 
-        node1 = nodes_not_in_edge(mesh.polygons[tri1], 
+        node1 = nodes_not_in_edge(mesh.polygons[tri1],
                                   edges[edge_count])[0]
-        node2 = nodes_not_in_edge(mesh.polygons[tri2], 
+        node2 = nodes_not_in_edge(mesh.polygons[tri2],
                                   edges[edge_count])[0]
         node_p[tri1].append(node1)
         node_p[tri2].append(node2)
 
         node_m[tri1].append(node2)
         node_m[tri2].append(node1)
- 
+
     return RWG(tri_p[:-1], tri_m[:-1], node_p[:-1], node_m[:-1])
+
 
 def construct_loop(loop_triangles, polygons):
     """Construct a single loop basis function corresponding to a single inner
@@ -351,35 +354,30 @@ def construct_loop(loop_triangles, polygons):
     tri_m = []
     node_p = []
     node_m = []
-    
+
     # The first triangle to be picked doesn't get removed from
     # the list, as we will need to refer to it again
-    current_triangle = loop_triangles.pop() #[0]
-    #ordered_triangles = [current_triangle]
+    current_triangle = loop_triangles.pop()
     first_triangle = current_triangle
-   
-    #done_triangles = [current_triangle]
-   
+
     while len(loop_triangles) > 0:
         for triangle_count, next_triangle in enumerate(loop_triangles):
-            shared = shared_nodes(polygons[next_triangle], 
+            shared = shared_nodes(polygons[next_triangle],
                                   polygons[current_triangle])
             if len(shared) == 2:
                 break
-        #raise ValueError("Cannot find adjoining triangle") # wrong!
         loop_triangles.pop(triangle_count)
-        #ordered_triangles.append(current_triangle)
-        
+
         # find the unshared nodes
         free_current = nodes_not_in_edge(polygons[current_triangle], shared)[0]
         free_next = nodes_not_in_edge(polygons[next_triangle], shared)[0]
-        
+
         tri_p.append(current_triangle)
         tri_m.append(next_triangle)
 
         node_p.append(free_current)
         node_m.append(free_next)
-        
+
         #done_triangles.append(current_triangle)
         current_triangle = next_triangle
 
@@ -397,24 +395,25 @@ def construct_loop(loop_triangles, polygons):
 
     return RWG(tri_p, tri_m, node_p, node_m)
 
+
 class LoopStarBasis(LinearTriangleBasis):
     """Loop-Star basis functions.
-    
+
     Similar to div conforming RWG, but explicitly divides the basis functions
     into divergence-free loops and approximately curl-free stars.
 
     See:
 
-    [1] G. Vecchi, “Loop-star decomposition of basis functions in the 
-    discretization of the EFIE,” IEEE Transactions on Antennas and 
+    [1] G. Vecchi, “Loop-star decomposition of basis functions in the
+    discretization of the EFIE,” IEEE Transactions on Antennas and
     Propagation, vol. 47, no. 2, pp. 339–346, 1999.
 
-    [2] J.-F. Lee, R. Lee, and R. J. Burkholder, “Loop star basis 
+    [2] J.-F. Lee, R. Lee, and R. J. Burkholder, “Loop star basis
     functions and a robust preconditioner for EFIE scattering
-    problems,” IEEE Transactions on Antennas and Propagation, 
+    problems,” IEEE Transactions on Antennas and Propagation,
     vol. 51, no. 8, pp. 1855–1863, Aug. 2003.
     """
-    
+
     def __init__(self, mesh):
         super(LoopStarBasis, self).__init__()
         self.mesh = mesh
@@ -431,7 +430,7 @@ class LoopStarBasis(LinearTriangleBasis):
                                         sharing_count)
 
         # Now start searching for loops
-        num_nodes = len(mesh.nodes)        
+        num_nodes = len(mesh.nodes)
 
         # find the set of unshared edges
         unshared_edges = edges[np.where(sharing_count == 1)[0]]
@@ -448,40 +447,30 @@ class LoopStarBasis(LinearTriangleBasis):
 
         triangles_sharing_nodes = mesh.triangles_sharing_nodes()
 
-#        # eliminate nodes which don't belong to any edge at all 
-#        # (e.g. the point at the centre when constructing an arc)
-#        for node_count in xrange(num_nodes):
-#            if len(triangles_sharing_nodes[node_count]) == 0:
-#                print "eliminated node", node_count
-#                inner_nodes.remove(node_count)
-
-
         #n_vertices = len(self.inner_nodes)+len(outer_nodes)
         #print "vertices", n_vertices
         #print "faces", len(triangles)
         #print "edges", len(all_edges)
         boundary_contours = 2-num_nodes+len(edges)-len(mesh.polygons)
         #print "separated contours", boundary_contours
-        
-        
-        # Note that this would create one basis function for each inner 
+
+        # Note that this would create one basis function for each inner
         # node which may exceed the number of RWG degrees of freedom. In
         # this case arbitrary loops at the end of the list are dropped in
         # the conversion
-        
+
         num_loops = len(inner_nodes) + boundary_contours - 1
 
         if num_loops > len(inner_nodes):
             # TODO: need to deal with holes in 2D (and 3D?) structures
             raise NotImplementedError
-        
+
         loop_tri_p = []
         loop_tri_m = []
         loop_node_p = []
         loop_node_m = []
 
         if num_loops != 0:
-      
             for loop_number, node_number in enumerate(inner_nodes):
 
                 # there may be fewer loops than inner nodes
@@ -490,13 +479,13 @@ class LoopStarBasis(LinearTriangleBasis):
 
                 # find all the triangles sharing this node
                 loop_triangles = list(triangles_sharing_nodes[node_number])
-                
+
                 this_loop = construct_loop(loop_triangles, mesh.polygons)
                 loop_tri_p.append(this_loop[0])
                 loop_tri_m.append(this_loop[1])
                 loop_node_p.append(this_loop[2])
                 loop_node_m.append(this_loop[3])
-                
+
         self.rwg_loop = RWG(loop_tri_p, loop_tri_m, loop_node_p, loop_node_m)
 
     def __len__(self):
@@ -515,10 +504,10 @@ class LoopStarBasis(LinearTriangleBasis):
     def __getitem__(self, index):
         if index < 0:
             index += len(self)
-            
+
         if index >= self.num_loops:
             index -= self.num_loops
-            return RWG(self.rwg_star.tri_p[index], self.rwg_star.tri_m[index], 
+            return RWG(self.rwg_star.tri_p[index], self.rwg_star.tri_m[index],
                     self.rwg_star.node_p[index], self.rwg_star.node_m[index])
         else:
             return RWG(self.rwg_loop.tri_p[index], self.rwg_loop.tri_m[index],
@@ -533,11 +522,11 @@ class LoopStarBasis(LinearTriangleBasis):
     def transformation_matrices(self):
         """Returns the sparse transformation matrices to turn quantities
         defined on faces to loop-star basis
-        
-        For vector quantities, assumes that the face-based quantity has been 
+
+        For vector quantities, assumes that the face-based quantity has been
         packed to a 2D array of size (n_basis*3, n_basis*3)
 
-        For scalar quantities, assumes that the face-based quantity has been 
+        For scalar quantities, assumes that the face-based quantity has been
         packed to a 2D array of size (n_basis, n_basis)
 
         """
@@ -553,35 +542,35 @@ class LoopStarBasis(LinearTriangleBasis):
 
             scalar_transform = dok_matrix((num_basis, num_tri), np.float64)
             vector_transform = dok_matrix((num_basis, 3*num_tri), np.float64)
-            
+
             for basis_count, (tri_p, tri_m, node_p, node_m) in enumerate(self):
-                # Assume that tri_p, tri_m, node_p, node_m are all of same 
+                # Assume that tri_p, tri_m, node_p, node_m are all of same
                 # length, which they must be for loop-star basis
                 if basis_count >= self.num_loops:
                     for tri_n in tri_p:
                         scalar_transform[basis_count, tri_n] += 1.0
                     for tri_n in tri_m:
                         scalar_transform[basis_count, tri_n] += -1.0
-                      
+
 #                # TODO: slicing dok_matrix may be quite slow
 #                norm = np.sqrt(scalar_transform[basis_count, :].multiply(
 #                                scalar_transform[basis_count, :]).sum())
 #                scalar_transform[basis_count, :] /= norm
-#    
+#
                 for tri_n, node_n in zip(tri_p, node_p):
                     vector_transform[basis_count, tri_n*3+node_n] += 1.0
-                    
+
                 for tri_n, node_n in zip(tri_m, node_m):
                     vector_transform[basis_count, tri_n*3+node_n] += -1.0
 
 #                norm = np.sqrt(vector_transform[basis_count, :].multiply(
 #                                vector_transform[basis_count, :]).sum())
 #                vector_transform[basis_count, :] /= norm
-                    
+
             self.__vector_transform = vector_transform.tocsr()
             self.__scalar_transform = scalar_transform.tocsr()
-    
-            return self.__vector_transform, self.__scalar_transform            
+
+            return self.__vector_transform, self.__scalar_transform
 
 # The code below is designed to allow basis functions to be multiplied by the
 # Gram matrix. The result will be a new basis function class. In order to avoid
@@ -623,17 +612,19 @@ def gram_wrapped_basis_class(base_class, name):
     """Create a basis function class which inherits from another basis class
     and wraps its transformation operation by the square root of the Gram
     matrix"""
-    
-    return type(name, (base_class,), 
-                dict(transformation_matrices=property(gram_wrapped_transformation_matrices)))
+
+    return type(name, (base_class,),
+                dict(transformation_matrices=
+                     property(gram_wrapped_transformation_matrices)))
 
 
 DivRwgGramBasis = gram_wrapped_basis_class(DivRwgBasis, 'DivRwgGramBasis')
 LoopStarGramBasis = gram_wrapped_basis_class(LoopStarBasis, 'LoopStarGramBasis')
 
 
-cached_basis_functions = {}      
-        
+cached_basis_functions = {}
+
+
 def get_basis_functions(mesh, basis_class):
     """Generate basis functions for a mesh. Performs caching, so that if an
     identical mesh has already been generated, the basis functions will
@@ -652,7 +643,7 @@ def get_basis_functions(mesh, basis_class):
     # unique. Potentially this could be expanded to include non-affine mesh
     # transformations, or other parameters passed to the basis function
     # constructor
-    unique_key = (mesh.id, basis_class) 
+    unique_key = (mesh.id, basis_class)
 
     if unique_key in cached_basis_functions:
         #print "Basis functions retrieved from cache"
