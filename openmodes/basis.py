@@ -222,7 +222,7 @@ class DivRwgBasis(LinearTriangleBasis):
     they can be re-used for the same mesh placed in a different location.
     """
 
-    def __init__(self, mesh):
+    def __init__(self, mesh, logger=None):
         """Generate basis functions for a particular mesh. Note that the mesh
         will be referenced, so it should not be modified after generating the
         basis functions.
@@ -263,6 +263,10 @@ class DivRwgBasis(LinearTriangleBasis):
                        mesh.polygons[tri_m[basis_count]], edges[edge_count])[0]
 
         self.rwg = RWG(tri_p, tri_m, node_p, node_m)
+        
+        if logger:
+            logger.info("Constructing %d RWG basis functions over %d faces"
+                        % (num_basis, len(mesh.polygons)))
 
     @property
     def transformation_matrices(self):
@@ -411,7 +415,7 @@ class LoopStarBasis(LinearTriangleBasis):
     vol. 51, no. 8, pp. 1855–1863, Aug. 2003.
     """
 
-    def __init__(self, mesh):
+    def __init__(self, mesh, logger=None):
         super(LoopStarBasis, self).__init__()
         self.mesh = mesh
 
@@ -484,6 +488,13 @@ class LoopStarBasis(LinearTriangleBasis):
                 loop_node_m.append(this_loop[3])
 
         self.rwg_loop = RWG(loop_tri_p, loop_tri_m, loop_node_p, loop_node_m)
+
+        if logger:
+            logger.info("Constructing %d loop-star basis functions\n" 
+            "%d loops\n%d stars\n%d faces\n%d edges"
+            % (len(self), num_loops, self.num_stars, 
+               len(mesh.polygons), len(edges)))
+
 
     def __len__(self):
         return len(self.rwg_loop.tri_p)+len(self.rwg_star.tri_p)
@@ -622,7 +633,7 @@ LoopStarGramBasis = gram_wrapped_basis_class(LoopStarBasis, 'LoopStarGramBasis')
 cached_basis_functions = {}
 
 
-def get_basis_functions(mesh, basis_class):
+def get_basis_functions(mesh, basis_class, logger=None):
     """Generate basis functions for a mesh. Performs caching, so that if an
     identical mesh has already been generated, the basis functions will
     not be unnecessarily duplicated
@@ -646,7 +657,6 @@ def get_basis_functions(mesh, basis_class):
         #print "Basis functions retrieved from cache"
         return cached_basis_functions[unique_key]
     else:
-        #print "Calculating new basis functions"
-        result = basis_class(mesh)
+        result = basis_class(mesh, logger=logger)
         cached_basis_functions[unique_key] = result
         return result

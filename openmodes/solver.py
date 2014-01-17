@@ -43,15 +43,40 @@ class Simulation(object):
     used to solve the scattering problem.
     """
 
-    def __init__(self, integration_rule = 5, basis_class = LoopStarBasis,
-                 operator_class = EfieOperator, 
-                 greens_function=FreeSpaceGreensFunction()):
+    def __init__(self, integration_rule=5, basis_class=LoopStarBasis,
+                 operator_class=EfieOperator,
+                 greens_function=FreeSpaceGreensFunction(),
+                 name=None):
         """       
         Parameters
         ----------
         integration_rule : integer
             the order of the integration rule on triangles
+        basis_class : type
+            The class representing the type of basis function which will be
+            used
+        greens_function : object, optional
+            The Green's function (currently unused)
+        name : string
+            A name for this simulation, which will be used for logging
         """
+
+        if name is None:
+            name = repr(self)
+
+        # create a unique logger for each simulation object
+        self.logger = logging.getLogger(name)
+        self.logfile = tempfile.NamedTemporaryFile(mode='wt',
+                                prefix=time.strftime("%Y-%m-%d--%H-%M-%S"),
+                                suffix=".log", delete=False)
+        handler = logging.StreamHandler(self.logfile)
+        handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        self.logger.addHandler(handler)
+        
+        #self.logger.setLevel(logging.CRITICAL)
+        self.logger.setLevel(logging.INFO)
+        self.logger.propagate = False
+        #print "Logging info in %s" % self.logfile.name
 
         self.quadrature_rule = integration.get_dunavant_rule(integration_rule)
 
@@ -63,21 +88,8 @@ class Simulation(object):
         self.basis_class = basis_class
         self.operator = operator_class(quadrature_rule=self.quadrature_rule,
                                        basis_class=basis_class, 
-                                       greens_function=greens_function)
-
-        # create a unique logger for each simulation object
-        self.logger = logging.getLogger(repr(self))
-        self.logfile = tempfile.NamedTemporaryFile(mode='wt',
-                                prefix=time.strftime("%Y-%m-%d--%H-%M-%S"),
-                                suffix=".log", delete=False)
-        handler = logging.StreamHandler(self.logfile)
-        handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-        self.logger.addHandler(handler)
-        
-        #self.logger.setLevel(logging.CRITICAL)
-        self.logger.setLevel(logging.INFO)
-        self.logger.propagate = False
-        print "Logging info in %s" % self.logfile.name
+                                       greens_function=greens_function,
+                                       logger=self.logger)
 
 
     def place_part(self, mesh, location=None):
@@ -198,7 +210,7 @@ class Simulation(object):
             else:
                 self.logger.info("Finding singularities for part %s" % str(unique_id))
                 # first get an estimate of the pole locations
-                basis = get_basis_functions(part.mesh, self.basis_class)
+                basis = get_basis_functions(part.mesh, self.basis_class, self.logger)
                 Z = self.operator.impedance_matrix(s_start, part)
                 lin_s, lin_currents = eig_linearised(Z, num_modes)
                 
@@ -376,7 +388,7 @@ class Simulation(object):
         
         for part_num, part in enumerate(self.parts):
             I = solution[part_num]
-            basis = get_basis_functions(part.mesh, self.basis_class)
+            basis = get_basis_functions(part.mesh, self.basis_class, self.logger)
         
             centre, current, charge = basis.interpolate_function(I, 
                                                             return_scalar=True,

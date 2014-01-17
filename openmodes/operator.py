@@ -200,16 +200,18 @@ class EfieOperator(object):
     reciprocal = True
 
     def __init__(self, quadrature_rule, basis_class,
-                 greens_function=FreeSpaceGreensFunction()):
+                 greens_function=FreeSpaceGreensFunction(),
+                 logger=None):
         self.basis_class = basis_class
         self.quadrature_rule = quadrature_rule
         self.greens_function = greens_function
+        self.logger = logger
 
     def impedance_matrix(self, s, part_o, part_s=None):
         """Calculate the impedance matrix for a single part, at a given
         complex frequency s"""
 
-        basis_o = get_basis_functions(part_o.mesh, self.basis_class)
+        basis_o = get_basis_functions(part_o.mesh, self.basis_class, self.logger)
 
         if part_s is None or part_s.id == part_o.id:
             #print "self"
@@ -217,7 +219,7 @@ class EfieOperator(object):
             nodes_s = None
         else:
             #print "mutual"
-            basis_s = get_basis_functions(part_s.mesh, self.basis_class)
+            basis_s = get_basis_functions(part_s.mesh, self.basis_class, self.logger)
             nodes_s = part_s.nodes
 
         if isinstance(self.greens_function, FreeSpaceGreensFunction):
@@ -257,7 +259,7 @@ class EfieOperator(object):
         V : ndarray
             the source "voltage" vector
         """
-        basis = get_basis_functions(part.mesh, self.basis_class)
+        basis = get_basis_functions(part.mesh, self.basis_class, self.logger)
 
         if (isinstance(basis, LinearTriangleBasis) and
             isinstance(self.greens_function, FreeSpaceGreensFunction)):
@@ -273,7 +275,7 @@ class EfieOperator(object):
         else:
             raise NotImplementedError("%s, %s" % (str(type(basis)),
                                               str(type(self.greens_function))))
-        
+
     def far_field_radiation(self, s, part, current_vec, direction, xi_eta, weights):
         """Calculate the far-field radiation in a given direction. Note that
         all calculations will be referenced to the global origin. This means
@@ -307,11 +309,8 @@ class EfieOperator(object):
         direction = np.atleast_2d(direction)        
         direction /= np.sqrt(np.sum(direction**2, axis=1))
 
-        basis = get_basis_functions(part.mesh, self.basis_class)
+        basis = get_basis_functions(part.mesh, self.basis_class, self.logger)
         r, currents = basis.interpolate_function(current_vec, xi_eta, 
                                                  nodes=part.mesh.nodes,
                                                  scale_area=False)
-        
-        
 
-#def get_impedance(operator, part_o, part_s = None)
