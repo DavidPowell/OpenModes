@@ -1032,38 +1032,49 @@ def plot_sem_currents():
     print [s/(2*np.pi) for s in mode_s]
     #sim.plot_solution([mode_j[0][:, 1]], 'mayavi')
 
-#def plot_eem():
-ring1 = openmodes.load_mesh(
-                    osp.join("..", "examples", "geometry", "SRR.geo"),
-                    mesh_tol=0.5e-3)
-
-#basis_class=LoopStarBasis
-#basis_class=DivRwgBasis
-#basis_class=DivRwgGramBasis
-basis_class=LoopStarGramBasis
-
-sim = openmodes.Simulation(basis_class=basis_class)
-sim.place_part(ring1, location=[0e-3, 0, 0])
-sim.place_part(ring1, location=[10e-3, 0, 0])
-sim.place_part(ring1, location=[20e-3, 0, 0])
-sim.place_part(ring1, location=[30e-3, 0, 0])
-
-start_freq = 1e10
-start_s = 2j*np.pi*start_freq
-
-num_modes = 4
-
-if False:
-    s_modes, j_modes = sim.part_singularities(start_s, num_modes, use_gram=True)
-    #print np.array(s_modes)/2/np.pi
-else:
-    impedance = sim.calculate_impedance(start_s)
-    z_modes, j_modes = impedance.eigenmodes(num_modes, use_gram=False)
-
-I = [j_modes[0][:, n] for n in xrange(num_modes)]
-sim.plot_solution(I, 'mayavi')
-#sim.plot_solution(I, 'vtk', filename='modes.vtk')
-
+def test_gram():
+    ring1 = openmodes.load_mesh(
+                        osp.join("..", "examples", "geometry", "SRR.geo"),
+                        mesh_tol=0.5e-3)
+    
+    basis_class=LoopStarBasis
+    #basis_class=DivRwgBasis
+    #basis_class=DivRwgGramBasis
+    #basis_class=LoopStarGramBasis
+    
+    sim = openmodes.Simulation(basis_class=basis_class, name="plot_eem")
+    sim.logger.propagate = True
+    sim.place_part(ring1, location=[0e-3, 0, 0])
+    sim.place_part(ring1, location=[10e-3, 0, 0])
+    sim.place_part(ring1, location=[20e-3, 0, 0])
+    sim.place_part(ring1, location=[30e-3, 0, 0])
+    
+    start_freq = 1e10
+    start_s = 2j*np.pi*start_freq
+    
+    num_modes = 4
+    
+    if True:
+        s_modes, j_modes = sim.part_singularities(start_s, num_modes, use_gram=True)
+        scalar_models = sim.construct_models(s_modes, j_modes)
+        #print [scalar.coefficients for scalar in scalar_models[0]]
+        #print np.array(s_modes)/2/np.pi
+    else:
+        impedance = sim.calculate_impedance(start_s)
+    #z_modes, j_modes = impedance.eigenmodes(num_modes, use_gram=False)
+    #
+    I = [j_modes[0][:, n] for n in xrange(num_modes)]
+    sim.plot_solution(I, 'mayavi')
+    #sim.plot_solution(I, 'vtk', filename='modes.vtk')
+    #Z = impedance[0][0]
+    ##pcolor((abs(Z.L))); colorbar(); show()
+    ##pcolor((abs(Z.S))); colorbar(); show()
+    #
+    #G = Z.basis_o.gram_matrix
+    #
+    #ev = sqrt(la.eigvals(Z.S, -Z.L))/2/pi
+    ##ev = la.eigvals(Z[:])
+    #loglog(ev.real, abs(ev.imag), 'x')
 
 
 #loop_star_linear_eigenmodes()
