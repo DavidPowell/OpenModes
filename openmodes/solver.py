@@ -195,7 +195,7 @@ class Simulation(object):
         """
 
         all_s = []
-        all_j = []   
+        all_j = []
 
         solved_parts = {}
 
@@ -214,19 +214,22 @@ class Simulation(object):
                 Z = self.operator.impedance_matrix(s_start, part)
                 lin_s, lin_currents = eig_linearised(Z, num_modes)
                 
-                if use_gram:
-                    Gw, Gv = basis.gram_factored
-                    Gwm = np.diag(Gw)
-                    lin_currents = Gwm.dot(Gv.T.dot(lin_currents))
-                    Gwm = np.diag(1.0/Gw)
+#                if use_gram:
+#                    Gw, Gv = basis.gram_factored
+#                    Gwm = np.diag(Gw)
+#                    lin_currents = Gwm.dot(Gv.T.dot(lin_currents))
+#                    Gwm = np.diag(1.0/Gw)
 
                 mode_s = np.empty(num_modes, np.complex128)
                 mode_j = np.empty((len(basis), num_modes), np.complex128)
 
+#                if use_gram:
+#                    Z_func = lambda s: Gwm.dot(Gv.T.dot(self.operator.impedance_matrix(s, part)[:].dot(Gv.dot(Gwm))))
+#                else:                    
+                Z_func = lambda s: self.operator.impedance_matrix(s, part)[:]
+
                 if use_gram:
-                    Z_func = lambda s: Gwm.dot(Gv.T.dot(self.operator.impedance_matrix(s, part)[:].dot(Gv.dot(Gwm))))
-                else:                    
-                    Z_func = lambda s: self.operator.impedance_matrix(s, part)[:]
+                    G = basis.gram_matrix
 
                 for mode in xrange(num_modes):
                     res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode],
@@ -244,12 +247,18 @@ class Simulation(object):
                             
                     mode_s[mode] = res['eigval']
                     j_calc = res['eigvec']
-                    mode_j[:, mode] = j_calc/np.sqrt(np.sum(j_calc**2))
+                    
+                    if use_gram:
+                        j_calc /= np.sqrt(j_calc.T.dot(G.dot(j_calc)))
+                    else:
+                        j_calc /= np.sqrt(np.sum(j_calc**2))
+                        
+                    mode_j[:, mode] = j_calc
 
-                if use_gram:
-                    Gw, Gv = basis.gram_factored
-                    Gwm = np.diag(1.0/Gw)
-                    mode_j = Gv.dot(Gwm.dot(mode_j))
+#                if use_gram:
+#                    Gw, Gv = basis.gram_factored
+#                    Gwm = np.diag(1.0/Gw)
+#                    mode_j = Gv.dot(Gwm.dot(mode_j))
 
                 # add to cache
                 solved_parts[unique_id] = (mode_s, mode_j)
