@@ -359,13 +359,13 @@ class Simulation(object):
 
             unique_id = (part.mesh.id,) # cache identical parts 
             if unique_id in solved_parts:
-                #print "got from cache"
                 scalar_models.append(solved_parts[unique_id])
             else:
                 scalar_models.append([])
                 for s_n, j_n in zip(mode_s[part_count], mode_j[part_count].T):
                     Z_func = lambda s: self.operator.impedance_matrix(s, part)
-                    scalar_models[-1].append(ScalarModel(s_n, j_n, Z_func))
+                    scalar_models[-1].append(ScalarModel(s_n, j_n, Z_func,
+                                                         logger=self.logger))
 
 #                    Z = self.operator.impedance_matrix(s_n, part)
 #                    scalar_L = np.dot(j_n, np.dot(Z.L, j_n))
