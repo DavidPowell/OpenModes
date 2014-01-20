@@ -275,7 +275,7 @@ class Simulation(object):
 
         return all_s, all_j
 
-    def system_singularities(self, s_start, num_modes):
+    def system_singularities(self, s_start, num_modes, use_gram=False):
         """Find the singularities of the whole system in the complex frequency
         plane
 
@@ -324,7 +324,14 @@ class Simulation(object):
 
             mode_s[mode] = res['eigval']
             j_calc = res['eigvec']
-            mode_j[:, mode] = j_calc/np.sqrt(np.sum(j_calc**2))
+
+            if use_gram:
+                G = Z.basis_o.gram_matrix
+                j_calc /= np.sqrt(j_calc.T.dot(G.dot(j_calc)))
+            else:
+                j_calc /= np.sqrt(np.sum(j_calc**2))
+
+            mode_j[:, mode] = j_calc
 
         return mode_s, mode_j
 
