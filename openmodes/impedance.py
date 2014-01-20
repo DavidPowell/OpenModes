@@ -308,7 +308,7 @@ class ImpedanceParts(object):
             The number of modes to find for each part
         use_gram : boolean, optional
             Solve a generalised problem involving the Gram matrix, which scales
-            out the basis functions to get the physical eigenimpedances   
+            out the basis functions to get the physical eigenimpedances
         """
 
         # TODO: cache this if parts are identical (should be upstream caching
@@ -316,7 +316,8 @@ class ImpedanceParts(object):
         mode_impedances = []
         mode_currents = []
         for count in xrange(self.num_parts):
-            eig_z, eig_current = self.matrices[count][count].eigenmodes(num_modes, use_gram)
+            Z = self.matrices[count][count]
+            eig_z, eig_current = Z.eigenmodes(num_modes, use_gram)
 
             mode_impedances.append(eig_z)
             mode_currents.append(eig_current)
