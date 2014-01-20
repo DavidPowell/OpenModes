@@ -270,6 +270,8 @@ class Simulation(object):
         s_start : number
             The complex frequency at which to perform the estimate. Should be
             within the band of interest
+        num_modes : integer
+            The number of modes to find
         use_gram : boolean, optional
             Use the Gram matrix to scale the eigenvectors, so that the
             eigenvalues will be independent of the basis functions.
@@ -394,7 +396,24 @@ class Simulation(object):
 
     def plot_solution(self, solution, output_format, filename=None,
                       compress_scalars=None, compress_separately=False):
-        """Plot a solution on several parts"""
+        """Plot a solution on several parts
+
+        Parameters
+        ----------
+        solution : array
+            The solution to plot, typically a vector of current
+        output_format : string
+            The format of the output. Currently 'mayavi' or 'vtk'
+        filename : string, optional
+            If saving to a file, the name of the file to save to
+        compress_scalars : boolean, optional
+            Compress the dynamic range of the scalar solution, which will make
+            the resulting plot easier to view, but less 'physically correct'
+        compress_separately : boolean, optional
+            If compressing dynamic range, do it separately for each part. This
+            will conceal any difference in the relative strength of excitation
+            between parts.
+        """
 
         charges = []
         currents = []
