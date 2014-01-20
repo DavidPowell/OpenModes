@@ -64,19 +64,23 @@ class Simulation(object):
         if name is None:
             name = repr(self)
 
-        # create a unique logger for each simulation object
-        self.logger = logging.getLogger(name)
-        self.logfile = tempfile.NamedTemporaryFile(mode='wt',
-                                prefix=time.strftime("%Y-%m-%d--%H-%M-%S"),
-                                suffix=".log", delete=False)
-        handler = logging.StreamHandler(self.logfile)
-        handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-        self.logger.addHandler(handler)
-        
-        #self.logger.setLevel(logging.CRITICAL)
-        self.logger.setLevel(logging.INFO)
-        self.logger.propagate = False
-        #print "Logging info in %s" % self.logfile.name
+        if enable_logging:
+            # create a unique logger for each simulation object
+            self.logger = logging.getLogger(name)
+            self.logfile = tempfile.NamedTemporaryFile(mode='wt',
+                                    prefix=time.strftime("%Y-%m-%d--%H-%M-%S"),
+                                    suffix=".log", delete=False)
+            handler = logging.StreamHandler(self.logfile)
+            handler.setFormatter(logging.Formatter(
+                                 '%(asctime)s - %(levelname)s - %(message)s'))
+            self.logger.addHandler(handler)
+
+            #self.logger.setLevel(logging.CRITICAL)
+            self.logger.setLevel(logging.INFO)
+            self.logger.propagate = False
+            #print "Logging info in %s" % self.logfile.name
+        else:
+            self.logger = None
 
         self.quadrature_rule = integration.get_dunavant_rule(integration_rule)
 
@@ -208,7 +212,9 @@ class Simulation(object):
                 #print "got from cache"
                 mode_s, mode_j = solved_parts[unique_id]
             else:
-                self.logger.info("Finding singularities for part %s" % str(unique_id))
+                if self.logger:
+                    self.logger.info("Finding singularities for part %s"
+                                     % str(unique_id))
                 # first get an estimate of the pole locations
                 basis = get_basis_functions(part.mesh, self.basis_class, self.logger)
                 Z = self.operator.impedance_matrix(s_start, part)
@@ -238,13 +244,14 @@ class Simulation(object):
                                      
                     lin_hz = lin_s[mode]/2/np.pi
                     nl_hz = res['eigval']/2/np.pi
-                    self.logger.info("Converged after %d iterations\n"
-                                     "%+.4e %+.4ej (linearised solution)\n"
-                                     "%+.4e %+.4ej (nonlinear solution)"
-                                     % (res['iter_count'], 
-                                        lin_hz.real, lin_hz.imag, 
-                                        nl_hz.real, nl_hz.imag))
-                            
+                    if self.logger:
+                        self.logger.info("Converged after %d iterations\n"
+                                         "%+.4e %+.4ej (linearised solution)\n"
+                                         "%+.4e %+.4ej (nonlinear solution)"
+                                         % (res['iter_count'],
+                                            lin_hz.real, lin_hz.imag,
+                                            nl_hz.real, nl_hz.imag))
+
                     mode_s[mode] = res['eigval']
                     j_calc = res['eigvec']
                     
@@ -297,7 +304,8 @@ class Simulation(object):
 
         Z_func = lambda s: self.calculate_impedance(s).combine_parts()[:]
 
-        self.logger.info("Finding singularities for the whole system")
+        if self.logger:
+            self.logger.info("Finding singularities for the whole system")
 
         for mode in xrange(num_modes):
             res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode],
@@ -306,12 +314,13 @@ class Simulation(object):
 
             lin_hz = lin_s[mode]/2/np.pi
             nl_hz = res['eigval']/2/np.pi
-            self.logger.info("Converged after %d iterations\n"
-                             "%+.4e %+.4ej (linearised solution)\n"
-                             "%+.4e %+.4ej (nonlinear solution)"
-                             % (res['iter_count'], 
-                                lin_hz.real, lin_hz.imag, 
-                                nl_hz.real, nl_hz.imag))
+            if self.logger:
+                self.logger.info("Converged after %d iterations\n"
+                                 "%+.4e %+.4ej (linearised solution)\n"
+                                 "%+.4e %+.4ej (nonlinear solution)"
+                                 % (res['iter_count'],
+                                    lin_hz.real, lin_hz.imag,
+                                    nl_hz.real, nl_hz.imag))
 
             mode_s[mode] = res['eigval']
             j_calc = res['eigvec']
