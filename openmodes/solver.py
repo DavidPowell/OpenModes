@@ -46,8 +46,8 @@ class Simulation(object):
     def __init__(self, integration_rule=5, basis_class=LoopStarBasis,
                  operator_class=EfieOperator,
                  greens_function=FreeSpaceGreensFunction(),
-                 name=None):
-        """       
+                 name=None, enable_logging=True):
+        """
         Parameters
         ----------
         integration_rule : integer
@@ -55,10 +55,14 @@ class Simulation(object):
         basis_class : type
             The class representing the type of basis function which will be
             used
+        operator_class : type
+            The class representing the operator equation to be solved
         greens_function : object, optional
             The Green's function (currently unused)
-        name : string
+        name : string, optional
             A name for this simulation, which will be used for logging
+        enable_logging : bool, optional
+            Enable logging of simulation information to a temporary file
         """
 
         if name is None:
@@ -84,21 +88,17 @@ class Simulation(object):
 
         self.quadrature_rule = integration.get_dunavant_rule(integration_rule)
 
-        self.triangle_quadrature = {}
-        self.singular_integrals = {}
-
         self.parts = []
 
         self.basis_class = basis_class
         self.operator = operator_class(quadrature_rule=self.quadrature_rule,
-                                       basis_class=basis_class, 
+                                       basis_class=basis_class,
                                        greens_function=greens_function,
                                        logger=self.logger)
 
-
     def place_part(self, mesh, location=None):
         """Add a part to the simulation domain
-        
+
         Parameters
         ----------
         mesh : an appropriate mesh object
@@ -106,19 +106,19 @@ class Simulation(object):
         location : array, optional
             If specified, place the part at a given location, otherwise it will
             be placed at the origin
-            
+
         Returns
         -------
         part : Part
             The part placed in the simulation
-            
+
         The part will be placed at the origin. It can be translated, rotated
-        etc using the relevant methods of `Part`            
+        etc using the relevant methods of `Part`
         """
-        
-        sim_part = Part(mesh, location=location) 
+
+        sim_part = Part(mesh, location=location)
         self.parts.append(sim_part)
-        
+
         #self.logger.info("Placed part %s" % repr(sim_part))
 
         return sim_part
@@ -129,7 +129,7 @@ class Simulation(object):
         several derived impedance quantities
 
         Parameters
-        ----------        
+        ----------
         s : number
             complex frequency at which to calculate impedance (in rad/s)
 
@@ -168,7 +168,7 @@ class Simulation(object):
         separate vectors for each part.
 
         Parameters
-        ----------        
+        ----------
         e_inc: ndarray
             incident field polarisation in free space
         jk_inc: ndarray
@@ -179,7 +179,7 @@ class Simulation(object):
         V : list of ndarray
             the source vector for each part
         """
-        return [self.operator.source_plane_wave(part, e_inc, jk_inc) for part 
+        return [self.operator.source_plane_wave(part, e_inc, jk_inc) for part
                 in self.parts]
 
     def part_singularities(self, s_start, num_modes, use_gram=False):
@@ -187,7 +187,7 @@ class Simulation(object):
         frequency plane
 
         Parameters
-        ----------        
+        ----------
         s_start : complex
             The complex frequency at which to perform the estimate. Should be
             within the band of interest
@@ -195,7 +195,7 @@ class Simulation(object):
             The number of modes to find for each part
         use_gram : boolean, optional
             Solve a generalised problem involving the Gram matrix, which scales
-            out the basis functions to get the physical eigenimpedances 
+            out the basis functions to get the physical eigenimpedances
         """
 
         all_s = []
@@ -207,7 +207,7 @@ class Simulation(object):
             # TODO: unique ID needs to be modified if different materials or
             # placement above a layer are possible
 
-            unique_id = (part.mesh.id,) # cache identical parts 
+            unique_id = (part.mesh.id,)  # cache identical parts
             if unique_id in solved_parts:
                 #print "got from cache"
                 mode_s, mode_j = solved_parts[unique_id]
@@ -219,7 +219,7 @@ class Simulation(object):
                 basis = get_basis_functions(part.mesh, self.basis_class, self.logger)
                 Z = self.operator.impedance_matrix(s_start, part)
                 lin_s, lin_currents = eig_linearised(Z, num_modes)
-                
+
 #                if use_gram:
 #                    Gw, Gv = basis.gram_factored
 #                    Gwm = np.diag(Gw)
@@ -241,7 +241,7 @@ class Simulation(object):
                     res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode],
                                      weight='max element', lambda_tol=1e-8,
                                      max_iter=200)
-                                     
+
                     lin_hz = lin_s[mode]/2/np.pi
                     nl_hz = res['eigval']/2/np.pi
                     if self.logger:
@@ -254,12 +254,12 @@ class Simulation(object):
 
                     mode_s[mode] = res['eigval']
                     j_calc = res['eigvec']
-                    
+
                     if use_gram:
                         j_calc /= np.sqrt(j_calc.T.dot(G.dot(j_calc)))
                     else:
                         j_calc /= np.sqrt(np.sum(j_calc**2))
-                        
+
                     mode_j[:, mode] = j_calc
 
 #                if use_gram:
@@ -280,11 +280,11 @@ class Simulation(object):
         plane
 
         Parameters
-        ----------        
+        ----------
         s_start : number
             The complex frequency at which to perform the estimate. Should be
             within the band of interest
-            
+
         Returns
         -------
         mode_s : 1D array
@@ -330,14 +330,14 @@ class Simulation(object):
 
     def construct_model_system(self, mode_s, mode_j):
         """Construct a scalar model for the modes of the whole system
-        
+
         Parameters
         ----------
         mode_s : ndarray
             The mode frequency of the whole system
         mode_j : list of ndarray
             The currents for the modes of the whole system
-            
+
         Returns
         -------
         scalar_models : list
@@ -347,10 +347,9 @@ class Simulation(object):
         scalar_models = []
 
         for s_n, j_n in zip(mode_s, mode_j.T):
-            Z_func = lambda s: self.calculate_impedance(s).combine_parts()          
+            Z_func = lambda s: self.calculate_impedance(s).combine_parts()
             scalar_models.append(ScalarModel(s_n, j_n, Z_func))
         return scalar_models
-
 
     def construct_models(self, mode_s, mode_j):
         """Construct a scalar model for the modes of each part
@@ -375,7 +374,7 @@ class Simulation(object):
             # TODO: unique ID needs to be modified if different materials or
             # placement above a layer are possible
 
-            unique_id = (part.mesh.id,) # cache identical parts 
+            unique_id = (part.mesh.id,)  # cache identical parts
             if unique_id in solved_parts:
                 scalar_models.append(solved_parts[unique_id])
             else:
@@ -390,11 +389,9 @@ class Simulation(object):
 #                    scalar_S = np.dot(j_n, np.dot(Z.S, j_n))
 #                    scalar_models[-1].append(ScalarModelLS(s_n, j_n, scalar_L, scalar_S))
 
-
                 solved_parts[unique_id] = scalar_models[-1]
 
             return scalar_models
-
 
     def plot_solution(self, solution, output_format, filename=None,
                       compress_scalars=None, compress_separately=False):
@@ -403,27 +400,27 @@ class Simulation(object):
         charges = []
         currents = []
         centres = []
-        
+
         for part_num, part in enumerate(self.parts):
             I = solution[part_num]
             basis = get_basis_functions(part.mesh, self.basis_class, self.logger)
-        
-            centre, current, charge = basis.interpolate_function(I, 
+
+            centre, current, charge = basis.interpolate_function(I,
                                                             return_scalar=True,
                                                             nodes=part.nodes)
             charges.append(charge.real)
             currents.append(current.real)
             centres.append(centre)
-       
+
         output_format = output_format.lower()
         if output_format == 'mayavi':
             plot_mayavi(self.parts, charges, currents, vector_points=centres,
-                       compress_scalars=compress_scalars, filename=filename)
-                       
+                        compress_scalars=compress_scalars, filename=filename)
+
         elif output_format == 'vtk':
             write_vtk(self.parts, charges, currents, filename=filename,
-                     compress_scalars=compress_scalars,
-                     autoscale_vectors=True,
-                     compress_separately=compress_separately)
+                      compress_scalars=compress_scalars,
+                      autoscale_vectors=True,
+                      compress_separately=compress_separately)
         else:
             raise ValueError("Unknown output format")
