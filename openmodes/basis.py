@@ -560,20 +560,11 @@ class LoopStarBasis(LinearTriangleBasis):
                     for tri_n in tri_m:
                         scalar_transform[basis_count, tri_n] += -1.0
 
-#                # TODO: slicing dok_matrix may be quite slow
-#                norm = np.sqrt(scalar_transform[basis_count, :].multiply(
-#                                scalar_transform[basis_count, :]).sum())
-#                scalar_transform[basis_count, :] /= norm
-#
                 for tri_n, node_n in zip(tri_p, node_p):
                     vector_transform[basis_count, tri_n*3+node_n] += 1.0
 
                 for tri_n, node_n in zip(tri_m, node_m):
                     vector_transform[basis_count, tri_n*3+node_n] += -1.0
-
-#                norm = np.sqrt(vector_transform[basis_count, :].multiply(
-#                                vector_transform[basis_count, :]).sum())
-#                vector_transform[basis_count, :] /= norm
 
             self.__vector_transform = vector_transform.tocsr()
             self.__scalar_transform = scalar_transform.tocsr()
