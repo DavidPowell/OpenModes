@@ -9,10 +9,10 @@ Documentation of modules
     :members:
 
 
-``openmodes.solver``
+``openmodes.simulation``
 --------------------
 
-.. automodule:: openmodes.solver
+.. automodule:: openmodes.simulation
     :members:
 
 
