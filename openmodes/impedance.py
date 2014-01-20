@@ -91,14 +91,14 @@ class EfieImpedanceMatrix(object):
         Note that the impedance matrix can easily be *ill-conditioned*.
         Therefore this routine can return junk results, particularly if the
         mesh is dense.
-        
+
         Parameters
         ----------
         num_modes : integer
             The number of modes to find for each part
         use_gram : boolean, optional
             Solve a generalised problem involving the Gram matrix, which scales
-            out the basis functions to get the physical eigenimpedances         
+            out the basis functions to get the physical eigenimpedances
         """
 
         if use_gram:
@@ -247,7 +247,7 @@ class ImpedanceParts(object):
                 raise TypeError("Cannot slice the first dimension")
             return self.matrices[index[0]][index[1]]
 
-    def combine_parts(self, V = None):
+    def combine_parts(self, V=None):
         """Evaluate the self and mutual impedances of all parts combined into
         a pair of matrices for the whole system.
 
@@ -286,7 +286,7 @@ class ImpedanceParts(object):
         # function object
         basis = DummyBasis()
         Z = EfieImpedanceMatrix(self.s, L_tot, S_tot, basis, basis)
-        
+
         if V is not None:
             return Z, np.hstack(V)
         else:
@@ -308,7 +308,7 @@ class ImpedanceParts(object):
             The number of modes to find for each part
         use_gram : boolean, optional
             Solve a generalised problem involving the Gram matrix, which scales
-            out the basis functions to get the physical eigenimpedances         
+            out the basis functions to get the physical eigenimpedances   
         """
 
         # TODO: cache this if parts are identical (should be upstream caching
@@ -346,7 +346,7 @@ class ImpedanceParts(object):
         # coupling between all modes of different parts
         num_parts = self.num_parts
         L_red = np.zeros((num_parts, num_modes, num_parts, num_modes),
-                          np.complex128)
+                         np.complex128)
         S_red = np.zeros_like(L_red)
 
         for i, j in itertools.product(xrange(num_parts), xrange(num_parts)):
@@ -399,7 +399,7 @@ class ImpedancePartsLoopStar(ImpedanceParts):
     combined, loops and stars are represented as global blocks for the whole
     system, rather than being separated for each individual part
     """
-    
+
     def combine_parts(self, V=None):
         """Evaluate the self and mutual impedances of all parts combined into
         a pair of matrices for the whole system. Loops and stars are all
@@ -417,7 +417,7 @@ class ImpedancePartsLoopStar(ImpedanceParts):
             An object containing the combined impedance matrices
         V : array
             If given as an input, the voltage vector will also be combined and
-            returned as an output            
+            returned as an output
         """
 
         total_size = sum(M[0].shape[0] for M in self.matrices)
@@ -456,7 +456,7 @@ class ImpedancePartsLoopStar(ImpedanceParts):
                 L_tot[star_range_o, loop_range_s] = m.L[m.star_range_o, m.loop_range_s]
                 L_tot[star_range_o, star_range_s] = m.L[m.star_range_o, m.star_range_s]
 
-        basis = DummyBasis(num_loops = num_loops)
+        basis = DummyBasis(num_loops=num_loops)
         Z = EfieImpedanceMatrixLoopStar(self.s, L_tot, S_tot, basis, basis)
 
         if V is not None:
