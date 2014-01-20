@@ -21,7 +21,7 @@ Routines to construct the basis functions on a mesh
 """
 
 from collections import namedtuple
-from scipy.sparse import dok_matrix
+from scipy.sparse import lil_matrix
 import scipy.linalg as la
 import numpy as np
 import uuid
@@ -288,8 +288,8 @@ class DivRwgBasis(LinearTriangleBasis):
             num_tri = len(self.mesh.polygons)
             # scalar_transform = np.zeros((num_basis, num_tri), np.float64)
             # vector_transform=np.zeros((num_basis, 3*num_tri), np.float64)
-            scalar_transform = dok_matrix((num_basis, num_tri), np.float64)
-            vector_transform = dok_matrix((num_basis, 3*num_tri), np.float64)
+            scalar_transform = lil_matrix((num_basis, num_tri))
+            vector_transform = lil_matrix((num_basis, 3*num_tri))
 
             for basis_count, (tri_p, tri_m, node_p, node_m) in enumerate(self):
                 scalar_transform[basis_count, tri_p] = 1.0
@@ -548,8 +548,8 @@ class LoopStarBasis(LinearTriangleBasis):
             # scalar_transform = np.zeros((num_basis, num_tri), np.float64)
             # vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
 
-            scalar_transform = dok_matrix((num_basis, num_tri), np.float64)
-            vector_transform = dok_matrix((num_basis, 3*num_tri), np.float64)
+            scalar_transform = lil_matrix((num_basis, num_tri))
+            vector_transform = lil_matrix((num_basis, 3*num_tri))
 
             for basis_count, (tri_p, tri_m, node_p, node_m) in enumerate(self):
                 # Assume that tri_p, tri_m, node_p, node_m are all of same
