@@ -182,7 +182,7 @@ class Simulation(object):
         return [self.operator.source_plane_wave(part, e_inc, jk_inc) for part
                 in self.parts]
 
-    def part_singularities(self, s_start, num_modes, use_gram=False):
+    def part_singularities(self, s_start, num_modes, use_gram=True):
         """Find the singularities of each part of the system in the complex
         frequency plane
 
@@ -194,8 +194,8 @@ class Simulation(object):
         num_modes : integer
             The number of modes to find for each part
         use_gram : boolean, optional
-            Solve a generalised problem involving the Gram matrix, which scales
-            out the basis functions to get the physical eigenimpedances
+            Use the Gram matrix to scale the eigenvectors, so that the
+            eigenvalues will be independent of the basis functions.
         """
 
         all_s = []
@@ -220,18 +220,9 @@ class Simulation(object):
                 Z = self.operator.impedance_matrix(s_start, part)
                 lin_s, lin_currents = eig_linearised(Z, num_modes)
 
-#                if use_gram:
-#                    Gw, Gv = basis.gram_factored
-#                    Gwm = np.diag(Gw)
-#                    lin_currents = Gwm.dot(Gv.T.dot(lin_currents))
-#                    Gwm = np.diag(1.0/Gw)
-
                 mode_s = np.empty(num_modes, np.complex128)
                 mode_j = np.empty((len(basis), num_modes), np.complex128)
 
-#                if use_gram:
-#                    Z_func = lambda s: Gwm.dot(Gv.T.dot(self.operator.impedance_matrix(s, part)[:].dot(Gv.dot(Gwm))))
-#                else:                    
                 Z_func = lambda s: self.operator.impedance_matrix(s, part)[:]
 
                 if use_gram:
@@ -262,11 +253,6 @@ class Simulation(object):
 
                     mode_j[:, mode] = j_calc
 
-#                if use_gram:
-#                    Gw, Gv = basis.gram_factored
-#                    Gwm = np.diag(1.0/Gw)
-#                    mode_j = Gv.dot(Gwm.dot(mode_j))
-
                 # add to cache
                 solved_parts[unique_id] = (mode_s, mode_j)
 
@@ -275,7 +261,7 @@ class Simulation(object):
 
         return all_s, all_j
 
-    def system_singularities(self, s_start, num_modes, use_gram=False):
+    def system_singularities(self, s_start, num_modes, use_gram=True):
         """Find the singularities of the whole system in the complex frequency
         plane
 
@@ -284,6 +270,9 @@ class Simulation(object):
         s_start : number
             The complex frequency at which to perform the estimate. Should be
             within the band of interest
+        use_gram : boolean, optional
+            Use the Gram matrix to scale the eigenvectors, so that the
+            eigenvalues will be independent of the basis functions.
 
         Returns
         -------
@@ -307,6 +296,9 @@ class Simulation(object):
         if self.logger:
             self.logger.info("Finding singularities for the whole system")
 
+        if use_gram:
+            G = Z.basis_o.gram_matrix
+
         for mode in xrange(num_modes):
             res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode],
                              weight='max element', lambda_tol=1e-8,
@@ -326,7 +318,6 @@ class Simulation(object):
             j_calc = res['eigvec']
 
             if use_gram:
-                G = Z.basis_o.gram_matrix
                 j_calc /= np.sqrt(j_calc.T.dot(G.dot(j_calc)))
             else:
                 j_calc /= np.sqrt(np.sum(j_calc**2))
