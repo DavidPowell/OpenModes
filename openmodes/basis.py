@@ -27,7 +27,7 @@ import numpy as np
 import uuid
 
 from openmodes.mesh import nodes_not_in_edge, shared_nodes
-from openmodes.helpers import cached_property
+from openmodes.helpers import cached_property, inc_slice
 
 # A named tuple for holding the positive and negative triangles and nodes
 # which are used by both RWG and loop-star basis functions
@@ -638,4 +638,100 @@ def get_basis_functions(mesh, basis_class, logger=None):
     else:
         result = basis_class(mesh, logger=logger)
         cached_basis_functions[unique_key] = result
+        return result
+
+
+class CombinedBasis(AbstractBasis):
+    "A set of basis functions which have been combined together"
+
+    def __init__(self, basis_list):
+        super(CombinedBasis, self).__init__()
+        self.basis_list = basis_list
+
+    @cached_property
+    def gram_matrix(self):
+        "Calculate the total Gram matrix of the complete system"
+        total_size = len(self)
+
+        G_tot = lil_matrix((total_size, total_size))
+
+        row_offset = 0
+        for basis in self.basis_list:
+            row_size = len(basis)
+            G_tot[row_offset:row_offset+row_size, row_offset:row_offset+row_size] = basis.gram_matrix
+
+            row_offset += row_size
+
+        return G_tot.tocsr()
+
+    def __len__(self):
+        return sum(len(basis) for basis in self.basis_list)
+
+
+class CombinedLoopStarBasis(CombinedBasis):
+    "A set of loop-star basis functions which have been combined together"
+
+    @property
+    def num_loops(self):
+        "The number of loops in the loop-star basis"
+        return sum(basis.num_loops for basis in self.basis_list)
+
+    @cached_property
+    def gram_matrix(self):
+        "Calculate the total Gram matrix of the complete system"
+        total_size = len(self)
+        num_loops = self.num_loops
+
+        G_tot = lil_matrix((total_size, total_size))
+
+        loop_range_o = slice(0, 0)
+        star_range_o = slice(num_loops, num_loops)
+
+        for basis in self.basis_list:
+            loop_range = inc_slice(loop_range_o, basis.num_loops)
+            star_range = inc_slice(star_range_o, basis.num_stars)
+
+            G = basis.gram_matrix
+            # assumes symmetric weighting and testing
+            if loop_range.stop > loop_range.start:
+                G_tot[loop_range, loop_range_o] = G[basis.loop_range, basis.loop_range]
+                G_tot[loop_range, star_range_o] = G[basis.loop_range, basis.star_range]
+                G_tot[star_range, loop_range_o] = G[basis.star_range, basis.loop_range]
+            G_tot[star_range, star_range] = G[basis.star_range, basis.star_range]
+
+        return G_tot.tocsr()
+
+CACHED_COMBINED_BASIS = {}
+
+
+def get_combined_basis(basis_list):
+    """Generate combined basis functions from several existing. Performs
+    caching, so that if an identical combination of basis functions already
+    exists it will not be unnecessarily duplicated
+
+    Parameters
+    ----------
+    mesh : object
+        The mesh to generate the basis functions for
+
+    basis_class : class
+        Which class of basis function should be created
+    """
+
+    # The following parameters are needed to determine if basis functions are
+    # unique. Potentially this could be expanded to include non-affine mesh
+    # transformations, or other parameters passed to the basis function
+    # constructor
+    unique_key = tuple(basis.id for basis in basis_list)
+
+    if unique_key in CACHED_COMBINED_BASIS:
+        #print "Basis functions retrieved from cache"
+        return CACHED_COMBINED_BASIS[unique_key]
+    else:
+        if all(issubclass(basis, LoopStarBasis) for basis in basis_list):
+            result = CombinedLoopStarBasis(basis_list)
+        else:
+            result = CombinedBasis(basis_list)
+
+        CACHED_COMBINED_BASIS[unique_key] = result
         return result
