@@ -27,6 +27,7 @@ import numpy as np
 import uuid
 
 from openmodes.mesh import nodes_not_in_edge, shared_nodes
+from openmodes.helpers import cached_property
 
 # A named tuple for holding the positive and negative triangles and nodes
 # which are used by both RWG and loop-star basis functions
@@ -167,7 +168,7 @@ class LinearTriangleBasis(object):
 
         return G
 
-    @property
+    @cached_property
     def gram_matrix(self):
         """Calculate the Gram matrix which is the inner product between each
         basis function
@@ -178,17 +179,12 @@ class LinearTriangleBasis(object):
             The Gram matrix, giving the inner product between each basis
             function
         """
-        try:
-            return self.stored_gram
-        except AttributeError:
-            G = self.gram_matrix_faces()
-            num_tri = len(self.mesh.polygons)
+        G = self.gram_matrix_faces()
+        num_tri = len(self.mesh.polygons)
 
-            # convert from faces to the appropriate basis functions
-            vector_transform, _ = self.transformation_matrices
-            self.stored_gram = vector_transform.dot(vector_transform.dot(G.reshape(3*num_tri, 3*num_tri)).T).T
-
-            return self.stored_gram
+        # convert from faces to the appropriate basis functions
+        vector_transform, _ = self.transformation_matrices
+        return vector_transform.dot(vector_transform.dot(G.reshape(3*num_tri, 3*num_tri)).T).T
 
     @property
     def gram_factored(self):
@@ -268,7 +264,7 @@ class DivRwgBasis(LinearTriangleBasis):
             logger.info("Constructing %d RWG basis functions over %d faces"
                         % (num_basis, len(mesh.polygons)))
 
-    @property
+    @cached_property
     def transformation_matrices(self):
         """Returns the sparse transformation matrix to turn quantities
         defined on faces to loop-star basis
@@ -280,27 +276,21 @@ class DivRwgBasis(LinearTriangleBasis):
         packed to a 2D array of size (n_basis, n_basis)
         """
 
-        try:
-            return self.__vector_transform, self.__scalar_transform
-        except AttributeError:
+        num_basis = len(self)
+        num_tri = len(self.mesh.polygons)
+        # scalar_transform = np.zeros((num_basis, num_tri), np.float64)
+        # vector_transform=np.zeros((num_basis, 3*num_tri), np.float64)
+        scalar_transform = lil_matrix((num_basis, num_tri))
+        vector_transform = lil_matrix((num_basis, 3*num_tri))
 
-            num_basis = len(self)
-            num_tri = len(self.mesh.polygons)
-            # scalar_transform = np.zeros((num_basis, num_tri), np.float64)
-            # vector_transform=np.zeros((num_basis, 3*num_tri), np.float64)
-            scalar_transform = lil_matrix((num_basis, num_tri))
-            vector_transform = lil_matrix((num_basis, 3*num_tri))
+        for basis_count, (tri_p, tri_m, node_p, node_m) in enumerate(self):
+            scalar_transform[basis_count, tri_p] = 1.0
+            scalar_transform[basis_count, tri_m] = -1.0
 
-            for basis_count, (tri_p, tri_m, node_p, node_m) in enumerate(self):
-                scalar_transform[basis_count, tri_p] = 1.0
-                scalar_transform[basis_count, tri_m] = -1.0
+            vector_transform[basis_count, tri_p*3+node_p] = 1.0
+            vector_transform[basis_count, tri_m*3+node_m] = -1.0
 
-                vector_transform[basis_count, tri_p*3+node_p] = 1.0
-                vector_transform[basis_count, tri_m*3+node_m] = -1.0
-
-            self.__vector_transform = vector_transform.tocsr()
-            self.__scalar_transform = scalar_transform.tocsr()
-            return self.__vector_transform, self.__scalar_transform
+        return vector_transform.tocsr(), scalar_transform.tocsr()
 
     def __len__(self):
         return len(self.rwg.tri_p)
@@ -526,7 +516,7 @@ class LoopStarBasis(LinearTriangleBasis):
         "Combine the loop and star lists"
         return RWG._make(a + b for a, b in zip(self.rwg_loop, self.rwg_star))
 
-    @property
+    @cached_property
     def transformation_matrices(self):
         """Returns the sparse transformation matrices to turn quantities
         defined on faces to loop-star basis
@@ -539,37 +529,30 @@ class LoopStarBasis(LinearTriangleBasis):
 
         """
 
-        try:
-            return self.__vector_transform, self.__scalar_transform
-        except AttributeError:
+        num_basis = len(self)
+        num_tri = len(self.mesh.polygons)
+        # scalar_transform = np.zeros((num_basis, num_tri), np.float64)
+        # vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
 
-            num_basis = len(self)
-            num_tri = len(self.mesh.polygons)
-            # scalar_transform = np.zeros((num_basis, num_tri), np.float64)
-            # vector_transform = np.zeros((num_basis, 3*num_tri), np.float64)
+        scalar_transform = lil_matrix((num_basis, num_tri))
+        vector_transform = lil_matrix((num_basis, 3*num_tri))
 
-            scalar_transform = lil_matrix((num_basis, num_tri))
-            vector_transform = lil_matrix((num_basis, 3*num_tri))
+        for basis_count, (tri_p, tri_m, node_p, node_m) in enumerate(self):
+            # Assume that tri_p, tri_m, node_p, node_m are all of same
+            # length, which they must be for loop-star basis
+            if basis_count >= self.num_loops:
+                for tri_n in tri_p:
+                    scalar_transform[basis_count, tri_n] += 1.0
+                for tri_n in tri_m:
+                    scalar_transform[basis_count, tri_n] += -1.0
 
-            for basis_count, (tri_p, tri_m, node_p, node_m) in enumerate(self):
-                # Assume that tri_p, tri_m, node_p, node_m are all of same
-                # length, which they must be for loop-star basis
-                if basis_count >= self.num_loops:
-                    for tri_n in tri_p:
-                        scalar_transform[basis_count, tri_n] += 1.0
-                    for tri_n in tri_m:
-                        scalar_transform[basis_count, tri_n] += -1.0
+            for tri_n, node_n in zip(tri_p, node_p):
+                vector_transform[basis_count, tri_n*3+node_n] += 1.0
 
-                for tri_n, node_n in zip(tri_p, node_p):
-                    vector_transform[basis_count, tri_n*3+node_n] += 1.0
+            for tri_n, node_n in zip(tri_m, node_m):
+                vector_transform[basis_count, tri_n*3+node_n] += -1.0
 
-                for tri_n, node_n in zip(tri_m, node_m):
-                    vector_transform[basis_count, tri_n*3+node_n] += -1.0
-
-            self.__vector_transform = vector_transform.tocsr()
-            self.__scalar_transform = scalar_transform.tocsr()
-
-            return self.__vector_transform, self.__scalar_transform
+        return vector_transform.tocsr(), scalar_transform.tocsr()
 
 # The code below is designed to allow basis functions to be multiplied by the
 # Gram matrix. The result will be a new basis function class. In order to avoid
