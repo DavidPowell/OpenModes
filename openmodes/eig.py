@@ -200,3 +200,95 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
            'delta_lambda': delta_lambda}
 
     return res
+
+def eig_newton_linear(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
+               G=None, weight='rayleigh symmetric'):
+    """Solve a linear (generalised) eigenvalue problem by Newton iteration
+
+    Parameters
+    ----------
+    Z : ndarray
+        The matrix
+    lambda_0 : complex
+        The starting guess for the eigenvalue
+    x_0 : ndarray
+        The starting guess for the eigenvector
+    lambda_tol : float
+        The relative tolerance in the eigenvalue for convergence
+    max_iter : int
+        The maximum number of iterations to perform
+    G : ndarray, optional
+        The RHS matrix for the generalised problem. If omitted, the identity
+        matrix will be used
+    weight : string, optional
+        How to perform the weighting of the eigenvector
+
+        'max element' : The element with largest magnitude will be preserved
+
+        'rayleigh' : Rayleigh iteration for Hermition matrices will be used
+
+        'rayleigh symmetric' : Rayleigh iteration for complex symmetric
+        (i.e. non-Hermitian) matrices will be used
+
+    Returns
+    -------
+    res : dictionary
+        A dictionary containing the following members:
+
+        `eigval` : the eigenvalue
+
+        'eigvect' : the eigenvector
+
+        'iter_count' : the number of iterations performed
+
+        'delta_lambda' : the change in the eigenvalue on the final iteration
+
+
+    See:
+    1.  P. Lancaster, Lambda Matrices and Vibrating Systems.
+        Oxford: Pergamon, 1966.
+
+    2.  A. Ruhe, “Algorithms for the Nonlinear Eigenvalue Problem,”
+        SIAM J. Numer. Anal., vol. 10, no. 4, pp. 674–689, Sep. 1973.
+
+    """
+
+    x_s = x_0
+    lambda_s = lambda_0
+
+    converged = False
+
+    for iter_count in xrange(max_iter):
+        if G is not None:
+            u = la.solve(Z-lambda_s*G, -np.dot(G, x_s))
+        else:
+            u = la.lu_solve(Z, x_s)
+            
+        if weight.lower() == 'max element':
+            v_s = np.zeros_like(x_s)
+            v_s[np.argmax(abs(x_s))] = 1.0
+        elif weight.lower() == 'rayleigh':
+            v_s = np.dot(Z.T, x_s.conj())
+        elif weight.lower() == 'rayleigh symmetric':
+            v_s = np.dot(Z.T, x_s)
+
+        lambda_s1 = lambda_s - np.dot(v_s, x_s)/(np.dot(v_s, u))
+        x_s1 = u/np.sqrt(np.sum(np.abs(u)**2))
+
+        delta_lambda = abs((lambda_s1 - lambda_s)/lambda_s)
+        converged = delta_lambda < lambda_tol
+
+        lambda_s = lambda_s1
+        x_s = x_s1
+        #print x_s
+        #print lambda_s
+
+        if converged: break
+
+    if not converged:
+        raise ValueError("maximum iterations reached, no convergence")
+
+    res = {'eigval': lambda_s, 'eigvec': x_s, 'iter_count': iter_count+1,
+           'delta_lambda': delta_lambda}
+
+    return res
