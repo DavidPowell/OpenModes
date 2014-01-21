@@ -26,16 +26,7 @@ from scipy.sparse import lil_matrix
 import itertools
 
 from openmodes.helpers import inc_slice
-
-
-class DummyBasis(object):
-    """A minimal basis function data structure for combined impedance matrix
-    objects. Does not contain full basis functions, but serves as a place
-    holder for information which would be obtained form them
-    """
-    def __init__(self, **kwargs):
-        for kw, val in kwargs.iteritems():
-            setattr(self, kw, val)
+from openmodes.basis import CombinedBasis, CombinedLoopStarBasis
 
 
 # TODO: ImpedanceMatrix may need to know about number of loops and stars?
@@ -273,13 +264,10 @@ class ImpedanceParts(object):
         L_tot = np.empty((total_size, total_size), np.complex128)
         S_tot = np.empty_like(L_tot)
 
-        G_tot = lil_matrix((total_size, total_size))
-
         row_offset = 0
         for row in self.matrices:
             row_size = row[0].shape[0]
             col_offset = 0
-            G_tot[row_offset:row_offset+row_size, row_offset:row_offset+row_size] = row[0].basis_o.gram_matrix
 
             for matrix in row:
                 col_size = matrix.shape[1]
@@ -288,10 +276,7 @@ class ImpedanceParts(object):
                 col_offset += col_size
             row_offset += row_size
 
-        # TODO: Note that combined impedance matrices lose all information
-        # about basis functions, so it has to be put into a dummy basis
-        # function object
-        basis = DummyBasis(gram_matrix=G_tot.tocsr())
+        basis = CombinedBasis(basis_list = [m.basis_o for m in row])
         Z = EfieImpedanceMatrix(self.s, L_tot, S_tot, basis, basis)
 
         if V is not None:
@@ -429,8 +414,6 @@ class ImpedancePartsLoopStar(ImpedanceParts):
         if V is not None:
             V_tot = np.empty(total_size, np.complex128)
 
-        G_tot = lil_matrix((total_size, total_size))
-
         loop_range_o = slice(0, 0)
         star_range_o = slice(num_loops, num_loops)
 
@@ -460,16 +443,7 @@ class ImpedancePartsLoopStar(ImpedanceParts):
                 L_tot[star_range_o, loop_range_s] = m.L[m.star_range_o, m.loop_range_s]
                 L_tot[star_range_o, star_range_s] = m.L[m.star_range_o, m.star_range_s]
 
-                if row_count == col_count:
-                    G = m.basis_o.gram_matrix
-                    # assumes symmetric weighting and testing
-                    if loop_range_o.stop > loop_range_o.start:
-                        G_tot[loop_range_o, loop_range_o] = G[m.loop_range_o, m.loop_range_o]                    
-                        G_tot[loop_range_o, star_range_o] = G[m.loop_range_o, m.star_range_o]                    
-                        G_tot[star_range_o, loop_range_o] = G[m.star_range_o, m.loop_range_o]
-                    G_tot[star_range_o, star_range_o] = G[m.star_range_o, m.star_range_o]
-
-        basis = DummyBasis(num_loops=num_loops, gram_matrix=G_tot.tocsr())
+        basis = CombinedLoopStarBasis(basis_list = [m.basis_s for m in row])
         Z = EfieImpedanceMatrixLoopStar(self.s, L_tot, S_tot, basis, basis)
 
         if V is not None:
