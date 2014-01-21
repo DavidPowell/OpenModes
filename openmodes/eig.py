@@ -21,7 +21,7 @@ Routines for solving linear and nonlinear eigenvalue problems
 """
 
 #from openmodes.basis import LoopStarBasis
-from openmodes.impedance import EfieImpedanceMatrixLoopStar
+#from openmodes.impedance import EfieImpedanceMatrixLoopStar
 import scipy.linalg as la
 import numpy as np
 
@@ -48,9 +48,9 @@ def eig_linearised(Z, num_modes):
         Columns of this matrix contain the corresponding modal currents
     """
 
-    if not isinstance(Z, EfieImpedanceMatrixLoopStar):
-        raise ValueError(
-            "Loop-star basis functions required for linearised eigenvalues")
+    #if not isinstance(Z, EfieImpedanceMatrixLoopStar):
+    #    raise ValueError(
+    #        "Loop-star basis functions required for linearised eigenvalues")
 
     star_range = Z.star_range_o
 
