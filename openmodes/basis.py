@@ -102,11 +102,18 @@ def inner_product_triangle_face(nodes):
     return res
 
 
-class LinearTriangleBasis(object):
+class AbstractBasis(object):
+    "An abstract class for arbitrary basis functions"
+
+    def __init__(self):
+        self.id = uuid.uuid4()
+
+
+class LinearTriangleBasis(AbstractBasis):
     "An abstract base class for first order basis functions on triangles"
 
     def __init__(self, mesh):
-        self.id = uuid.uuid4()
+        super(LinearTriangleBasis, self).__init__()
         self.mesh = mesh
 
     def interpolate_function(self, linear_func, xi_eta=[[1.0/3.0, 1.0/3.0]],
