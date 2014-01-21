@@ -26,7 +26,7 @@ import scipy.linalg as la
 import itertools
 
 from openmodes.helpers import inc_slice
-from openmodes.basis import CombinedBasis, CombinedLoopStarBasis
+from openmodes.basis import get_combined_basis
 
 
 # TODO: ImpedanceMatrix may need to know about number of loops and stars?
