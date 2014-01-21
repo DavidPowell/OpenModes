@@ -105,8 +105,9 @@ def inner_product_triangle_face(nodes):
 class LinearTriangleBasis(object):
     "An abstract base class for first order basis functions on triangles"
 
-    def __init__(self):
+    def __init__(self, mesh):
         self.id = uuid.uuid4()
+        self.mesh = mesh
 
     def interpolate_function(self, linear_func, xi_eta=[[1.0/3, 1.0/3]],
                              flatten=True, return_scalar=False, nodes=None,
@@ -223,8 +224,7 @@ class DivRwgBasis(LinearTriangleBasis):
         will be referenced, so it should not be modified after generating the
         basis functions.
         """
-        super(DivRwgBasis, self).__init__()
-        self.mesh = mesh
+        super(DivRwgBasis, self).__init__(mesh)
 
         edges, triangles_shared_by_edges = mesh.get_edges(True)
 
@@ -406,8 +406,7 @@ class LoopStarBasis(LinearTriangleBasis):
     """
 
     def __init__(self, mesh, logger=None):
-        super(LoopStarBasis, self).__init__()
-        self.mesh = mesh
+        super(LoopStarBasis, self).__init__(mesh)
 
         edges, triangles_shared_by_edges = mesh.get_edges(True)
 
