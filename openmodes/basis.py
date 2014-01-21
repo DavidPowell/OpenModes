@@ -109,7 +109,7 @@ class LinearTriangleBasis(object):
         self.id = uuid.uuid4()
         self.mesh = mesh
 
-    def interpolate_function(self, linear_func, xi_eta=[[1.0/3, 1.0/3]],
+    def interpolate_function(self, linear_func, xi_eta=[[1.0/3.0, 1.0/3.0]],
                              flatten=True, return_scalar=False, nodes=None,
                              scale_area=True):
         """Interpolate a function defined in RWG or loop-star basis over the
@@ -162,7 +162,8 @@ class LinearTriangleBasis(object):
         "Return the gram matrix defined between faces"
         num_tri = len(self.mesh.polygons)
         G = np.zeros((num_tri, 3, num_tri, 3), dtype=np.float64)
-        for tri_count, (tri, area) in enumerate(zip(self.mesh.polygons, self.mesh.polygon_areas)):
+        for tri_count, (tri, area) in enumerate(zip(self.mesh.polygons, 
+                                                    self.mesh.polygon_areas)):
             nodes = self.mesh.nodes[tri]
             G[tri_count, :, tri_count, :] = inner_product_triangle_face(nodes)/(2*area)
             # factor of 1/(2*area) is for second integration
