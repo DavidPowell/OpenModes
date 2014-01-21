@@ -25,6 +25,8 @@ import scipy.linalg as la
 from scipy.sparse import lil_matrix
 import itertools
 
+from openmodes.helpers import inc_slice
+
 
 class DummyBasis(object):
     """A minimal basis function data structure for combined impedance matrix
@@ -391,12 +393,6 @@ class ImpedanceParts(object):
             V_red = V_red.reshape(self.num_parts*num_modes)
 
         return V_red
-
-
-def inc_slice(s, inc):
-    """Increment a slice so that it starts at the current stop, and the current
-    stop is incremented by some amount"""
-    return slice(s.stop, s.stop+inc)
 
 
 class ImpedancePartsLoopStar(ImpedanceParts):

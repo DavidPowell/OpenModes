@@ -19,6 +19,13 @@
 
 import functools
 
+
+def inc_slice(s, inc):
+    """Increment a slice so that it starts at the current stop, and the current
+    stop is incremented by some amount"""
+    return slice(s.stop, s.stop+inc)
+
+
 def cached_property(f):
     """Wrap a function which represents some property that is expensive to
     calculate but is likely to be reused."""
