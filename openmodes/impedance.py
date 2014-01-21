@@ -276,7 +276,7 @@ class ImpedanceParts(object):
                 col_offset += col_size
             row_offset += row_size
 
-        basis = CombinedBasis(basis_list = [m.basis_o for m in row])
+        basis = get_combined_basis(basis_list = [m.basis_o for m in row])
         Z = EfieImpedanceMatrix(self.s, L_tot, S_tot, basis, basis)
 
         if V is not None:
@@ -407,7 +407,7 @@ class ImpedancePartsLoopStar(ImpedanceParts):
             returned as an output
         """
 
-        basis = CombinedLoopStarBasis(basis_list=[row[0].basis_o for row in self.matrices])
+        basis = get_combined_basis(basis_list=[row[0].basis_o for row in self.matrices])
 
         L_tot = np.empty((len(basis), len(basis)), np.complex128)
         S_tot = np.zeros_like(L_tot)

@@ -736,10 +736,10 @@ def get_combined_basis(basis_list):
     unique_key = tuple(basis.id for basis in basis_list)
 
     if unique_key in CACHED_COMBINED_BASIS:
-        #print "Basis functions retrieved from cache"
+        #print "Combined basis functions retrieved from cache"
         return CACHED_COMBINED_BASIS[unique_key]
     else:
-        if all(issubclass(basis, LoopStarBasis) for basis in basis_list):
+        if all(isinstance(basis, LoopStarBasis) for basis in basis_list):
             result = CombinedLoopStarBasis(basis_list)
         else:
             result = CombinedBasis(basis_list)
