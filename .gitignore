@@ -35,7 +35,7 @@ nosetests.xml
 .project
 .pydevproject
 doc/_build/
-examples/.ipynb_checkpoints/
+.ipynb_checkpoints
 src/openmodes_coremodule.c
 src/core_cython.c
 src/*.html
@@ -43,3 +43,4 @@ src/*.html
 *.session
 *.session.gui
 doc/examples/
+test/output/
