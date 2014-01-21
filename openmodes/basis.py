@@ -506,6 +506,18 @@ class LoopStarBasis(LinearTriangleBasis):
         "The number of stars in the loop-star mesh"
         return len(self.rwg_star.tri_p)
 
+    @property
+    def loop_range(self):
+        """The range of indicies into any vector corresponding to the loops of
+        the basis function"""
+        return slice(0, self.num_loops)
+
+    @property
+    def star_range(self):
+        """The range of indicies into any vector corresponding to the stars of
+        the basis function"""
+        return slice(self.num_loops, len(self))
+
     def __getitem__(self, index):
         if index < 0:
             index += len(self)
@@ -684,19 +696,19 @@ class CombinedLoopStarBasis(CombinedBasis):
 
         G_tot = lil_matrix((total_size, total_size))
 
-        loop_range_o = slice(0, 0)
-        star_range_o = slice(num_loops, num_loops)
+        loop_range = slice(0, 0)
+        star_range = slice(num_loops, num_loops)
 
         for basis in self.basis_list:
-            loop_range = inc_slice(loop_range_o, basis.num_loops)
-            star_range = inc_slice(star_range_o, basis.num_stars)
+            loop_range = inc_slice(loop_range, basis.num_loops)
+            star_range = inc_slice(star_range, basis.num_stars)
 
             G = basis.gram_matrix
             # assumes symmetric weighting and testing
             if loop_range.stop > loop_range.start:
-                G_tot[loop_range, loop_range_o] = G[basis.loop_range, basis.loop_range]
-                G_tot[loop_range, star_range_o] = G[basis.loop_range, basis.star_range]
-                G_tot[star_range, loop_range_o] = G[basis.star_range, basis.loop_range]
+                G_tot[loop_range, loop_range] = G[basis.loop_range, basis.loop_range]
+                G_tot[loop_range, star_range] = G[basis.loop_range, basis.star_range]
+                G_tot[star_range, loop_range] = G[basis.star_range, basis.loop_range]
             G_tot[star_range, star_range] = G[basis.star_range, basis.star_range]
 
         return G_tot.tocsr()
