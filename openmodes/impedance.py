@@ -16,13 +16,13 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------------
+"Classes for holding impedance matrix objects"
 
 from __future__ import division
 
 # numpy and scipy
 import numpy as np
 import scipy.linalg as la
-from scipy.sparse import lil_matrix
 import itertools
 
 from openmodes.helpers import inc_slice
@@ -407,15 +407,15 @@ class ImpedancePartsLoopStar(ImpedanceParts):
             returned as an output
         """
 
-        total_size = sum(M[0].shape[0] for M in self.matrices)
-        num_loops = sum(M[0].basis_o.num_loops for M in self.matrices)
-        L_tot = np.empty((total_size, total_size), np.complex128)
+        basis = CombinedLoopStarBasis(basis_list=[row[0].basis_o for row in self.matrices])
+
+        L_tot = np.empty((len(basis), len(basis)), np.complex128)
         S_tot = np.zeros_like(L_tot)
         if V is not None:
-            V_tot = np.empty(total_size, np.complex128)
+            V_tot = np.empty(len(basis), np.complex128)
 
         loop_range_o = slice(0, 0)
-        star_range_o = slice(num_loops, num_loops)
+        star_range_o = slice(basis.num_loops, basis.num_loops)
 
         for col_count, row in enumerate(self.matrices):
             m = row[0]
@@ -423,7 +423,7 @@ class ImpedancePartsLoopStar(ImpedanceParts):
             star_range_o = inc_slice(star_range_o, m.basis_o.num_stars)
 
             loop_range_s = slice(0, 0)
-            star_range_s = slice(num_loops, num_loops)
+            star_range_s = slice(basis.num_loops, basis.num_loops)
 
             if V is not None:
                 V_tot[loop_range_o] = V[col_count][m.loop_range_o]
@@ -438,12 +438,11 @@ class ImpedancePartsLoopStar(ImpedanceParts):
 
                 # Some of these arrays may have one dimension of size zero if
                 # there are no loops, but this is handled automatically.
-                L_tot[loop_range_o, loop_range_s] = m.L[m.loop_range_o, m.loop_range_s]                    
+                L_tot[loop_range_o, loop_range_s] = m.L[m.loop_range_o, m.loop_range_s]
                 L_tot[loop_range_o, star_range_s] = m.L[m.loop_range_o, m.star_range_s]                    
                 L_tot[star_range_o, loop_range_s] = m.L[m.star_range_o, m.loop_range_s]
                 L_tot[star_range_o, star_range_s] = m.L[m.star_range_o, m.star_range_s]
-
-        basis = CombinedLoopStarBasis(basis_list = [m.basis_s for m in row])
+        
         Z = EfieImpedanceMatrixLoopStar(self.s, L_tot, S_tot, basis, basis)
 
         if V is not None:

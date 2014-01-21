@@ -620,7 +620,6 @@ def gram_wrapped_basis_class(base_class, name):
 DivRwgGramBasis = gram_wrapped_basis_class(DivRwgBasis, 'DivRwgGramBasis')
 LoopStarGramBasis = gram_wrapped_basis_class(LoopStarBasis, 'LoopStarGramBasis')
 
-
 cached_basis_functions = {}
 
 
