@@ -385,11 +385,6 @@ class Simulation(object):
                     scalar_models[-1].append(ScalarModel(s_n, j_n, Z_func,
                                                          logger=self.logger))
 
-#                    Z = self.operator.impedance_matrix(s_n, part)
-#                    scalar_L = np.dot(j_n, np.dot(Z.L, j_n))
-#                    scalar_S = np.dot(j_n, np.dot(Z.S, j_n))
-#                    scalar_models[-1].append(ScalarModelLS(s_n, j_n, scalar_L, scalar_S))
-
                 solved_parts[unique_id] = scalar_models[-1]
 
             return scalar_models

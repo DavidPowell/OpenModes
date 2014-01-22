@@ -104,7 +104,7 @@ class ScalarModel(object):
         "Solve the model for the current at arbitrary frequency"
         return self.mode_j*np.dot(self.mode_j, V)/self.scalar_impedance(s)
 
-def fit_LS(s_0, L, S):
+def fit_LS(s_0, L_0, S_0):
     """
     Fit a polynomial model to the values of the scalar impedance components
     at the resonant frequency. 
@@ -123,39 +123,49 @@ def fit_LS(s_0, L, S):
     """
 
     M = np.zeros((2, 2))
+    eq = np.array([1.0, -s_0])
+    M[:, 0] = eq.real
+    M[:, 1] = eq.imag
+
+    L_coeffs = nnls(M, np.array([L_0.real, L_0.imag]))[0]
+
     eq = np.array([1.0, s_0])
-    
     M[:, 0] = eq.real
     M[:, 1] = eq.imag
     
-    L_coeffs = nnls(M, np.array([L.real, L.imag]))[0]
-    S_coeffs = nnls(M, np.array([S.real, S.imag]))[0]
+    S_coeffs = nnls(M, np.array([S_0.real, S_0.imag]))[0]
 
     return L_coeffs, S_coeffs
 
 class ScalarModelLS(object):
     """A scalar model of a mode of a structure, assuming that the eigencurrents
-    are frequency independent. Fits a 4th order model to the eigenfrequency
-    and the derivative of the eigenimpedancec at resonance, as well as the
-    condition of open-circuit impedance at zero frequency."""
+    are frequency independent. Fits to the diagonalised partial impedance
+    matrices L and S at resonance."""
     
-    def __init__(self, mode_s, mode_j, L, S):
+    def __init__(self, mode_s, mode_j, Z_func, logger=None):
         "Construct the scalar model"
         self.mode_s = mode_s
         self.mode_j = mode_j
-        #self.L = L
-        #self.S = S
-        #self.z_der = z_der
-        #self.coefficients = fit_four_term(mode_s/mode_s.imag, z_der*mode_s.imag)
-        self.L, self.S = fit_LS(mode_s/mode_s.imag, L, S)
+        Z = Z_func(mode_s)
+        self.L_scale = 1e10
+        self.S_scale = 1e-10
+        L_0 = mode_j.dot(Z.L.dot(mode_j))
+        S_0 = mode_j.dot(Z.S.dot(mode_j))
+        self.scale_factor = abs(mode_s.imag)/10
+        self.L, self.S = fit_LS(mode_s/self.scale_factor, L_0*self.L_scale, S_0*self.S_scale)
+
+        if logger:
+            logger.info("Creating scalar model\nL(s_0) = %+.4e %+.4e\n"
+                        "S(s_0) = %+.4e %+.4e\nL Coefficients: %s\n"
+                        "S Coefficients: %s" % 
+                        (L_0.real, L_0.imag, S_0.real, S_0.imag,
+                         str(self.L), str(self.S)))
     
     def scalar_impedance(self, s):
         "The scalar impedance of this mode"
-        #powers = np.array([1.0, s])
-        powers = np.array([1.0, s/self.mode_s.imag])
-        return s*np.dot(self.L, powers.T) + np.dot(self.S, powers.T)/s
-        #powers = np.array([1/s, 1, s, -s**2])
-        #return np.dot(self.coefficients, powers.T)
+        powers_L = np.array([1.0, -s/self.scale_factor])
+        powers_S = np.array([1.0, s/self.scale_factor])
+        return s*np.dot(self.L, powers_L.T)/self.L_scale + np.dot(self.S, powers_S.T)/s/self.S_scale
     
     def solve(self, s, V):
         "Solve the model for the current at arbitrary frequency"
