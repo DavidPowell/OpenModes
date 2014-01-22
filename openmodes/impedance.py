@@ -27,6 +27,7 @@ import itertools
 
 from openmodes.helpers import inc_slice
 from openmodes.basis import get_combined_basis
+from openmodes.eig import eig_newton_linear
 
 
 # TODO: ImpedanceMatrix may need to know about number of loops and stars?
@@ -76,7 +77,7 @@ class EfieImpedanceMatrix(object):
                 self.factored_matrix = lu
         return la.lu_solve(lu, V)
 
-    def eigenmodes(self, num_modes, use_gram=False):
+    def eigenmodes(self, num_modes=None, use_gram=None, start_j=None):
         """Calculate the eigenimpedance and eigencurrents of each part's modes
 
         The modes with the smallest imaginary part of their impedance will be
@@ -95,24 +96,47 @@ class EfieImpedanceMatrix(object):
             out the basis functions to get the physical eigenimpedances
         """
 
-        if use_gram:
-            Gw, Gv = self.basis_o.gram_factored
-            Gwm = np.diag(1.0/Gw)
-            Zd = Gwm.dot(Gv.T.dot(self[:].dot(Gv.dot(Gwm))))
-            z_all, v_all = la.eig(Zd)
-            #G = self.basis_o.gram_matrix
-            #z_all, v_all = la.eig(self[:], G)
+        if start_j is not None:
+            # An iterative solution will be performed, based on the given
+            # current distribution. In this case the Gram matrix is used and
+            # the use_gram parameter is ignored
+            eigencurrent = np.empty_like(start_j)
+            num_modes = start_j.shape[1]
+            eigenimpedance = np.empty(num_modes, np.complex128)
+            
+            G = self.basis_o.gram_matrix
+            start_j /= np.sqrt(np.diag(start_j.T.dot(G.dot(start_j))))
+            
+            Z = self[:]
+            for mode in xrange(num_modes):
+                start_z = start_j[:, mode].dot(Z.dot(start_j[:, mode]))
+                res = eig_newton_linear(Z, start_z, start_j[:, mode], G=G)
+                eigencurrent[:, mode] = res['eigvec']
+                eigenimpedance[mode] = res['eigval']
+
+            eigencurrent /= np.sqrt(np.diag(eigencurrent.T.dot(G.dot(eigencurrent))))
+
         else:
-            z_all, v_all = la.eig(self[:])
+            # The direct solution, which may or may not use the Gram matrix
 
-        which_z = np.argsort(abs(z_all.imag))[:num_modes]
-        eigenimpedance = z_all[which_z]
+            if use_gram:
+                Gw, Gv = self.basis_o.gram_factored
+                Gwm = np.diag(1.0/Gw)
+                Zd = Gwm.dot(Gv.T.dot(self[:].dot(Gv.dot(Gwm))))
+                z_all, v_all = la.eig(Zd)
+                #G = self.basis_o.gram_matrix
+                #z_all, v_all = la.eig(self[:], G)
+            else:
+                z_all, v_all = la.eig(self[:])
 
-        v = v_all[:, which_z]
-        eigencurrent = v/np.sqrt(np.sum(v**2, axis=0))
-
-        if use_gram:
-            eigencurrent = Gv.dot(Gwm.dot(eigencurrent))
+            which_z = np.argsort(abs(z_all.imag))[:num_modes]
+            eigenimpedance = z_all[which_z]
+    
+            v = v_all[:, which_z]
+            eigencurrent = v/np.sqrt(np.sum(v**2, axis=0))
+    
+            if use_gram:
+                eigencurrent = Gv.dot(Gwm.dot(eigencurrent))
 
         return eigenimpedance, eigencurrent
 
@@ -284,7 +308,7 @@ class ImpedanceParts(object):
         else:
             return Z
 
-    def eigenmodes(self, num_modes, use_gram=False):
+    def eigenmodes(self, *args, **kwargs):
         """Calculate the eigenimpedance and eigencurrents of each part's modes
 
         The modes with the smallest imaginary part of their impedance will be
@@ -305,11 +329,13 @@ class ImpedanceParts(object):
 
         # TODO: cache this if parts are identical (should be upstream caching
         # of L and S for this to work)
+        if 'start_j' in kwargs:
+            start_j = kwargs.pop('start_j')
         mode_impedances = []
         mode_currents = []
         for count in xrange(self.num_parts):
             Z = self.matrices[count][count]
-            eig_z, eig_current = Z.eigenmodes(num_modes, use_gram)
+            eig_z, eig_current = Z.eigenmodes(*args, start_j=start_j[count], **kwargs)
 
             mode_impedances.append(eig_z)
             mode_currents.append(eig_current)
