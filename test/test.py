@@ -53,7 +53,7 @@ def loop_star_linear_eigenmodes():
     freq = 7e9
     s = 2j*np.pi*freq
 
-    Z = sim.calculate_impedance(s)
+    Z = sim.impedance(s)
     num_modes = 3
 
     _, vr0 = eig_linearised(Z[0][0], num_modes)
@@ -93,12 +93,12 @@ def loop_star_combined():
         s = 2j*np.pi*freq
         jk_0 = s/c
 
-        Z = sim_rwg.calculate_impedance(s)
+        Z = sim_rwg.impedance(s)
         V = sim_rwg.source_plane_wave(e_inc, jk_0*k_hat)
         Z, V = Z.combine_parts(V)
         ext_rwg[freq_count] = np.vdot(V, Z.solve(V))
 
-        Z = sim_ls.calculate_impedance(s)
+        Z = sim_ls.impedance(s)
         V = sim_ls.source_plane_wave(e_inc, jk_0*k_hat)
         Z, V = Z.combine_parts(V)
         if freq_count == 0:
@@ -143,7 +143,7 @@ def sem_eem_asrr():
         s = 2j*np.pi*freq
         jk_0 = s/c
 
-        Z = sim.calculate_impedance(s)
+        Z = sim.impedance(s)
         V = sim.source_plane_wave(e_inc, jk_0*k_hat)
         Z, V = Z.combine_parts(V)
         if freq_count == 0:
@@ -166,105 +166,107 @@ def sem_eem_asrr():
     plt.show()
     
 
-def eem_srr():
-    """"Calculate the eigencurrent expansion of a single ring.
-    """
+#def eem_srr():
+""""Calculate the eigencurrent expansion of a single ring.
+"""
 
-    srr = openmodes.load_mesh(
-                    osp.join("..", "examples", "geometry", "SRR.geo"), mesh_tol=0.7e-3)
+srr = openmodes.load_mesh(osp.join("..", "examples", "geometry", "SRR.geo"), 
+                          mesh_tol=0.5e-3)
 
-    basis_class = LoopStarBasis
-    #basis_class = DivRwgBasis
+basis_class = LoopStarBasis
+#basis_class = DivRwgBasis
 
-    sim = openmodes.Simulation(basis_class=basis_class)
-    srr1 = sim.place_part(srr)
-    #srr2 = sim.place_part(srr, location=[0e-3, 0e-3, 2e-3])
-    #srr2.rotate([0, 0, 1], 180)
+sim = openmodes.Simulation(basis_class=basis_class)
+sim.logger.propagate = True
+srr1 = sim.place_part(srr)
+#srr2 = sim.place_part(srr, location=[0e-3, 0e-3, 2e-3])
+#srr2.rotate([0, 0, 1], 180)
 
-    num_freqs = 201
-    freqs = np.linspace(0.5e9, 20e9, num_freqs)#+1e8j
-    e_inc = np.array([1, 0, 0], dtype=np.complex128)
-    k_hat = np.array([0, 1, 0], dtype=np.complex128)
+num_freqs = 201
+freqs = np.linspace(0.5e9, 20e9, num_freqs)#+1e8j
+e_inc = np.array([1, 0, 0], dtype=np.complex128)
+k_hat = np.array([0, 1, 0], dtype=np.complex128)
 
-    num_modes = 6
+num_modes = 2
 
-    ext = np.empty(num_freqs, np.complex128)
-    ext_modes = np.empty(num_freqs, np.complex128)
-    ext_sem = np.empty((num_freqs, num_modes), np.complex128)
-    ext_eem = np.empty((num_freqs, num_modes), np.complex128)
+ext = np.empty(num_freqs, np.complex128)
+ext_modes = np.empty(num_freqs, np.complex128)
+ext_sem = np.empty((num_freqs, num_modes), np.complex128)
+ext_eem = np.empty((num_freqs, num_modes), np.complex128)
 
-    if basis_class == LoopStarBasis:
-        s_start = 2j*np.pi*10e9
-        mode_s, mode_j = sim.part_singularities(s_start, num_modes)
-        print [s/(2*np.pi) for s in mode_s]
-        models = sim.construct_models(mode_s, mode_j)[0]    
-        print [model.coefficients for model in models]
+if basis_class == LoopStarBasis:
+    s_start = 2j*np.pi*10e9
+    mode_s, mode_j = sim.part_singularities(s_start, num_modes, 
+                                            use_gram=True)
+    #print [s/(2*np.pi) for s in mode_s]
+    models = sim.construct_models(mode_s, mode_j)[0]    
+    #print [model.coefficients for model in models]
+
+z_eem = np.empty((num_freqs, num_modes), np.complex128)
+z_modes = np.empty((num_freqs, num_modes), np.complex128)
+z_sem = np.empty((num_freqs, num_modes), np.complex128)
+
+for freq_count, freq in enumerate(freqs):
+    s = 2j*np.pi*freq
+    jk_0 = s/c
+
+    Z = sim.impedance(s)
+    V = sim.source_plane_wave(e_inc, jk_0*k_hat)
+    #Z, V = Z.combine_parts(V)
+    #Z = Z[0][0]
+    #V = V[0]
+    #if freq_count == 0 and sim.basis_class==LoopStarBasis:
+    #    print Z.basis_o.num_loops, Z.basis_s.num_loops
+        
+    ext[freq_count] = np.vdot(V[0], Z[0][0].solve(V[0]))
     
-    z_eem = np.empty((num_freqs, num_modes), np.complex128)
-    z_modes = np.empty((num_freqs, num_modes), np.complex128)
-    z_sem = np.empty((num_freqs, num_modes), np.complex128)
+    eem_z, eem_j = Z.eigenmodes(num_modes, use_gram=True, start_j=mode_j)
 
-    for freq_count, freq in enumerate(freqs):
-        s = 2j*np.pi*freq
-        jk_0 = s/c
+    z_eem[freq_count] = eem_z[0]
 
-        Z = sim.calculate_impedance(s)
-        V = sim.source_plane_wave(e_inc, jk_0*k_hat)
-        #Z, V = Z.combine_parts(V)
-        Z = Z[0][0]
-        V = V[0]
-        if freq_count == 0 and sim.basis_class==LoopStarBasis:
-            print Z.basis_o.num_loops, Z.basis_s.num_loops
-            
-        ext[freq_count] = np.vdot(V, Z.solve(V))
-        
-        eem_z, eem_j = Z.eigenmodes(num_modes, True)
-
-        z_eem[freq_count] = eem_z
-
-        Z_modes = Z.impedance_modes(num_modes, eem_j)
-        V_modes = Z.source_modes(V, num_modes, eem_j)
-        
-        z_modes[freq_count] = Z_modes[:].diagonal()        
-        
-        ext_modes[freq_count] = np.vdot(V_modes, Z_modes.solve(V_modes))
-
-        
-        for mode in xrange(num_modes):
-            ext_eem[freq_count, mode] = np.vdot(V, eem_j[:, mode])*np.dot(V, eem_j[:, mode])/eem_z[mode]
-            
-            if basis_class == LoopStarBasis:
-                ext_sem[freq_count, mode] = np.vdot(V, models[mode].solve(s, V))
-                z_sem[freq_count, mode] = models[mode].scalar_impedance(s)
-
-    plt.figure(figsize=(10, 5))
-    plt.subplot(121)
-    plt.plot(freqs*1e-9, ext.real)
-    plt.plot(freqs*1e-9, ext_modes.real)
-    #plt.plot(freqs*1e-9, np.sum(ext_sem.real, axis=1))
-    plt.plot(freqs*1e-9, np.sum(ext_eem.real, axis=1))
-    plt.subplot(122)
-    plt.plot(freqs*1e-9, ext.imag)
-    plt.plot(freqs*1e-9, ext_modes.imag)
-    #plt.plot(freqs*1e-9, np.sum(ext_sem.imag, axis=1))
-    plt.plot(freqs*1e-9, np.sum(ext_eem.imag, axis=1))
-    plt.show()
+    Z_modes = Z.impedance_modes(num_modes, eem_j)
+    V_modes = Z.source_modes(V, num_modes, eem_j)
     
+    z_modes[freq_count] = Z_modes[:].diagonal()        
+    
+    ext_modes[freq_count] = np.vdot(V_modes, Z_modes.solve(V_modes))
+
+    
+    for mode in xrange(num_modes):
+        ext_eem[freq_count, mode] = np.vdot(V[0], eem_j[0][:, mode])*np.dot(V[0], eem_j[0][:, mode])/eem_z[0][mode]
+        
+        if basis_class == LoopStarBasis:
+            ext_sem[freq_count, mode] = np.vdot(V[0], models[mode].solve(s, V[0]))
+            z_sem[freq_count, mode] = models[mode].scalar_impedance(s)
+
+plt.figure(figsize=(8, 5))
+plt.subplot(121)
+plt.plot(freqs*1e-9, ext.real)
+#plt.plot(freqs*1e-9, ext_modes.real)
+plt.plot(freqs*1e-9, np.sum(ext_sem.real, axis=1))
+plt.plot(freqs*1e-9, np.sum(ext_eem.real, axis=1), 'x')
+plt.subplot(122)
+plt.plot(freqs*1e-9, ext.imag)
+#plt.plot(freqs*1e-9, ext_modes.imag)
+plt.plot(freqs*1e-9, np.sum(ext_sem.imag, axis=1))
+plt.plot(freqs*1e-9, np.sum(ext_eem.imag, axis=1), 'x')
+plt.show()
+
 #    z_eem = 1.0/z_eem
 #    z_sem = 1.0/z_sem    
-    
-#    plt.figure(figsize=(10, 5))
-#    plt.subplot(121)
-#    plt.plot(freqs*1e-9, z_eem.real, 'x')
-#    plt.plot(freqs*1e-9, z_modes.real, '--')
-#    #plt.plot(freqs*1e-9, z_sem.real, '--')
-#    plt.subplot(122)
-#    plt.semilogy(freqs*1e-9, abs(z_eem.imag), 'x')
-#    plt.semilogy(freqs*1e-9, abs(z_modes.imag), '--')
-#   # plt.semilogy(freqs*1e-9, abs(z_sem.imag), '--')
-#    #plt.plot(freqs*1e-9, z_eem.imag, 'x')
-#    #plt.plot(freqs*1e-9, z_sem.imag, '--')
-#    plt.show()
+
+plt.figure(figsize=(10, 5))
+plt.subplot(121)
+plt.plot(freqs*1e-9, z_eem.real, 'x')
+#plt.plot(freqs*1e-9, z_modes.real, '--')
+plt.plot(freqs*1e-9, z_sem.real, '--')
+plt.subplot(122)
+#plt.semilogy(freqs*1e-9, abs(z_eem.imag), 'x')
+#plt.semilogy(freqs*1e-9, abs(z_modes.imag), '--')
+#plt.semilogy(freqs*1e-9, abs(z_sem.imag), '--')
+plt.plot(freqs*1e-9, z_eem.imag, 'x')
+plt.plot(freqs*1e-9, z_sem.imag, '--')
+plt.show()
 
 
 def sem_eem_bcsrr():
@@ -309,7 +311,7 @@ def sem_eem_bcsrr():
         s = 2j*np.pi*freq
         jk_0 = s/c
 
-        Z = sim.calculate_impedance(s)
+        Z = sim.impedance(s)
         V = sim.source_plane_wave(e_inc, jk_0*k_hat)
         
         impedance_combined, V_tot = Z.combine_parts(V)
@@ -678,7 +680,7 @@ def reduced_impedance():
     for freq in freqs:
         s = 2j*np.pi*freq
     
-        impedance = sim.calculate_impedance(s)
+        impedance = sim.impedance(s)
         impedance.calculate_eigenmodes(num_modes)
         #P.append(w[0])
         L, S = impedance.impedance_reduced()
@@ -742,7 +744,7 @@ def coupled_extinction():
     for freq_count, freq in enumerate(freqs):
         s = 2j*np.pi*freq
     
-        impedance = sim.calculate_impedance(s)
+        impedance = sim.impedance(s)
         V = sim.source_plane_wave(e_inc, k_hat*s/c)
         
         z_mode, j_mode = impedance.eigenmodes(num_modes)
@@ -836,7 +838,7 @@ def test_nonlinear_eig_srr():
     for freq_count, freq in enumerate(freqs):
         s = 2j*np.pi*freq
     
-        impedance = sim.calculate_impedance(s)
+        impedance = sim.impedance(s)
         V = sim.source_plane_wave(e_inc, k_hat*s/c)
         if freq_count == 0:
             print len(V[0])
@@ -907,7 +909,7 @@ def vis_eigencurrents():
         s_modes, j_modes = sim.part_singularities(start_s, num_modes)
         #print np.array(s_modes)/2/np.pi
     else:
-        impedance = sim.calculate_impedance(start_s)
+        impedance = sim.impedance(start_s)
         z_modes, j_modes = impedance.eigenmodes(num_modes)
     
     I = [j_modes[0][:, n] for n in xrange(num_modes)]
@@ -973,7 +975,7 @@ def fit_mode():
     
     for freq_count, freq in enumerate(freqs):
         s = 2j*np.pi*freq
-        Z = sim.calculate_impedance(s)
+        Z = sim.impedance(s)
         V = sim.source_plane_wave(e_inc, k_hat*s/c)
         extinction[freq_count] = np.vdot(V[0], Z[0,0].solve(V[0]))
     
@@ -1035,7 +1037,7 @@ def plot_sem_currents():
 def test_gram():
     ring1 = openmodes.load_mesh(
                         osp.join("..", "examples", "geometry", "SRR.geo"),
-                        mesh_tol=0.5e-3)
+                        mesh_tol=0.35e-3)
     
     basis_class=LoopStarBasis
     #basis_class=DivRwgBasis
@@ -1054,28 +1056,39 @@ def test_gram():
     
     num_modes = 4
     
-    if True:
+    if False:
         s_modes, j_modes = sim.part_singularities(start_s, num_modes, use_gram=True)
         scalar_models = sim.construct_models(s_modes, j_modes)
         #print [scalar.coefficients for scalar in scalar_models[0]]
         #print np.array(s_modes)/2/np.pi
     else:
-        impedance = sim.calculate_impedance(start_s)
-    #z_modes, j_modes = impedance.eigenmodes(num_modes, use_gram=False)
+        impedance = sim.impedance(start_s)
+        z_modes, j_modes = impedance.eigenmodes(num_modes, use_gram=False)
     #
-    I = [j_modes[0][:, n] for n in xrange(num_modes)]
-    sim.plot_solution(I, 'mayavi')
+    #I = [j_modes[0][:, n] for n in xrange(num_modes)]
+    #sim.plot_solution(I, 'mayavi')
     #sim.plot_solution(I, 'vtk', filename='modes.vtk')
-    #Z = impedance[0][0]
+    Z = impedance[0][0]
     ##pcolor((abs(Z.L))); colorbar(); show()
     ##pcolor((abs(Z.S))); colorbar(); show()
     #
-    #G = Z.basis_o.gram_matrix
+    G = Z.basis_o.gram_matrix
     #
     #ev = sqrt(la.eigvals(Z.S, -Z.L))/2/pi
-    ##ev = la.eigvals(Z[:])
-    #loglog(ev.real, abs(ev.imag), 'x')
+    #ev = la.eigvals(Z[:])
+    ev = la.eigvals(Z[:], G)
+    plt.figure()
+    plt.loglog(ev.real, abs(ev.imag), 'x')
+    plt.show()
+    
+    plt.figure()
+    plt.plot(np.log10(abs(ev.real)))
+    plt.plot(np.log10(abs(ev.imag)))
+    plt.show()
 
+#plt.figure()
+#plt.loglog(abs(z_modes[0].real), abs(z_modes[0].imag), 'x')
+#plt.show()
 
 #loop_star_linear_eigenmodes()
 #srr_coupling()
@@ -1091,5 +1104,5 @@ def test_gram():
 #sem_eem_bcsrr()
 #plot_sem_currents()
 #plot_eem()
-
+#eem_srr()
 

@@ -33,7 +33,7 @@ s_sem, j_sem = sim.part_singularities(start_s, num_modes, use_gram=True)
 s_sem = s_sem[0]
 j_sem = j_sem[0]
 
-impedance = sim.calculate_impedance(start_s)
+impedance = sim.impedance(start_s)
 Z = impedance[0][0][:]
 z_sem = np.diag(j_sem.T.dot(Z.dot(j_sem)))
 #z_modes, j_modes = impedance.eigenmodes(num_modes, use_gram=False)
