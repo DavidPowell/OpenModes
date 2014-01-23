@@ -184,7 +184,7 @@ class EfieImpedanceMatrix(object):
         if return_arrays:
             return L_red, S_red
         else:
-            return EfieImpedanceMatrix(self.s, L_red, S_red, None, None)
+            return self.__class__(self.s, L_red, S_red, None, None)
 
     def source_modes(self, V, num_modes, mode_currents):
         "Take a source field, and project it onto the modes of the system"
@@ -331,12 +331,17 @@ class ImpedanceParts(object):
         # of L and S for this to work)
         if 'start_j' in kwargs:
             start_j = kwargs.pop('start_j')
+        else:
+            start_j = None
         mode_impedances = []
         mode_currents = []
         for count in xrange(self.num_parts):
             Z = self.matrices[count][count]
-            eig_z, eig_current = Z.eigenmodes(*args, start_j=start_j[count], **kwargs)
-
+            if start_j is None:
+                eig_z, eig_current = Z.eigenmodes(*args, **kwargs)
+            else:
+                eig_z, eig_current = Z.eigenmodes(*args, start_j=start_j[count], **kwargs)
+                
             mode_impedances.append(eig_z)
             mode_currents.append(eig_current)
 
