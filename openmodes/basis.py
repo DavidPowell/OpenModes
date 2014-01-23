@@ -722,11 +722,8 @@ def get_combined_basis(basis_list):
 
     Parameters
     ----------
-    mesh : object
-        The mesh to generate the basis functions for
-
-    basis_class : class
-        Which class of basis function should be created
+    basis_list : list
+        A list of the basis functions in all parts to be combined
     """
 
     # The following parameters are needed to determine if basis functions are
