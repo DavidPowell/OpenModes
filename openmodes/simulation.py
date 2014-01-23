@@ -123,7 +123,7 @@ class Simulation(object):
 
         return sim_part
 
-    def calculate_impedance(self, s):
+    def impedance(self, s, part_o=None, part_s=None):
         """Evaluate the self and mutual impedances of all parts in the
         simulation. Return an `ImpedancePart` object which can calculate
         several derived impedance quantities
@@ -132,13 +132,28 @@ class Simulation(object):
         ----------
         s : number
             complex frequency at which to calculate impedance (in rad/s)
+        part_o : Part, optional
+            If not specified then all impedances will be calculated. Otherwise
+            only the self-impedance for this part, or mutual impedance between
+            this part and another
+        part_s : Part, optional
+            If `part_o` and `part_s` are both specified, then the mutual
+            impedance between those two parts will be calculated
 
         Returns
         -------
-        impedance_matrices : ImpedanceParts
+        impedance_matrices : ImpedanceParts (if `part_o` not specified)
             The impedance matrix object which can represent the impedance of
             the object in several ways.
+        impedance_matrices : ImpedanceMatrix (if `part_o` is specified)
+            The impedance matrix of a single part.
         """
+
+        # if only one impedance term is required
+        if part_o is not None:
+            if part_s is None:
+                part_s = part_o
+            return self.operator.impedance_matrix(s, part_o, part_s)
 
         matrices = []
 
@@ -287,13 +302,13 @@ class Simulation(object):
         """
 
         # first get an estimate of the pole locations
-        Z = self.calculate_impedance(s_start).combine_parts()
+        Z = self.impedance(s_start).combine_parts()
         lin_s, lin_currents = eig_linearised(Z, num_modes)
 
         mode_s = np.empty_like(lin_s)
         mode_j = np.empty_like(lin_currents)
 
-        Z_func = lambda s: self.calculate_impedance(s).combine_parts()[:]
+        Z_func = lambda s: self.impedance(s).combine_parts()[:]
 
         if self.logger:
             self.logger.info("Finding singularities for the whole system")
@@ -347,7 +362,7 @@ class Simulation(object):
         scalar_models = []
 
         for s_n, j_n in zip(mode_s, mode_j.T):
-            Z_func = lambda s: self.calculate_impedance(s).combine_parts()
+            Z_func = lambda s: self.impedance(s).combine_parts()
             scalar_models.append(ScalarModel(s_n, j_n, Z_func,
                                              logger=self.logger))
         return scalar_models
