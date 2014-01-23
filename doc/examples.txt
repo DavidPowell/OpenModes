@@ -2,10 +2,10 @@ Using OpenModes
 ===============
 
 The best way to understand OpenModes is to run the examples which
-are included. This is most conveniently done using the IPython notebook
+are included. The included examples are created using the IPython notebook
 viewer. If you have installed it successfully, then you can go to a
 command prompt window, and change to the `example` directory of the
-OpenModes installation. Typing `ipython notebook --pylab=inline` should
+OpenModes installation. Typing `ipython notebook` should
 start the ipython notebook server, and automatically bring up a list
 of example notebooks, which enable you to interact with the examples
 presented here.
@@ -15,6 +15,3 @@ presented here.
    :glob:
 
    examples/*
-   
-If the IPython notebook is not installed, you can run the python scripts
-contained in the examples directory using a regular python interpreter.

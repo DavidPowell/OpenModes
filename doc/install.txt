@@ -83,3 +83,7 @@ NaNs in the returned arrays if optimisation levels -O2 or -O3 are specified.
 
 The windows binaries were successfully built under the mingw-64 
 x32-4.8.1-posix-dwarf-rev5 compiler.
+
+Downloading the Source
+----------------------
+The source is available on `GitHub <https://github.com/DavidPowell/OpenModes>`_
