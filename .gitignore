@@ -44,3 +44,5 @@ src/*.html
 *.session.gui
 doc/examples/
 test/output/
+src/*module.c
+src/*f2pywrappers*
