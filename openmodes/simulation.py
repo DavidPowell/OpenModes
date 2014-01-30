@@ -211,6 +211,13 @@ class Simulation(object):
         use_gram : boolean, optional
             Use the Gram matrix to scale the eigenvectors, so that the
             eigenvalues will be independent of the basis functions.
+            
+        Returns
+        -------
+        mode_s : list of ndarray
+            The location of the singularities
+        mode_j : list of ndarray
+            The current distributions at the singularities
         """
 
         all_s = []
