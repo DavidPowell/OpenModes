@@ -68,14 +68,15 @@ fcompiler_dependent_options = {
     } 
 }
 
-core = Extension(name = 'core',
+core = Extension(name = 'openmodes.core',
                  sources = [join('src', 'core.pyf'),
                             join('src', 'common.f90'),
-                            join('src', 'rwg.f90')], 
+                            join('src', 'rwg.f90')],
                 )
 
-dunavant = Extension(name = 'dunavant', sources=[join('src', 'dunavant.pyf'), 
-                                                 join('src', 'dunavant.f90')])
+dunavant = Extension(name = 'openmodes.dunavant',
+                     sources=[join('src', 'dunavant.pyf'),
+                              join('src', 'dunavant.f90')])
 
 from numpy.distutils.command.build_ext import build_ext
 
