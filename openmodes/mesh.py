@@ -87,7 +87,7 @@ class TriangularSurfaceMesh(object):
     
     polygon_name = 'triangles'
 
-    def __init__(self, raw_mesh):
+    def __init__(self, raw_mesh, scale=None):
         """
         Parameters
         ----------
@@ -97,12 +97,18 @@ class TriangularSurfaceMesh(object):
                 The nodes making up the object
             triangles : ndarray
                 The node indices of triangles making up the object
+        scale : real, optional
+            A scaling factor to apply to all nodes, in case conversion between
+            units is required.
 
         The internal storage of `nodes` and `polygons` will be put into
         fortran order as these arrays will be passed to fortran routines
         """
 
         self.nodes = np.asfortranarray(raw_mesh['nodes'])
+        if scale is not None:
+            self.nodes *= scale
+            
         self.polygons = np.asfortranarray(raw_mesh[self.polygon_name])
         self.nodes.setflags(write=False)
         self.polygons.setflags(write=False)
@@ -245,7 +251,7 @@ def combine_mesh(meshes, nodes=None):
     return mesh_class(raw_mesh)
 
 
-def load_mesh(filename, mesh_tol=None, force_tuple=False):
+def load_mesh(filename, mesh_tol=None, force_tuple=False, scale=None):
     """
     Open a geometry file and mesh it (or directly open a mesh file), then
     convert it into a mesh object.
@@ -260,6 +266,10 @@ def load_mesh(filename, mesh_tol=None, force_tuple=False):
     force_tuple : boolean, optional
         Ensure that a tuple is always returned, even if only a single part
         is found in the file
+    scale : real, optional
+        A scaling factor to apply to all nodes, in case conversion between
+        units is required. Note that `mesh_tol` is expressed in the original
+        units of the geometry, before this scale factor is applied.
 
     Returns
     -------
@@ -279,7 +289,8 @@ def load_mesh(filename, mesh_tol=None, force_tuple=False):
 
     raw_mesh = gmsh.read_mesh(meshed_name)
 
-    parts = tuple(TriangularSurfaceMesh(sub_mesh) for sub_mesh in raw_mesh)
+    parts = tuple(TriangularSurfaceMesh(sub_mesh, scale=scale)
+                  for sub_mesh in raw_mesh)
     if len(parts) == 1 and not force_tuple:
         return parts[0]
     else:
