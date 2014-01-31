@@ -423,9 +423,10 @@ class Simulation(object):
             The format of the output. Currently 'mayavi' or 'vtk'
         filename : string, optional
             If saving to a file, the name of the file to save to
-        compress_scalars : boolean, optional
-            Compress the dynamic range of the scalar solution, which will make
-            the resulting plot easier to view, but less 'physically correct'
+        compress_scalars : real, optional
+            Compression factor to change the dynamic range of the scalar
+            solution, which will make the resulting plot easier to view, but
+            less 'physically correct'
         compress_separately : boolean, optional
             If compressing dynamic range, do it separately for each part. This
             will conceal any difference in the relative strength of excitation
