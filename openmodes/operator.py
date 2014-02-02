@@ -185,7 +185,7 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
 
     L = transform_L_o.dot(transform_L_s.dot(A_faces.reshape(num_faces_o*3,
                                                         num_faces_s*3,
-                                                        order='A').T).T)
+                                                        order='C').T).T)
     S = transform_S_o.dot(transform_S_s.dot(phi_faces.T).T)
 
     L *= mu_0/(4*pi)
