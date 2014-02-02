@@ -123,6 +123,28 @@ class Simulation(object):
 
         return sim_part
 
+    def iter_freqs(self, freqs):
+        """Return an iterator over a range of frequencies
+
+        Parameters
+        ----------
+        freqs : array or list
+            All the frequencies over which to iterate, in Hz
+
+        Returns
+        -------
+        freq_iter : generator
+            An iterator, which yields the frequency count and the complex
+            frequency `s` for each frequency in the range. It also logs the
+            frequency sweep.
+        """
+
+        num_freqs = len(freqs)
+        for freq_count, freq in enumerate(freqs):
+
+            self.logger.info("Sweep frequency %d/%d" % (freq_count, num_freqs))
+            yield freq_count, 2j*np.pi*freq
+
     def impedance(self, s, part_o=None, part_s=None):
         """Evaluate the self and mutual impedances of all parts in the
         simulation. Return an `ImpedancePart` object which can calculate
