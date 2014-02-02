@@ -123,13 +123,15 @@ class Simulation(object):
 
         return sim_part
 
-    def iter_freqs(self, freqs):
+    def iter_freqs(self, freqs, log_skip=10):
         """Return an iterator over a range of frequencies
 
         Parameters
         ----------
         freqs : array or list
             All the frequencies over which to iterate, in Hz
+        log_skip : integer, optional
+            How many frequencies to skip between logging calls
 
         Returns
         -------
@@ -141,8 +143,9 @@ class Simulation(object):
 
         num_freqs = len(freqs)
         for freq_count, freq in enumerate(freqs):
-
-            self.logger.info("Sweep frequency %d/%d" % (freq_count, num_freqs))
+            if freq_count % log_skip == 0:
+                self.logger.info("Sweep frequency %d/%d" %
+                                 (freq_count, num_freqs))
             yield freq_count, 2j*np.pi*freq
 
     def impedance(self, s, part_o=None, part_s=None):
