@@ -68,7 +68,7 @@ class Simulation(object):
         self.id = uuid.uuid4()
 
         if name is None:
-            name = repr(self)
+            name = self.id
 
         if enable_logging:
             # create a unique logger for each simulation object
@@ -77,13 +77,14 @@ class Simulation(object):
             import time
             import tempfile
 
-            self.logger = logging.getLogger(name)
+            self.logger = logging.getLogger(str(self.id))
+            formatter = logging.Formatter(name+' - %(asctime)s - %(message)s')
+
             self.logfile = tempfile.NamedTemporaryFile(mode='wt',
                                     prefix=time.strftime("%Y-%m-%d--%H-%M-%S"),
                                     suffix=".log", delete=False)
             handler = logging.StreamHandler(self.logfile)
-            handler.setFormatter(logging.Formatter(
-                                 '%(asctime)s - %(levelname)s - %(message)s'))
+            handler.setFormatter(formatter)
             self.logger.addHandler(handler)
 
             self.logger.setLevel(logging.INFO)
@@ -93,6 +94,7 @@ class Simulation(object):
                 # dump logging info to the screen as well
                 import sys
                 handler = logging.StreamHandler(sys.stderr)
+                handler.setFormatter(formatter)
                 self.logger.addHandler(handler)
         else:
             self.logger = None
