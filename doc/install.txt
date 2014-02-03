@@ -76,13 +76,29 @@ Manual Install for Windows
 --------------------------
 
 Manual installation under windows is difficult, as it requires the use of 
-mingw compilers.
+mingw32 or mingw64 compilers, as these are the only free fortran compilers available for
+windows. Unfortunately the default setting on most systems will not successfully
+compile the required libraries.
 
-MingW 4.8 has a bug which causes the fortran extensions to randomly generate
-NaNs in the returned arrays if optimisation levels -O2 or -O3 are specified.
+As of version 4.8 and possibly earlier, Mingw32/64 have a bug which causes the
+fortran extensions to randomly generate NaNs in the returned arrays if
+optimisation levels -O2 or -O3 are specified, therefore the default optimisation
+level has been set to -O1.
 
-The windows binaries were successfully built under the mingw-64 
-x32-4.8.1-posix-dwarf-rev5 compiler.
+The 32 bit windows binaries were successfully built under the mingw-64 
+x32-4.8.1-posix-dwarf-rev5 compiler. For 64 bit windows, binaries were successfully
+build using the x64-4.8.1-posix-seh-rev5 compiler. Both were installed using the
+`mingw-builds<http://sourceforge.net/projects/mingwbuilds/>`_ installer.
+
+In order for setup.py to find these compilers, they must be in the path. To be safe,
+ensure that no other C or fortran compilers are in the path. Python's distutils
+must be instructed to use the mingw32 compiler (for both 32 or 64 bit), using the
+--compiler flag, or by editing the file ``Lib/site-packages/distutils/distutils.cfg``
+under your python installation.
+
+In addition, for 64 bit versions, it is necessary to replace the line
+``raise NotImplementedError("Only MS compiler supported with gfortran on win64")`` with 
+``pass`` in the file ``Lib/site-packages/numpy/distutils/fcompiler/gnu.py``.
 
 Downloading the Source
 ----------------------
