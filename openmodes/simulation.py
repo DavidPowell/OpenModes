@@ -20,10 +20,6 @@
 
 from __future__ import division
 
-import logging
-import time
-import tempfile
-
 # numpy and scipy
 import numpy as np
 
@@ -70,6 +66,11 @@ class Simulation(object):
 
         if enable_logging:
             # create a unique logger for each simulation object
+
+            import logging
+            import time
+            import tempfile
+
             self.logger = logging.getLogger(name)
             self.logfile = tempfile.NamedTemporaryFile(mode='wt',
                                     prefix=time.strftime("%Y-%m-%d--%H-%M-%S"),
@@ -79,10 +80,8 @@ class Simulation(object):
                                  '%(asctime)s - %(levelname)s - %(message)s'))
             self.logger.addHandler(handler)
 
-            #self.logger.setLevel(logging.CRITICAL)
             self.logger.setLevel(logging.INFO)
             self.logger.propagate = False
-            #print "Logging info in %s" % self.logfile.name
         else:
             self.logger = None
 
