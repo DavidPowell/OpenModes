@@ -42,7 +42,7 @@ class Simulation(object):
     def __init__(self, integration_rule=5, basis_class=LoopStarBasis,
                  operator_class=EfieOperator,
                  greens_function=FreeSpaceGreensFunction(),
-                 name=None, enable_logging=True):
+                 name=None, enable_logging=True, log_stderr=False):
         """
         Parameters
         ----------
@@ -59,6 +59,8 @@ class Simulation(object):
             A name for this simulation, which will be used for logging
         enable_logging : bool, optional
             Enable logging of simulation information to a temporary file
+        log_stderr : bool, optional
+            In addition to logging to a file, log to standard error
         """
 
         if name is None:
@@ -82,6 +84,12 @@ class Simulation(object):
 
             self.logger.setLevel(logging.INFO)
             self.logger.propagate = False
+
+            if log_stderr:
+                # dump logging info to the screen as well
+                import sys
+                handler = logging.StreamHandler(sys.stderr)
+                self.logger.addHandler(handler)
         else:
             self.logger = None
 
