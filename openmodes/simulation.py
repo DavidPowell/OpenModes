@@ -23,6 +23,8 @@ from __future__ import division
 # numpy and scipy
 import numpy as np
 
+import uuid
+
 from openmodes import integration
 from openmodes.parts import Part
 from openmodes.impedance import ImpedanceParts, ImpedancePartsLoopStar
@@ -62,6 +64,8 @@ class Simulation(object):
         log_stderr : bool, optional
             In addition to logging to a file, log to standard error
         """
+
+        self.id = uuid.uuid4()
 
         if name is None:
             name = repr(self)
