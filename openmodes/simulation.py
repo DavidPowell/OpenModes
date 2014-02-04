@@ -540,7 +540,7 @@ class Simulation(object):
     
         raw_mesh = gmsh.read_mesh(meshed_name)
     
-        parts = tuple(TriangularSurfaceMesh(sub_mesh, scale=scale)
+        parts = tuple(TriangularSurfaceMesh(sub_mesh, scale=scale, logger=self.logger)
                       for sub_mesh in raw_mesh)
         if len(parts) == 1 and not force_tuple:
             return parts[0]

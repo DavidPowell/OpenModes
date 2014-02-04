@@ -84,7 +84,7 @@ class TriangularSurfaceMesh(object):
     
     polygon_name = 'triangles'
 
-    def __init__(self, raw_mesh, scale=None):
+    def __init__(self, raw_mesh, scale=None, logger=None):
         """
         Parameters
         ----------
@@ -116,6 +116,10 @@ class TriangularSurfaceMesh(object):
             self.physical_name = None
 
         self.id = uuid.uuid4()
+
+        if logger is not None:
+            logger.info('Creating triangular mesh\n%d nodes\n%d triangles' %
+                        (len(self.nodes), len(self.polygons)))
 
 #    def __repr__(self):
 #        return "Nodes
