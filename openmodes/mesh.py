@@ -22,10 +22,7 @@ derived quantities
 """
 
 import numpy as np
-import os.path as osp
 import uuid
-
-from openmodes import gmsh
 
 
 def nodes_not_in_edge(nodes, edge):
@@ -251,47 +248,3 @@ def combine_mesh(meshes, nodes=None):
     return mesh_class(raw_mesh)
 
 
-def load_mesh(filename, mesh_tol=None, force_tuple=False, scale=None):
-    """
-    Open a geometry file and mesh it (or directly open a mesh file), then
-    convert it into a mesh object.
-
-    Parameters
-    ----------
-    filename : string
-        The name of the file to open. Can be a gmsh .msh file, or a gmsh
-        geometry file, which will be meshed first
-    mesh_tol : float, optional
-        If opening a geometry file, it will be meshed with this tolerance
-    force_tuple : boolean, optional
-        Ensure that a tuple is always returned, even if only a single part
-        is found in the file
-    scale : real, optional
-        A scaling factor to apply to all nodes, in case conversion between
-        units is required. Note that `mesh_tol` is expressed in the original
-        units of the geometry, before this scale factor is applied.
-
-    Returns
-    -------
-    parts : tuple
-        A tuple of `SimulationParts`, one for each separate geometric entity
-        found in the gmsh file
-
-    Currently only `TriangularSurfaceMesh` objects are created
-    """
-
-    if osp.splitext(osp.basename(filename))[1] == ".msh":
-        # assume that this is a binary mesh already generate by gmsh
-        meshed_name = filename
-    else:
-        # assume that this is a gmsh geometry file, so mesh it first
-        meshed_name = gmsh.mesh_geometry(filename, mesh_tol)
-
-    raw_mesh = gmsh.read_mesh(meshed_name)
-
-    parts = tuple(TriangularSurfaceMesh(sub_mesh, scale=scale)
-                  for sub_mesh in raw_mesh)
-    if len(parts) == 1 and not force_tuple:
-        return parts[0]
-    else:
-        return parts
