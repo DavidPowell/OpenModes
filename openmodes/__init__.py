@@ -21,7 +21,6 @@ OpenModes - An eigenmode solver for open electromagnetic resonantors
 """
 
 from openmodes.simulation import Simulation
-from openmodes.mesh import load_mesh
 
 #__all__ = [openmodes.simulation.Simulation, openmodes.mesh.load_mesh]
 
