@@ -488,9 +488,11 @@ class LoopStarBasis(LinearTriangleBasis):
 
         if logger:
             logger.info("Constructing %d loop-star basis functions\n" 
-            "%d loops\n%d stars\n%d faces\n%d edges"
+            "%d loops\n%d stars\n%d faces\n%d edges\n%d unshared_edges\n"
+            "%d nodes on boundary\n%d boundary contours"
             % (len(self), num_loops, self.num_stars, 
-               len(mesh.polygons), len(edges)))
+               len(mesh.polygons), len(edges), len(unshared_edges),
+               len(outer_nodes), boundary_contours))
 
 
     def __len__(self):
