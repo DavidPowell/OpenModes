@@ -175,11 +175,14 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
         elif weight.lower() == 'rayleigh symmetric':
             v_s = np.dot(T_s.T, x_s)
 
-        lambda_s1 = lambda_s - np.dot(v_s, x_s)/(np.dot(v_s, u))
-        x_s1 = u/np.sqrt(np.sum(np.abs(u)**2))
+        delta_lambda_abs = np.dot(v_s, x_s)/(np.dot(v_s, u))
 
-        delta_lambda = abs((lambda_s1 - lambda_s)/lambda_s)
+        delta_lambda = abs(delta_lambda_abs/lambda_s)
         converged = delta_lambda < lambda_tol
+        if converged: break
+        
+        lambda_s1 = lambda_s - delta_lambda_abs
+        x_s1 = u/np.sqrt(np.sum(np.abs(u)**2))
 
         # update variables for next iteration
         if not func_gives_der:
@@ -191,7 +194,6 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
         #print x_s
         #print lambda_s
 
-        if converged: break
 
     if not converged:
         raise ValueError("maximum iterations reached, no convergence")
