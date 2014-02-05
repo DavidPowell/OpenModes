@@ -160,15 +160,15 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
 
         singular_terms = singular_impedance_rwg_efie_homogeneous(basis_o,
                                                              quadrature_rule)
-        #(I_phi_sing, I_A_sing, index_sing, indptr_sing) = singular_terms
-        #assert(sum(np.isnan(I_phi_sing)) == 0)
-        #assert(sum(np.isnan(I_A_sing)) == 0)
+        if (np.any(np.isnan(singular_terms[0])) or
+            np.any(np.isnan(singular_terms[1]))):
+                raise ValueError("NaN returned in singular impedance terms")
 
         num_faces_s = num_faces_o
         A_faces, phi_faces = openmodes.core.z_efie_faces_self(nodes_o,
                                          basis_o.mesh.polygons, s, 
                                          xi_eta_eval, weights, *singular_terms)
-                                #I_phi_sing, I_A_sing, index_sing, indptr_sing)
+
         transform_L_s = transform_L_o
         transform_S_s = transform_S_o
 
@@ -182,6 +182,9 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
                                 basis_s.mesh.polygons, s, xi_eta_eval, weights)
 
         transform_L_s, transform_S_s = basis_s.transformation_matrices
+
+    if np.any(np.isnan(A_faces)) or np.any(np.isnan(phi_faces)):
+        raise ValueError("NaN returned in impedance matrix")
 
     L = transform_L_o.dot(transform_L_s.dot(A_faces.reshape(num_faces_o*3,
                                                         num_faces_s*3,
