@@ -119,6 +119,13 @@ class Simulation(object):
                                        greens_function=greens_function,
                                        logger=self.logger)
 
+        if self.logger:
+            self.logger.info('Creating simulation\nQuadrature order %d\n'
+                             'Basis function class %s\n'
+                             'Log file %s' %  (integration_rule,
+                                               basis_class,
+                                               self.logfile.name))
+
     def place_part(self, mesh, location=None):
         """Add a part to the simulation domain
 
