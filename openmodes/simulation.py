@@ -46,7 +46,7 @@ class Simulation(object):
     def __init__(self, integration_rule=5, basis_class=LoopStarBasis,
                  operator_class=EfieOperator,
                  greens_function=FreeSpaceGreensFunction(),
-                 name=None, enable_logging=True, log_stderr=False,
+                 name=None, enable_logging=True, log_display_level=None,
                  log_level="info"):
         """
         Parameters
@@ -64,10 +64,11 @@ class Simulation(object):
             A name for this simulation, which will be used for logging
         enable_logging : bool, optional
             Enable logging of simulation information to a temporary file
-        log_stderr : bool, optional
-            In addition to logging to a file, log to standard error
-        log_level : string, optional
-            If set to 'debug' then more information will be logged
+        log_display_level : integer, optional
+            The level of logging messages which should be displayed to the
+            user via the stderr stream. The default value prevents any logging
+            messages from being displayed. Useful values are 20 (general info)
+            and 10 (full debugging information)
         """
 
         self.id = uuid.uuid4()
@@ -92,20 +93,17 @@ class Simulation(object):
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
 
-            self.logger.setLevel(logging.INFO)
+            self.logger.setLevel(1)
             self.logger.propagate = False
 
-            if log_stderr:
+            if log_display_level is not None:
                 # dump logging info to the screen as well
                 import sys
                 handler = logging.StreamHandler(sys.stderr)
                 handler.setFormatter(formatter)
+                handler.setLevel(log_display_level)
                 self.logger.addHandler(handler)
                 
-            if log_level.lower() == 'debug':
-                self.logger.setLevel(logging.DEBUG)
-            else:
-                self.logger.setLevel(logging.INFO)
         else:
             self.logger = None
 
