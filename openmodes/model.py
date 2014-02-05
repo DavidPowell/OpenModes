@@ -48,7 +48,7 @@ def delta_eig(s, j, Z_func, eps = None):
     return np.dot(j.T, np.dot(delta_Z, j))
 
 
-def fit_four_term(s_0, z_der):
+def fit_four_term(s_0, z_der, logger=None):
     """
     Fit a 4 term model to a resonant frequency and impedance derivative
     To get reasonable condition number, omega_0 should be scaled to be near
@@ -72,6 +72,10 @@ def fit_four_term(s_0, z_der):
     rhs[2] = z_der.real
     rhs[3] = z_der.imag
     
+    if logger:
+        logger.debug("Fitting 4 term polynomial\nM = %s\nrhs = %s" %
+                    (str(M), str(rhs)))
+
     return nnls(M, rhs)[0]
 
 
@@ -88,7 +92,8 @@ class ScalarModel(object):
         self.z_der = delta_eig(mode_s, mode_j, Z_func)
         self.scale_factor = abs(mode_s.imag)/10
         self.coefficients = fit_four_term(mode_s/self.scale_factor,
-                                          self.z_der*self.scale_factor)
+                                          self.z_der*self.scale_factor,
+                                          logger)
         if logger:
             logger.info("Creating scalar model\ndlambda/ds = %+.4e %+.4e\n"
                         "Coefficients: %s" % (self.z_der.real, self.z_der.imag,
