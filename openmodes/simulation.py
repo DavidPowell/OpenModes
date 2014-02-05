@@ -551,7 +551,12 @@ class Simulation(object):
             meshed_name = filename
         else:
             # assume that this is a gmsh geometry file, so mesh it first
+            if self.logger:
+                self.logger.info("Meshing geometry %s" % filename)
             meshed_name = gmsh.mesh_geometry(filename, mesh_tol)
+
+        if self.logger:
+            self.logger.info("Loading mesh %s" % meshed_name)
     
         raw_mesh = gmsh.read_mesh(meshed_name)
     
