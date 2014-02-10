@@ -103,3 +103,11 @@ In addition, for 64 bit versions, it is necessary to replace the line
 Downloading the Source
 ----------------------
 The source is available on `GitHub <https://github.com/DavidPowell/OpenModes>`_
+
+Building the Documentation
+--------------------------
+
+In order to build the documentation, the following packages are required
+
+- numpydocs
+- Sphinx
