@@ -75,7 +75,8 @@ not work. All required packages are available from the MacPorts project.
 Manual Install for Windows
 --------------------------
 
-Manual installation under windows is difficult, as it requires the use of 
+Manual installation under windows is difficult, therefore it is recommended to use the
+precomplied binaries. Compliation requires the use of 
 mingw32 or mingw64 compilers, as these are the only free fortran compilers available for
 windows. Unfortunately the default setting on most systems will not successfully
 compile the required libraries.
@@ -111,3 +112,5 @@ In order to build the documentation, the following packages are required
 
 - numpydocs
 - Sphinx
+
+At a system command prompt, enter the ``doc`` directory and type ``make html``.
