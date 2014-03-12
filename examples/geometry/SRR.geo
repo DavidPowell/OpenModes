@@ -1,16 +1,10 @@
 // a 2D split ring resonator
 
-// Use the "MeshAdapt" mesh algorithm which seems to generate the most consistent element sizes
-// hence producing the most well-conditioned results
-//Mesh.Algorithm = 1;
-
 // first design the SRR
 inner_radius = 3.5e-3;
 outer_radius = 4e-3;
 gap_width = 1e-3;
-metal_thickness = 0; //0.03e-3;
 
-//lc_srr = 0.5e-3;
 lc_srr = 2e-3;
 
 srr_p = newp-1;
@@ -40,9 +34,6 @@ Line Loop(srr_l+7) = {srr_l+1, srr_l+2, srr_l+3, srr_l+4, srr_l+5, srr_l+6};
 srr_s = news;
 
 Plane Surface(srr_s) = {srr_l+7};
-Field[1] = Threshold;
-Field[1].LcMin = 0.5;
-Field[1].LcMax = 0.5;
-Field[1].LcMin = 0.1;
+
 
 
