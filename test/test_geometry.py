@@ -136,6 +136,6 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol, plot_only=False)
 
 
 #geometry_extinction_modes('horseshoe_rect', np.linspace(1e8, 20e9, 101), 3, 1.5e-3)
-geometry_extinction_modes('sphere', np.linspace(0.2e7, 8e7, 101), 16, 0.2, plot_only=True)
-
+#geometry_extinction_modes('sphere', np.linspace(0.2e7, 8e7, 101), 16, 0.2, plot_only=True)
+geometry_extinction_modes('canonical_spiral', np.linspace(1e8, 15e9, 101), 5, 1e-3)
 
