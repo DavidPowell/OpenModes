@@ -40,7 +40,7 @@ from openmodes.basis import triangle_face_to_rwg, DivRwgBasis
 from openmodes import load_mesh
 
 mesh_tol = 0.5e-3
-mesh = load_mesh(osp.join("..", "examples", "geometry", "square_plate.geo"), mesh_tol)
+mesh = load_mesh(osp.join(openmodes.geometry_dir, "square_plate.geo"), mesh_tol)
 
 basis = DivRwgBasis(mesh)
 #basis = LoopStarBasis(mesh)

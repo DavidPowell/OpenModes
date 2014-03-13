@@ -14,7 +14,7 @@ import os.path as osp
 
 def test_combine():
     ring1 = openmodes.load_mesh(
-                        osp.join("..", "examples", "geometry", "SRR_wide.geo"),
+                        osp.join(openmodes.geometry_dir, "SRR_wide.geo"),
                         mesh_tol=0.5e-3)
     
     sim = openmodes.Simulation()

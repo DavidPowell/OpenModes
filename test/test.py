@@ -38,7 +38,7 @@ def loop_star_linear_eigenmodes():
     """
 
     ring1, ring2 = openmodes.load_mesh(
-                    osp.join("..", "examples", "geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
+                    osp.join(openmodes.geometry_dir, "asymmetric_ring.geo"), mesh_tol=1e-3)
 
     #ring1 = openmodes.load_mesh(
     #                osp.join("geometry", "SRR.geo"), mesh_tol=0.4e-3)
@@ -71,7 +71,7 @@ def loop_star_combined():
     """
 
     ring1, ring2 = openmodes.load_mesh(
-                    osp.join("..", "examples", "geometry", "asymmetric_ring.geo"), mesh_tol=0.5e-3)
+                    osp.join(openmodes.geometry_dir, "asymmetric_ring.geo"), mesh_tol=0.5e-3)
 
     sim_rwg = openmodes.Simulation(basis_class=DivRwgBasis)
     sim_rwg.place_part(ring1)
@@ -118,7 +118,7 @@ def sem_eem_asrr():
     """
 
     ring1, ring2 = openmodes.load_mesh(
-                    osp.join("..", "examples", "geometry", "asymmetric_ring.geo"), mesh_tol=0.5e-3)
+                    osp.join(openmodes.geometry_dir, "asymmetric_ring.geo"), mesh_tol=0.5e-3)
 
     sim = openmodes.Simulation(basis_class=LoopStarBasis, name="sem_eem_asrr")
     sim.logger.propagate = True
@@ -169,7 +169,7 @@ def eem_srr():
     """"Calculate the eigencurrent expansion of a single ring.
     """
     
-    srr = openmodes.load_mesh(osp.join("..", "examples", "geometry", "SRR.geo"), 
+    srr = openmodes.load_mesh(osp.join(openmodes.geometry_dir, "SRR.geo"), 
                               mesh_tol=0.5e-3)
     
     basis_class = LoopStarBasis
@@ -273,7 +273,7 @@ def sphere_mode_orthogonality():
     """"Calculate the eigencurrent expansion of a sphere.
     """
     
-    sphere = openmodes.load_mesh(osp.join("..", "examples", "geometry", "sphere.geo"), 
+    sphere = openmodes.load_mesh(osp.join(openmodes.geometry_dir, "sphere.geo"), 
                               mesh_tol=0.5)
     
     sim = openmodes.Simulation()
@@ -303,7 +303,7 @@ def sphere_mode_orthogonality():
 
 def eem_sphere():
 
-    sphere = openmodes.load_mesh(osp.join("..", "examples", "geometry", "sphere.geo"), 
+    sphere = openmodes.load_mesh(osp.join(openmodes.geometry_dir, "sphere.geo"), 
                               mesh_tol=0.5)
     
     sim = openmodes.Simulation(name='sphere extinction')
@@ -414,7 +414,7 @@ def sem_eem_bcsrr():
     """
 
     srr = openmodes.load_mesh(
-                    osp.join("..", "examples", "geometry", "SRR.geo"), mesh_tol=0.5e-3)
+                    osp.join(openmodes.geometry_dir, "SRR.geo"), mesh_tol=0.5e-3)
 
     basis_class = LoopStarBasis
     #basis_class = DivRwgBasis
@@ -532,7 +532,7 @@ def srr_coupling():
 
     #filename = osp.join("geometry", "dipole.geo")
     #freqs = np.linspace(4e9, 15e9, 201)
-    filename = osp.join("..", "examples", "geometry", "SRR.geo")
+    filename = osp.join(openmodes.geometry_dir, "SRR.geo")
     freqs = np.linspace(2e9, 20e9, 201)
 
     mesh_tol = 2e-3
@@ -640,7 +640,7 @@ def srr_extinction():
     Calculate the excinction for a pair of SRRs
     """
 
-    filename = osp.join("..", "examples", "geometry", "SRR_Pendry.geo")
+    filename = osp.join(openmodes.geometry_dir, "SRR_Pendry.geo")
     freqs = np.linspace(0.2e9, 20e9, 201)
 
     mesh_tol = 0.25e-3
@@ -680,7 +680,7 @@ def srr_extinction():
 
 def test_plotting():
 
-    filename = osp.join("..", "examples", "geometry", "SRR.geo")
+    filename = osp.join(openmodes.geometry_dir, "SRR.geo")
 
     mesh_tol = 1e-3
     srr = openmodes.load_parts(filename, mesh_tol)
@@ -704,7 +704,7 @@ def test_rwg():
     #from openmodes.operator import EfieOperator
     #from openmodes import integration
     
-    filename = osp.join("..", "examples", "geometry", "SRR.geo")
+    filename = osp.join(openmodes.geometry_dir, "SRR.geo")
     
     mesh_tol = 0.4e-3 #0.25e-3
     #meshed_name = gmsh.mesh_geometry(filename, mesh_tol)
@@ -750,7 +750,7 @@ def test_rwg():
         
 def extinction_sphere():
 
-    filename = osp.join("..", "examples", "geometry", "sphere.geo")
+    filename = osp.join(openmodes.geometry_dir, "sphere.geo")
     mesh_tol = 0.3
     
     basis_class = LoopStarBasis
@@ -788,7 +788,7 @@ def extinction_sphere():
 
 def modes_sphere():
 
-    filename = osp.join("..", "examples", "geometry", "sphere.geo")
+    filename = osp.join(openmodes.geometry_dir, "sphere.geo")
     mesh_tol = 0.3
     
     basis_class = LoopStarBasis
@@ -807,7 +807,7 @@ def modes_sphere():
 def reduced_impedance():
     "Plot the reduced self impedance"
     ring1, ring2 = openmodes.load_mesh(
-                    osp.join("..", "examples", "geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
+                    osp.join(openmodes.geometry_dir, "asymmetric_ring.geo"), mesh_tol=1e-3)
     
     #basis_class=LoopStarBasis
     basis_class=DivRwgBasis
@@ -874,7 +874,7 @@ def coupled_extinction():
     problem gives the same result as the full problem"""
     
     ring1, ring2 = openmodes.load_mesh(
-        osp.join("..", "examples", "geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
+        osp.join(openmodes.geometry_dir, "asymmetric_ring.geo"), mesh_tol=1e-3)
     
     #basis_class=LoopStarBasis
     basis_class=DivRwgBasis
@@ -930,7 +930,7 @@ def coupled_extinction():
 
 def test_nonlinear_eig_asrr():
     ring1, ring2 = openmodes.load_mesh(
-        osp.join("..", "examples", "geometry", "asymmetric_ring.geo"), mesh_tol=1e-3)
+        osp.join(openmodes.geometry_dir, "asymmetric_ring.geo"), mesh_tol=1e-3)
     
     basis_class=LoopStarBasis
     #basis_class=DivRwgBasis
@@ -952,7 +952,7 @@ def test_nonlinear_eig_asrr():
 def test_nonlinear_eig_srr():
     
     ring1 = openmodes.load_mesh(
-            osp.join("..", "examples", "geometry", "SRR.geo"), mesh_tol=2e-3)
+            osp.join(openmodes.geometry_dir, "SRR.geo"), mesh_tol=2e-3)
     
     
     basis_class=LoopStarBasis
@@ -1040,7 +1040,7 @@ def test_nonlinear_eig_srr():
 
 def vis_eigencurrents():
     ring1 = openmodes.load_mesh(
-                        osp.join("..", "examples", "geometry", "SRR_wide.geo"),
+                        osp.join(openmodes.geometry_dir, "SRR_wide.geo"),
                         mesh_tol=0.25e-3)
     
     basis_class=LoopStarBasis
@@ -1072,7 +1072,7 @@ def vis_eigencurrents():
 
 def fit_mode():
     ring1 = openmodes.load_mesh(
-                        osp.join("..", "examples", "geometry", "SRR.geo"),
+                        osp.join(openmodes.geometry_dir, "SRR.geo"),
                         mesh_tol=1e-3)
     
     basis_class=LoopStarBasis
@@ -1171,7 +1171,7 @@ def plot_sem_currents():
     """
 
     srr = openmodes.load_mesh(
-                    osp.join("..", "examples", "geometry", "SRR_wide.geo"), mesh_tol=0.5e-3)
+                    osp.join(openmodes.geometry_dir, "SRR_wide.geo"), mesh_tol=0.5e-3)
 
     basis_class = LoopStarBasis
     #basis_class = DivRwgBasis
@@ -1188,7 +1188,7 @@ def plot_sem_currents():
 
 def test_gram():
     ring1 = openmodes.load_mesh(
-                        osp.join("..", "examples", "geometry", "SRR.geo"),
+                        osp.join(openmodes.geometry_dir, "SRR.geo"),
                         mesh_tol=0.35e-3)
     
     basis_class=LoopStarBasis

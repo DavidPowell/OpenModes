@@ -14,7 +14,7 @@ from openmodes import load_mesh
 from openmodes.integration import get_dunavant_rule
 
 mesh_tol = 0.4e-3
-mesh = load_mesh(osp.join("..", "examples", "geometry", "square_plate.geo"), mesh_tol)
+mesh = load_mesh(osp.join(openmodes.geometry_dir, "square_plate.geo"), mesh_tol)
 
 basis = DivRwgBasis(mesh)
 #basis = LoopStarBasis(mesh)

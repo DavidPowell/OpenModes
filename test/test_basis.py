@@ -30,7 +30,7 @@ from openmodes.visualise import write_vtk
 def test_interpolate_rwg():
 
     mesh_tol = 0.5e-3
-    srr = load_mesh(osp.join("..", "examples", "geometry", "SRR.geo"), mesh_tol)
+    srr = load_mesh(osp.join(openmodes.geometry_dir, "SRR.geo"), mesh_tol)
     
     basis = DivRwgBasis(srr)
     
@@ -50,7 +50,7 @@ def test_interpolate_rwg():
 def test_interpolate_loop_star():
         
     mesh_tol = 4e-3
-    mesh = load_mesh(osp.join("..", "examples", "geometry", "square_plate.geo"), mesh_tol)
+    mesh = load_mesh(osp.join(openmodes.geometry_dir, "square_plate.geo"), mesh_tol)
     
     #basis = DivRwgBasis(mesh)
     basis = LoopStarBasis(mesh)
@@ -83,7 +83,7 @@ def test_interpolate_loop_star():
 def loop_star_to_vtk():
         
     mesh_tol = 1e-3
-    mesh = load_mesh(osp.join("..", "examples", "geometry", "SRR.geo"), mesh_tol)
+    mesh = load_mesh(osp.join(openmodes.geometry_dir, "SRR.geo"), mesh_tol)
     
     #basis = DivRwgBasis(mesh)
     basis = LoopStarBasis(mesh)
@@ -127,7 +127,7 @@ def loop_star_to_vtk():
 
 
 mesh_tol = 0.5e-3
-srr = load_mesh(osp.join("..", "examples", "geometry", "SRR.geo"), mesh_tol)
+srr = load_mesh(osp.join(openmodes.geometry_dir, "SRR.geo"), mesh_tol)
 
 basis = DivRwgGramBasis(srr)
 #basis = DivRwgBasis(srr)

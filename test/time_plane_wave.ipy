@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 
 
-filename = osp.join("..", "examples", "geometry", "SRR.geo")
+filename = osp.join(openmodes.geometry_dir, "SRR.geo")
 
 mesh_tol = 0.01e-3
 mesh = openmodes.load_mesh(filename, mesh_tol)

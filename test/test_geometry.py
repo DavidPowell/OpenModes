@@ -37,7 +37,7 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol, plot_only=False)
     sim = openmodes.Simulation(name=name, 
                                basis_class=openmodes.basis.LoopStarBasis,
                                log_display_level=20)
-    mesh = sim.load_mesh(osp.join('..', 'examples', 'geometry', name+'.geo'),
+    mesh = sim.load_mesh(osp.join(openmodes.geometry_dir, name+'.geo'),
                          mesh_tol=mesh_tol)
     sim.place_part(mesh)
     
