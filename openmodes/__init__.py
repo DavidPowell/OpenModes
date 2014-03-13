@@ -22,5 +22,10 @@ OpenModes - An eigenmode solver for open electromagnetic resonantors
 
 from openmodes.simulation import Simulation
 
+# allow the user to find the provided geometry files
+from pkg_resources import resource_filename
+geometry_dir = resource_filename('openmodes', 'geometry')
+
+
 #__all__ = [openmodes.simulation.Simulation, openmodes.mesh.load_mesh]
 
