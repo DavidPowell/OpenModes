@@ -26,16 +26,16 @@ from os.path import join
 
 try:
     import numpy
-    #import scipy
 except ImportError:
-    print "Numpy must be installed"
+    numpy_installed = False
+else:
+    numpy_installed = True
 
-if numpy.__version__ < '1.6.2':
+if not numpy_installed or (numpy.__version__ < '1.6.2'):
     raise ValueError("Numpy 1.6.2 or greater required")
 
 
 from numpy.distutils.core import Extension, setup
-#from setuptools import setup
 
 # Ideally would like to perform static linking under mingw32 to avoid
 # packaging a whole bunch of dlls. However, static linking is not supported
@@ -57,16 +57,16 @@ fcompiler_dependent_options = {
         'libraries': ["gomp"]
      },
         
-    # intel x86 fortran
     'intel': {
-        'libraries': ["iomp5"], 
-    },
-    
-    # intel x86_64 fortran
-    'intelem': {
-        'libraries' : ["iomp5"], 
-    } 
+        'extra_f90_compile_args' : ['-openmp', '-O3'],
+        'extra_link_args' : ['-openmp']
+    }     
 }
+
+# Intel fortran compiler goes by several names depending on the version
+# and target platform. Here the settings are all the same
+fcompiler_dependent_options['intelem'] = fcompiler_dependent_options['intel']
+fcompiler_dependent_options['intelvem'] = fcompiler_dependent_options['intel']
 
 core = Extension(name = 'openmodes.core',
                  sources = [join('src', 'core.pyf'),
