@@ -14,7 +14,34 @@
 
 import sys
 import os
-from os.path import join
+from os.path import join, splitext
+import os
+import subprocess
+import shutil
+
+# Convert all the IPython notebook example worksheets into .rst files which
+# can be included in the sphinx documentation
+# 
+# Requires IPython 1.2.1 to get reasonable quality .rst file from nbconvert
+#
+# Files are renamed from .rst to .txt
+
+# remove all previously converted examples
+shutil.rmtree("examples")
+os.mkdir("examples")
+os.chdir("examples")
+
+example_dir = join("..", "..", "examples")
+notebooks =[f for f in os.listdir(example_dir) if f.endswith(".ipynb")]
+#notebooks = ['example1.ipynb', 'example2.ipynb', 'example3.ipynb']
+
+for notebook in notebooks:
+    subprocess.call(["ipython", "nbconvert", "--to", "rst", join(example_dir, notebook)])
+    name_root = splitext(notebook)[0]
+    os.rename(name_root+".rst", name_root+".txt")
+
+# finished generated, so go back up a level
+os.chdir("..")
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
