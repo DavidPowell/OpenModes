@@ -284,8 +284,8 @@ def check_installed():
     ver = tuple([int(x) for x in proc.stderr.readline().split(".")])
     
     if ver < MIN_VERSION:
-        raise MeshError("gmsh version %d.%d.%d found, "+
-            "but version %d.%d.%d required" % (ver+MIN_VERSION))
+        raise MeshError(("gmsh version %d.%d.%d found, "+
+            "but version %d.%d.%d required") % (ver+MIN_VERSION))
            
 check_installed()
 
