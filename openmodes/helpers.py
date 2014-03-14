@@ -41,3 +41,8 @@ def cached_property(f):
         return f.cache[key]
 
     return property(caching_wrapper)
+
+
+class MeshError(Exception):
+    "An exeception indicating a failure generating or reading the mesh"
+    pass

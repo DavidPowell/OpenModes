@@ -29,6 +29,8 @@ import struct
 import numpy as np
 from collections import defaultdict
 
+from openmodes.helpers import MeshError
+
 # the minimum version of gmsh required
 MIN_VERSION = (2, 5, 0)
 
@@ -58,7 +60,7 @@ def mesh_geometry(filename, mesh_tol=None, binary=True, dirname=None):
     """
     
     if not osp.exists(filename):
-        raise ValueError("Geometry file %s not found" % filename)
+        raise MeshError("Geometry file %s not found" % filename)
     
     if dirname is None:
         dirname = tempfile.mkdtemp()
@@ -101,7 +103,9 @@ def read_nodes(file_handle):
     nodes = np.empty((num_nodes, 3), np.float32)
     for node_count in xrange(num_nodes):
         this_node = struct.unpack('=iddd', file_handle.read(28))
-        assert(this_node[0] == node_count+1)
+        if this_node[0] != node_count+1:
+            raise MeshError("Inconsistent node numbering")
+
         nodes[node_count] = this_node[1:]
 
     file_handle.readline()
@@ -111,10 +115,12 @@ def read_nodes(file_handle):
 def check_format(file_handle):
     "Check that the format of a gmsh file"
     # check the header version
-    assert(file_handle.readline().split() == ['2.2', '1', '8'])
+    if file_handle.readline().split() != ['2.2', '1', '8']:
+        raise MeshError("gmsh file has incorrect version format")
         
     # check the endianness of the file
-    assert(struct.unpack('=i', file_handle.read(4))[0] == 1)
+    if struct.unpack('=i', file_handle.read(4))[0] != 1:
+        raise MeshError("gmsh file format invalid")
 
     file_handle.readline()
 
@@ -132,7 +138,8 @@ def read_elements(file_handle, wanted_element_types):
                                                       file_handle.read(12))
         
         num_nodes_in_elem = GMSH_ELEMENT_NODES[element_type]
-        assert(num_tags >= 2) # need to have the elementary geometry tag
+        if num_tags < 2:
+            raise MeshError("Missing elementary geometry tag")
         
         element_bytes = 4*(1 + num_tags + num_nodes_in_elem)
 
@@ -221,16 +228,19 @@ def read_mesh(filename, returned_elements = ("edges", "triangles")):
                 check_format(file_handle)
             elif header == "$Nodes":
                 nodes = read_nodes(file_handle)
+                if len(nodes) == 0:
+                    raise MeshError("No nodes in mesh")
             elif header == "$Elements":
                 object_nodes, object_elements = read_elements(file_handle, 
                                                           wanted_element_types)
             elif header == "$PhysicalNames":
                 physical_names = read_physical_names(file_handle)
             else:
-                raise ValueError("Unkown header type " + header)
-            
-            assert(file_handle.readline().strip() == "$End"+header[1:])
-            
+                raise MeshError("Unkown header type " + header)
+                
+            end_header = "$End"+header[1:]
+            if file_handle.readline().strip() != end_header:
+                raise MeshError("Header %s with no matching %s" % (header, end_header))
             
     return_vals = []        
     
@@ -269,12 +279,12 @@ def check_installed():
     try:
         proc = subprocess.Popen(call_options, stderr=subprocess.PIPE)
     except OSError:
-        raise ValueError("gmsh not found")
+        raise MeshError("gmsh not found")
         
     ver = tuple([int(x) for x in proc.stderr.readline().split(".")])
     
     if ver < MIN_VERSION:
-        raise ValueError("gmsh version %d.%d.%d found, "+
+        raise MeshError("gmsh version %d.%d.%d found, "+
             "but version %d.%d.%d required" % (ver+MIN_VERSION))
            
 check_installed()
