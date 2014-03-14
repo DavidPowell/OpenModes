@@ -1,32 +1,34 @@
 // a flat dipole resonator
 
-// first design the SRR
-width = 1e-3;
-height = 10e-3;
-metal_thickness = 0; //0.03e-3;
+If (width == 0.0)
+    width = 1e-3;
+EndIf
 
-//lc_srr = 0.5e-3;
-lc_srr = 5e-3;
+If (height == 0.0)
+    height = 10e-3;
+EndIf
 
-srr_p = newp-1;
+lc = 5e-3;
 
-// Define the SRR
+p = newp-1;
+
+// Define the dipole
 // define all points on the face
-Point(srr_p+1) = {-0.5*width, -0.5*height, 0, lc_srr};
-Point(srr_p+2) = { 0.5*width, -0.5*height, 0, lc_srr};
-Point(srr_p+3) = { 0.5*width,  0.5*height, 0, lc_srr};
-Point(srr_p+4) = {-0.5*width,  0.5*height, 0, lc_srr};
+Point(p+1) = {-0.5*width, -0.5*height, 0, lc};
+Point(p+2) = { 0.5*width, -0.5*height, 0, lc};
+Point(p+3) = { 0.5*width,  0.5*height, 0, lc};
+Point(p+4) = {-0.5*width,  0.5*height, 0, lc};
 
-srr_l = newl-1;
+l = newl-1;
 
 // then the lines making the face
-Line(srr_l+1) = {srr_p+1, srr_p+2};
-Line(srr_l+2) = {srr_p+2, srr_p+3};
-Line(srr_l+3) = {srr_p+3, srr_p+4};
-Line(srr_l+4) = {srr_p+4, srr_p+1};
+Line(l+1) = {p+1, p+2};
+Line(l+2) = {p+2, p+3};
+Line(l+3) = {p+3, p+4};
+Line(l+4) = {p+4, p+1};
 
-Line Loop(srr_l+5) = {srr_l+1, srr_l+2, srr_l+3, srr_l+4}; 
+Line Loop(l+5) = {l+1, l+2, l+3, l+4}; 
 
-srr_s = news;
+s = news;
 
-Plane Surface(srr_s) = {srr_l+5};
+Plane Surface(s) = {l+5};
