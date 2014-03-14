@@ -36,8 +36,6 @@ nosetests.xml
 .pydevproject
 doc/_build/
 .ipynb_checkpoints
-src/openmodes_coremodule.c
-src/core_cython.c
 src/*.html
 *.vtk
 *.session
@@ -46,5 +44,5 @@ doc/examples/
 test/output/
 src/*module.c
 src/*f2pywrappers*
-examples/figures_paper/
 junk/
+examples/output/
