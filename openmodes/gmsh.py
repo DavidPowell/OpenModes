@@ -32,9 +32,10 @@ from collections import defaultdict
 from openmodes.helpers import MeshError
 
 # the minimum version of gmsh required
-MIN_VERSION = (2, 5, 0)
+MIN_VERSION = (2, 8, 4)
 
-def mesh_geometry(filename, mesh_tol=None, binary=True, dirname=None):
+def mesh_geometry(filename, mesh_tol=None, binary=True, dirname=None,
+                  parameters={}):
     """Call gmsh to surface mesh a geometry file with a specified maximum 
     tolerance
     
@@ -49,6 +50,11 @@ def mesh_geometry(filename, mesh_tol=None, binary=True, dirname=None):
     dirname : string, optional
         The location in which to create the mesh file. If unspecified a
         temporary directory will be created
+    parameters : dictionary, optional
+        A dictionary containing the values of geometric parameters to be
+        modified within the gmsh geometry before meshing. Note that the 
+        geometry file must be written to check for these values, otherwise 
+        they will be overwritten if they are assigned within the geometry file
         
     Returns
     -------
@@ -70,6 +76,11 @@ def mesh_geometry(filename, mesh_tol=None, binary=True, dirname=None):
 
     call_options = ['gmsh', filename, '-2', '-o', meshname, 
                      '-string', 'Mesh.Algorithm=1;']
+                     
+    # override geometric parameters on the command-line
+    for param, value in parameters.iteritems():
+        print 'setting parameter'
+        call_options += ['-setnumber', param, str(value)]
                      
     if mesh_tol is not None:
         call_options += ['-clmax', '%f' % mesh_tol]

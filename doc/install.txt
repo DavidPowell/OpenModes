@@ -24,7 +24,7 @@ The following software packages are the absolute minimum to run OpenModes:
 - python 2.7 (3.x not currently supported)
 - numpy (1.6.2 or later)
 - scipy
-- gmsh
+- gmsh (2.8.4 or later)
 - matplotlib (to plot the results)
 
 Strongly recommended packages

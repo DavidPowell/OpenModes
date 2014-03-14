@@ -514,7 +514,8 @@ class Simulation(object):
         else:
             raise ValueError("Unknown output format")
 
-    def load_mesh(self, filename, mesh_tol=None, force_tuple=False, scale=None):
+    def load_mesh(self, filename, mesh_tol=None, force_tuple=False, scale=None,
+                  parameters={}):
         """
         Open a geometry file and mesh it (or directly open a mesh file), then
         convert it into a mesh object. Note that the mesh is _not_ added to
@@ -534,6 +535,9 @@ class Simulation(object):
             A scaling factor to apply to all nodes, in case conversion between
             units is required. Note that `mesh_tol` is expressed in the original
             units of the geometry, before this scale factor is applied.
+        parameters : dictionary, optional
+            A dictionary containing geometric parameters to be overridden in
+            a geometry file, before meshing
     
         Returns
         -------
@@ -547,11 +551,14 @@ class Simulation(object):
         if osp.splitext(osp.basename(filename))[1] == ".msh":
             # assume that this is a binary mesh already generate by gmsh
             meshed_name = filename
+            if parameters != {}:
+                raise ValueError("Cannot modify parameters of an existing mesh")
         else:
             # assume that this is a gmsh geometry file, so mesh it first
             if self.logger:
-                self.logger.info("Meshing geometry %s" % filename)
-            meshed_name = gmsh.mesh_geometry(filename, mesh_tol)
+                self.logger.info("Meshing geometry %s with parameters %s"
+                                 % (filename, str(parameters)))
+            meshed_name = gmsh.mesh_geometry(filename, mesh_tol, parameters=parameters)
 
         if self.logger:
             self.logger.info("Loading mesh %s" % meshed_name)
