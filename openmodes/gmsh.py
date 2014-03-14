@@ -79,11 +79,16 @@ def mesh_geometry(filename, mesh_tol=None, binary=True, dirname=None):
     proc = subprocess.Popen(call_options, stdout=subprocess.PIPE)
     
     # run the process and read in stderr and stdout streams
-    # currently these are just suppressed
-    #stdouttxt, stderrtxt = proc.communicate()
-    _, _ = proc.communicate()
-    
-    #print stdouttxt, stderrtxt
+    stdouttxt, stderrtxt = proc.communicate()
+    if proc.returncode != 0:
+        # Non-zero return code incidates some problem   
+        print stdouttxt
+        print stderrtxt
+        raise MeshError("Gmsh did not run successfully")
+
+    #print stdouttxt
+    #print stderrtxt
+        
     return meshname
 
 
