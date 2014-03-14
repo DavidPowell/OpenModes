@@ -1,9 +1,20 @@
 lc = 2e-3;
 
-inner_radius = 3e-3;
-outer_radius = 4e-3;
-gap_width = 3e-3;
-arm_length = 10e-3;
+If (inner_radius == 0.0)
+    inner_radius = 3e-3;
+EndIf
+
+If (outer_radius == 0.0)
+    outer_radius = 4e-3;
+EndIf
+
+If (gap_width == 0.0)
+    gap_width = 3e-3;
+EndIf
+
+If (arm_length == 0.0)
+    arm_length = 10e-3;
+EndIf
 
 gap_inner_x = -Sqrt(inner_radius^2-(0.5*gap_width)^2);
 gap_outer_x = -Sqrt(outer_radius^2-(0.5*gap_width)^2);
@@ -11,7 +22,7 @@ gap_r = 0.5*gap_width;
 
 p = newp-1;
 l = newl-1;
-loop_l = 200;
+loop_l = newll;
 s = news-1;
 
 // The loop face
