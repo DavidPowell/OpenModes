@@ -1,9 +1,17 @@
 // a 2D split ring resonator
 
-// first design the SRR
-inner_radius = 3.5e-3;
-outer_radius = 4e-3;
-gap_width = 1e-3;
+// allow the geometric parameters to be specified on the command-line
+If (inner_radius == 0.0)
+    inner_radius = 3.5e-3;
+EndIf
+
+If (outer_radius == 0.0)
+    outer_radius = 4e-3;
+EndIf
+
+If (gap_width == 0.0)
+    gap_width = 1e-3;
+EndIf
 
 lc_srr = 2e-3;
 
