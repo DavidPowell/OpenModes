@@ -640,7 +640,6 @@ def srr_extinction():
     Calculate the excinction for a pair of SRRs
     """
 
-    filename = osp.join(openmodes.geometry_dir, "SRR_Pendry.geo")
     freqs = np.linspace(0.2e9, 20e9, 201)
 
     mesh_tol = 0.25e-3
@@ -649,26 +648,32 @@ def srr_extinction():
                                name='srr_extinction',
                                log_display_level=20)
 
-    srr1, srr2 = sim.load_mesh(filename, mesh_tol)
-    sim.place_part(srr1)
-    sim.place_part(srr2)
+    filename = osp.join(openmodes.geometry_dir, "SRR.geo")
 
-    #separation = [20e-3, 0e-3, 0]
-    #srr2 = sim.place_part(srr, separation)
-    
+    outer_mesh = sim.load_mesh(filename, mesh_tol, 
+                               parameters={'inner_radius' : 3.2e-3,
+                                           'outer_radius' : 4.2e-3,
+                                           'gap_width' : 1e-3})
+    sim.place_part(outer_mesh)
+
+    inner_mesh = sim.load_mesh(filename, mesh_tol, 
+                               parameters={'inner_radius' : 2e-3,
+                                           'outer_radius' : 3e-3,
+                                           'gap_width' : 1e-3})
+    inner_ring = sim.place_part(inner_mesh)
+    inner_ring.rotate([0, 0, 1], 180.0)
+
     e_inc = np.array([1, 1, 0], dtype=np.complex128)
     k_hat = np.array([0, 0, 0], dtype=np.complex128)
     
     
     extinction = np.empty(len(freqs), np.complex128)
     
-    #for freq_count, freq in enumerate(freqs):
-    #    s = 2j*np.pi*freq
     for freq_count, s in sim.iter_freqs(freqs):
         jk_0 = s/c        
         
-        V = sim.source_plane_wave(e_inc, k_hat*jk_0)#[0]
-        Z, V = sim.impedance(s).combine_parts(V)#[0][0]
+        V = sim.source_plane_wave(e_inc, k_hat*jk_0)
+        Z, V = sim.impedance(s).combine_parts(V)
 
         extinction[freq_count] = np.vdot(V, Z.solve(V))
         
