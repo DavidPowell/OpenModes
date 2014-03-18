@@ -1,10 +1,21 @@
 // a horseshoe without rounded edges
 
-// geometric parameters
-width = 12e-3;
-length = 12e-3;
-height = 3e-3;
-track = 3e-3;
+// geometric parameters specifiable from the command line
+If (width == 0.0)
+    width = 12e-3;
+EndIf
+
+If (length == 0.0)
+    length = 12e-3;
+EndIf
+
+If (height == 0.0)
+    height = 3e-3;
+EndIf
+
+If (track == 0.0)
+    track = 3e-3;
+EndIf
 
 lc = 5e-3;
 
@@ -39,5 +50,3 @@ s = news;
 Plane Surface(s) = {l+9};
 
 out[] = Extrude{0,0,height}{ Surface{s}; };
-
-//Surface Loop(s+1) = {s, out[0], out[1], out[2], out[3], out[4]
