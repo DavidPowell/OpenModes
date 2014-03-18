@@ -58,8 +58,12 @@ fcompiler_dependent_options = {
      },
         
     'intel': {
-        'extra_f90_compile_args' : ['-openmp', '-O3'],
-        'extra_link_args' : ['-openmp']
+        # -O3 also causes NaNs under intel fortran
+        'extra_f90_compile_args' : ['-openmp', '-O2'],
+        #'extra_link_args' : ['-openmp']
+        #'extra_f77_compile_args' : ['-openmp', '-O3'],
+        #'extra_compile_args' : ['-openmp', '-O3', '-static'],
+        #'extra_link_args' : ['-nodefaultlib:msvcrt']
     }     
 }
 
