@@ -294,3 +294,27 @@ def eig_newton_linear(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
            'delta_lambda': delta_lambda}
 
     return res
+
+
+def project_modes(mode_j, E):
+    """Take the projection of some field onto mode currents. Mostly useful
+    for degenerate modes, in order to make the polarisation of a particular
+    mode deterministic
+    
+    Parameters
+    ----------
+    mode_j : ndarray (n_basis, n_modes)
+        The modal currents
+    E : ndarray (n_basis)
+        The solution on which to project
+        
+    Returns
+    -------
+    projected : ndarray(n_basis)
+        The projected solution
+    """
+    projected = mode_j.dot(mode_j.T.dot(E))
+    projected /= np.sqrt(np.sum(projected**2))
+    return projected
+
+    
