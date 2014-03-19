@@ -34,13 +34,14 @@ class Part(object):
         self.id = uuid.uuid4()
 
         self.initial_location = location
+        self.transformation_matrix = np.empty((4, 4))
         self.reset()
         
     def reset(self):
         """Reset this part to the default values of the original `Mesh`
         from which this `Part` was created
         """        
-        self.transformation_matrix = np.eye(4)
+        self.transformation_matrix[:] = np.eye(4)
         if self.initial_location is not None:
             self.translate(self.initial_location)
 
@@ -58,7 +59,7 @@ class Part(object):
         translation = np.eye(4)
         translation[:3, 3] = offset_vector
          
-        self.transformation_matrix = np.dot(translation, 
+        self.transformation_matrix[:] = np.dot(translation, 
                                             self.transformation_matrix)
            
     def rotate(self, axis, angle):
@@ -95,7 +96,7 @@ class Part(object):
                             a**2 + d**2 - b**2 - c**2, 0],
                            [0, 0, 0, 1.0]])
         
-        self.transformation_matrix = np.dot(matrix, self.transformation_matrix)
+        self.transformation_matrix[:] = np.dot(matrix, self.transformation_matrix)
 
     def scale(self, scale_factor):
         raise NotImplementedError
