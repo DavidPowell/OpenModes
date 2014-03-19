@@ -309,6 +309,8 @@ class EfieOperator(object):
             $exp(jkr)/r$, this gives the far-field component of the 
             electric field at distance r.
         """
+        
+        raise NotImplementedError
 
         # ensure that all directions are unit vectors
         direction = np.atleast_2d(direction)        
