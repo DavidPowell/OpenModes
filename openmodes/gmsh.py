@@ -79,7 +79,6 @@ def mesh_geometry(filename, mesh_tol=None, binary=True, dirname=None,
                      
     # override geometric parameters on the command-line
     for param, value in parameters.iteritems():
-        print 'setting parameter'
         call_options += ['-setnumber', param, str(value)]
                      
     if mesh_tol is not None:
