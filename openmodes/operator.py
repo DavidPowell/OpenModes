@@ -220,10 +220,10 @@ class EfieOperator(object):
         s : complex
             Complex frequency at which to calculate impedance
         
-        part_o : Part
+        part_o : SinglePart
             The observing part, which must be a single part, not a composite
         
-        part_s : Part, optional
+        part_s : SinglePart, optional
             The source part, if not specified will default to observing part
         """
 
@@ -291,7 +291,7 @@ class EfieOperator(object):
         ----------
         s : complex
             The complex frequency
-        part : Part
+        part : SinglePart
             The part for which to calculate far-field radiation.
         current_vec : ndarray
             The current solution defined over basis functions

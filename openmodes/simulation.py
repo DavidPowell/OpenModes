@@ -27,7 +27,7 @@ import uuid
 import os.path as osp
 
 from openmodes import integration, gmsh
-from openmodes.parts import Part
+from openmodes.parts import SinglePart, CompositePart
 from openmodes.impedance import ImpedanceParts, ImpedancePartsLoopStar
 from openmodes.basis import LoopStarBasis, get_basis_functions
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
@@ -109,7 +109,7 @@ class Simulation(object):
 
         self.quadrature_rule = integration.get_dunavant_rule(integration_rule)
 
-        self.parts = []
+        self.parts = CompositePart()
 
         self.basis_class = basis_class
         self.operator = operator_class(quadrature_rule=self.quadrature_rule,
@@ -124,13 +124,16 @@ class Simulation(object):
                                                basis_class,
                                                self.logfile.name))
 
-    def place_part(self, mesh, location=None):
+    def place_part(self, mesh=None, parent=None, location=None):
         """Add a part to the simulation domain
 
         Parameters
         ----------
-        mesh : an appropriate mesh object
-            The part to place
+        mesh : an appropriate mesh object, optional
+            If specified, an individual part will be placed, otherwise an
+            empty composite part will be created
+        parent : CompositePart, optional
+            If specified, the part will be a child of some composite part
         location : array, optional
             If specified, place the part at a given location, otherwise it will
             be placed at the origin
@@ -144,12 +147,19 @@ class Simulation(object):
         etc using the relevant methods of `Part`
         """
 
-        sim_part = Part(mesh, location=location)
-        self.parts.append(sim_part)
+        if mesh is None:
+            part = CompositePart(location)
+        else:
+            part = SinglePart(mesh, location=location)
+        
+        # if not parent specified, use the root part of the simulation
+        parent = parent or self.parts
+        if not isinstance(parent, CompositePart):
+            raise ValueError("Can only add a part to a composite part")
 
-        #self.logger.info("Placed part %s" % repr(sim_part))
+        parent.add_part(part)
 
-        return sim_part
+        return part
 
     def iter_freqs(self, freqs, log_skip=10):
         """Return an iterator over a range of frequencies
@@ -225,9 +235,9 @@ class Simulation(object):
         # May not be worth it because mutual impedances cannot be cached
         # except in specific cases such as arrays
 
-        for index_a, part_a in enumerate(self.parts):
+        for index_a, part_a in enumerate(self.parts.iter_single()):
             matrices.append([])
-            for index_b, part_b in enumerate(self.parts):
+            for index_b, part_b in enumerate(self.parts.iter_single()):
                 if (index_b < index_a) and self.operator.reciprocal:
                     # use reciprocity to avoid repeated calculation
                     res = matrices[index_b][index_a].T
@@ -240,7 +250,8 @@ class Simulation(object):
         else:
             ImpedancePartsClass = ImpedanceParts
 
-        return ImpedancePartsClass(s, len(self.parts), matrices)
+        # TODO: make this work for a tree!
+        return ImpedancePartsClass(s, len(self.parts.parts), matrices)
 
     def source_plane_wave(self, e_inc, jk_inc):
         """Evaluate the source vectors due to an incident plane wave, returning
@@ -250,7 +261,7 @@ class Simulation(object):
         ----------
         e_inc: ndarray
             incident field polarisation in free space
-        jk_inc: ndarray
+        jk_inc: ndarray.dot(
             incident wave vector in free space
 
         Returns
@@ -259,7 +270,7 @@ class Simulation(object):
             the source vector for each part
         """
         return [self.operator.source_plane_wave(part, e_inc, jk_inc) for part
-                in self.parts]
+                in self.parts.iter_single()]
 
     def part_singularities(self, s_start, num_modes, use_gram=True):
         """Find the singularities of each part of the system in the complex
@@ -289,7 +300,7 @@ class Simulation(object):
 
         solved_parts = {}
 
-        for part in self.parts:
+        for part in self.parts.iter_single():
             # TODO: unique ID needs to be modified if different materials or
             # placement above a layer are possible
 
@@ -457,7 +468,7 @@ class Simulation(object):
         solved_parts = {}
         scalar_models = []
 
-        for part_count, part in enumerate(self.parts):
+        for part_count, part in enumerate(self.parts.iter_single()):
             # TODO: unique ID needs to be modified if different materials or
             # placement above a layer are possible
 
@@ -501,7 +512,7 @@ class Simulation(object):
         currents = []
         centres = []
 
-        for part_num, part in enumerate(self.parts):
+        for part_num, part in enumerate(self.parts.iter_single()):
             I = solution[part_num]
             basis = get_basis_functions(part.mesh, self.basis_class, self.logger)
 

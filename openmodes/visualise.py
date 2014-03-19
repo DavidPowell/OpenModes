@@ -21,7 +21,7 @@ Routines for displaying parts and solutions.
 """
 import numpy as np
 
-from openmodes.parts import Part
+from openmodes.parts import SinglePart, CompositePart
 from openmodes.mesh import combine_mesh
 
 
@@ -53,8 +53,10 @@ def plot_parts(parts, currents=None, figsize=(10, 4), view_angles = (40, 90)):
     ax = fig.add_subplot(111, projection='3d')
     
     for part in parts:
-        if isinstance(part, Part):
+        if isinstance(part, SinglePart):
             mesh = part.mesh
+        elif isinstance(part, CompositePart):
+            raise NotImplementedError
         else:
             mesh = part
             
@@ -120,7 +122,7 @@ def plot_mayavi(parts, scalar_function=None, vector_function=None,
         mlab.options.offscreen = True
 
     mlab.figure(bgcolor=(1.0, 1.0, 1.0))
-    for part_num, part in enumerate(parts):
+    for part_num, part in enumerate(parts.iter_atoms()):
 
         triangle_nodes = part.mesh.polygons
         nodes = part.nodes

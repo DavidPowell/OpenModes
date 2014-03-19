@@ -27,15 +27,13 @@ class Part(object):
     """A part which has been placed into the simulation, and which can be
     modified"""
 
-    def __init__(self, mesh, material = PecMaterial, location = None):
-                     
-        self.mesh = mesh
-        self.material = material
+    def __init__(self, location = None):
         self.id = uuid.uuid4()
 
         self.initial_location = location
         self.transformation_matrix = np.empty((4, 4))
         self.reset()
+        self.parent = None
         
     def reset(self):
         """Reset this part to the default values of the original `Mesh`
@@ -46,11 +44,15 @@ class Part(object):
             self.translate(self.initial_location)
 
     @property
-    def nodes(self):
-        "The nodes of this part after all transformations have been applied"
-        return np.dot(self.transformation_matrix[:3, :3], 
-              self.mesh.nodes.T).T + self.transformation_matrix[:3, 3]
-        
+    def complete_transformation(self):
+        """The complete transformation matrix, which takes into account
+        the transformation matrix of all parents"""
+        if self.parent is None:
+            return self.transformation_matrix
+        else:
+            return self.parent.complete_transformation.dot(
+                                                    self.transformation_matrix)
+
     def translate(self, offset_vector):
         """Translate a part by an arbitrary offset vector
         
@@ -59,8 +61,8 @@ class Part(object):
         translation = np.eye(4)
         translation[:3, 3] = offset_vector
          
-        self.transformation_matrix[:] = np.dot(translation, 
-                                            self.transformation_matrix)
+        self.transformation_matrix[:] = translation.dot(
+                                                    self.transformation_matrix)
            
     def rotate(self, axis, angle):
         """
@@ -96,7 +98,7 @@ class Part(object):
                             a**2 + d**2 - b**2 - c**2, 0],
                            [0, 0, 0, 1.0]])
         
-        self.transformation_matrix[:] = np.dot(matrix, self.transformation_matrix)
+        self.transformation_matrix[:] = matrix.dot(self.transformation_matrix)
 
     def scale(self, scale_factor):
         raise NotImplementedError
@@ -112,9 +114,59 @@ class Part(object):
         raise NotImplementedError
         # non-affine transform, will cause MAJOR problems
 
+class SinglePart(Part):
+    """A single part, which corresponds exactly to one set of basis functions"""
 
-class PartContainer(object):
-    """A specialised list for containing parts. It allows arrays to be handled"""
-    def __init__(self):
-        self.individual_parts = []
-        self.part_arrays = []
+    def __init__(self, mesh, material=PecMaterial, location=None):
+
+        Part.__init__(self, location)                     
+        self.mesh = mesh
+        self.material = material
+
+        self.initial_location = location
+        self.reset()
+        self.atom = True
+
+    @property
+    def nodes(self):
+        "The nodes of this part after all transformations have been applied"
+        transform = self.complete_transformation
+        return transform[:3, :3].dot(self.mesh.nodes.T).T + transform[:3, 3]
+
+
+class CompositePart(Part):
+    """A composite part containing sub-parts which should be treated as a
+    whole
+    """
+    def __init__(self, location = None, atom=False):
+
+        Part.__init__(self, location)                     
+        self.initial_location = location
+        self.reset()
+        self.parts = []
+        self.atom = atom
+
+    def add_part(self, part):
+        self.parts.append(part)
+        part.parent = self
+
+    def iter_atoms(self):
+        """Returns a generator which iterates over all contained parts, but
+        does not look within any part which is designated as an atom"""
+        for part in self.parts:
+            if part.atom:
+                yield part
+            else:
+                for sub_part in part.iter_atoms():
+                    yield sub_part
+
+    def iter_single(self):
+        """Returns a generator which iterates over all single parts, but
+        does not look within any part which is designated as an atom"""
+        for part in self.parts:
+            if isinstance(part, SinglePart):
+                yield part
+            else:
+                for sub_part in part.iter_single():
+                    yield sub_part
+        
