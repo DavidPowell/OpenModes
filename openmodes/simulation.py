@@ -176,7 +176,33 @@ class Simulation(object):
                                  (freq_count, num_freqs))
             yield freq_count, 2j*np.pi*freq
 
-    def impedance(self, s, part_o=None, part_s=None):
+    def impedance_part(self, s, part_o, part_s=None):
+        """Evaluate the self impedance of a part, or the mutual impedance
+        between parts.
+
+        Parameters
+        ----------
+        s : number
+            complex frequency at which to calculate impedance (in rad/s)
+        part_o : Part
+            The observer part, which may also be a composite part
+        part_s : Part, optional
+            The source part, which may also be a composite part. If
+            unspecified, then the source part will be used
+
+        Returns
+        -------
+        impedance_matrix : ImpedanceMatrix 
+            The single self or mutual impedance matrix
+        """
+
+        part_s = part_s or part_o
+
+        # if only one impedance term is required
+        return self.operator.impedance_matrix(s, part_o, part_s)
+
+
+    def impedance(self, s):
         """Evaluate the self and mutual impedances of all parts in the
         simulation. Return an `ImpedancePart` object which can calculate
         several derived impedance quantities
@@ -185,28 +211,13 @@ class Simulation(object):
         ----------
         s : number
             complex frequency at which to calculate impedance (in rad/s)
-        part_o : Part, optional
-            If not specified then all impedances will be calculated. Otherwise
-            only the self-impedance for this part, or mutual impedance between
-            this part and another
-        part_s : Part, optional
-            If `part_o` and `part_s` are both specified, then the mutual
-            impedance between those two parts will be calculated
 
         Returns
         -------
-        impedance_matrices : ImpedanceParts (if `part_o` not specified)
+        impedance_matrices : ImpedanceParts
             The impedance matrix object which can represent the impedance of
             the object in several ways.
-        impedance_matrices : ImpedanceMatrix (if `part_o` is specified)
-            The impedance matrix of a single part.
         """
-
-        # if only one impedance term is required
-        if part_o is not None:
-            if part_s is None:
-                part_s = part_o
-            return self.operator.impedance_matrix(s, part_o, part_s)
 
         matrices = []
 
@@ -221,7 +232,7 @@ class Simulation(object):
                     # use reciprocity to avoid repeated calculation
                     res = matrices[index_b][index_a].T
                 else:
-                    res = self.operator.impedance_matrix(s, part_a, part_b)
+                    res = self.impedance_part(s, part_a, part_b)
                 matrices[-1].append(res)
 
         if issubclass(self.basis_class, LoopStarBasis):
@@ -292,13 +303,13 @@ class Simulation(object):
                                      % str(unique_id))
                 # first get an estimate of the pole locations
                 basis = get_basis_functions(part.mesh, self.basis_class, self.logger)
-                Z = self.operator.impedance_matrix(s_start, part)
+                Z = self.impedance_part(s_start, part)
                 lin_s, lin_currents = eig_linearised(Z, num_modes)
 
                 mode_s = np.empty(num_modes, np.complex128)
                 mode_j = np.empty((len(basis), num_modes), np.complex128)
 
-                Z_func = lambda s: self.operator.impedance_matrix(s, part)[:]
+                Z_func = lambda s: self.impedance_part(s, part)[:]
 
                 if use_gram:
                     G = basis.gram_matrix
@@ -456,7 +467,7 @@ class Simulation(object):
             else:
                 scalar_models.append([])
                 for s_n, j_n in zip(mode_s[part_count], mode_j[part_count].T):
-                    Z_func = lambda s: self.operator.impedance_matrix(s, part)
+                    Z_func = lambda s: self.impedance_part(s, part)
                     scalar_models[-1].append(ScalarModel(s_n, j_n, Z_func,
                                                          logger=self.logger))
 
