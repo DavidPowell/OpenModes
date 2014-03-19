@@ -19,6 +19,7 @@
 
 import uuid
 import numpy as np
+import weakref
 
 # a constant, indicating that this material is a perfect electric conductor
 PecMaterial = "Perfect electric conductor"
@@ -148,7 +149,7 @@ class CompositePart(Part):
 
     def add_part(self, part):
         self.parts.append(part)
-        part.parent = self
+        part.parent = weakref.proxy(self)
 
     def iter_atoms(self):
         """Returns a generator which iterates over all contained parts, but
