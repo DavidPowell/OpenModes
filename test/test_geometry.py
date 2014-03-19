@@ -29,7 +29,8 @@ import openmodes.basis
 from openmodes.constants import c
 
 def geometry_extinction_modes(name, freqs, num_modes, mesh_tol, 
-                              plot_only=False, parameters={}):
+                              plot_currents=False, plot_admittance=True,
+                              parameters={}):
     """Load a geometry file, calculate its modes by searching for
     singularities, and plot them in 3D. Then use the modes to calculate
     extinction, and compare with exact calculation
@@ -46,10 +47,11 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
     
     mode_s, mode_j = sim.part_singularities(s_start, num_modes)
 
-    for mode in xrange(num_modes):
-        sim.plot_solution([mode_j[0][:, mode]], 'mayavi', compress_scalars=1)
+    if plot_currents:
+        for mode in xrange(num_modes):
+            sim.plot_solution([mode_j[0][:, mode]], 'mayavi', compress_scalars=1)
    
-    if plot_only:
+    if not plot_admittance:
         return
    
     models = sim.construct_models(mode_s, mode_j)[0]
@@ -65,7 +67,7 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
 
     z_sem = np.empty((num_freqs, num_modes), np.complex128)
     z_eem = np.empty((num_freqs, num_modes), np.complex128)
-    z_eem_direct = np.empty((num_freqs, num_modes), np.complex128)
+#    z_eem_direct = np.empty((num_freqs, num_modes), np.complex128)
     
     for freq_count, s in sim.iter_freqs(freqs):
         Z = sim.impedance(s)[0][0]
@@ -77,20 +79,20 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
         extinction_sem[freq_count] = [np.vdot(V, model.solve(s, V)) for model in models]
 
 #        z_eem_direct[freq_count], _ = Z.eigenmodes(num_modes, use_gram=False)
-#        z_eem[freq_count], j_eem = Z.eigenmodes(start_j = mode_j[0], use_gram=True)
-#        extinction_eem[freq_count] = [np.vdot(V, j_eem[:, mode])*np.dot(V, j_eem[:, mode])/z_eem[freq_count, mode] for mode in xrange(num_modes)]
+        z_eem[freq_count], j_eem = Z.eigenmodes(start_j = mode_j[0], use_gram=True)
+        extinction_eem[freq_count] = [np.vdot(V, j_eem[:, mode])*np.dot(V, j_eem[:, mode])/z_eem[freq_count, mode] for mode in xrange(num_modes)]
         
         
     plt.figure(figsize=(10,5))
     plt.subplot(121)
     plt.plot(freqs*1e-9, extinction.real)
     plt.plot(freqs*1e-9, np.sum(extinction_sem.real, axis=1), '--')
-    #plt.plot(freqs*1e-9, np.sum(extinction_eem.real, axis=1), '-.')
+    plt.plot(freqs*1e-9, np.sum(extinction_eem.real, axis=1), '-.')
     plt.xlabel('f (GHz)')
     plt.subplot(122)
     plt.plot(freqs*1e-9, extinction.imag)
     plt.plot(freqs*1e-9, np.sum(extinction_sem.imag, axis=1), '--')
-    #plt.plot(freqs*1e-9, np.sum(extinction_eem.imag, axis=1), '-.')
+    plt.plot(freqs*1e-9, np.sum(extinction_eem.imag, axis=1), '-.')
     plt.suptitle("Extinction")
     plt.show()
 
@@ -104,32 +106,33 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
 #    plt.plot([freqs[0]*1e-9, freqs[-1]*1e-9], [0, 0], 'k')
 #    plt.suptitle("EEM impedance without Gram matrix")
 #    plt.show()
-#
-#    plt.figure(figsize=(10,5))
-#    plt.subplot(121)
-#    plt.plot(freqs*1e-9, z_eem.real)
-#    plt.plot(freqs*1e-9, z_sem.real, '--')
-#    #plt.ylim(0, 80)
-#    plt.xlabel('f (GHz)')
-#    plt.subplot(122)
-#    plt.plot(freqs*1e-9, z_eem.imag)
-#    plt.plot(freqs*1e-9, z_sem.imag, '--')
-#    plt.ylim(-100, 100)
-##    plt.semilogy(freqs*1e-9, abs(z_eem.imag))
-##    plt.semilogy(freqs*1e-9, abs(z_sem.imag), '--')
-#    plt.suptitle("SEM and EEM impedance")
-#    plt.show()
-#
-    y_sem = 1/z_sem
-    #y_eem = 1/z_eem
 
     plt.figure(figsize=(10,5))
     plt.subplot(121)
-    #plt.plot(freqs*1e-9, y_eem.real)
+    plt.plot(freqs*1e-9, z_eem.real)
+    plt.plot(freqs*1e-9, z_sem.real, '--')
+    plt.ylim(-100, 100)
+    #plt.ylim(0, 80)
+    plt.xlabel('f (GHz)')
+    plt.subplot(122)
+    plt.plot(freqs*1e-9, z_eem.imag)
+    plt.plot(freqs*1e-9, z_sem.imag, '--')
+    plt.ylim(-100, 100)
+#    plt.semilogy(freqs*1e-9, abs(z_eem.imag))
+#    plt.semilogy(freqs*1e-9, abs(z_sem.imag), '--')
+    plt.suptitle("SEM and EEM impedance")
+    plt.show()
+
+    y_sem = 1/z_sem
+    y_eem = 1/z_eem
+
+    plt.figure(figsize=(10,5))
+    plt.subplot(121)
+    plt.plot(freqs*1e-9, y_eem.real)
     plt.plot(freqs*1e-9, y_sem.real, '--')
     plt.xlabel('f (GHz)')
     plt.subplot(122)
-    #plt.plot(freqs*1e-9, y_eem.imag)
+    plt.plot(freqs*1e-9, y_eem.imag)
     plt.plot(freqs*1e-9, y_sem.imag, '--')
     plt.xlabel('f (GHz)')
     plt.suptitle("SEM and EEM admittance")
@@ -137,9 +140,10 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
 
 
 #geometry_extinction_modes('horseshoe_rect', np.linspace(1e8, 20e9, 101), 3, 1.5e-3)
-#geometry_extinction_modes('sphere', np.linspace(0.2e7, 8e7, 101), 16, 0.2, plot_only=True)
-#geometry_extinction_modes('canonical_spiral', np.linspace(1e8, 15e9, 101), 
-#                          1, 1e-3, parameters={'arm_length' : 12e-3, 'inner_radius' : 2e-3})
-geometry_extinction_modes('v_antenna', np.linspace(1e8, 15e9, 101), 
-                          2, 0.7e-3)
+#geometry_extinction_modes('sphere', np.linspace(0.2e7, 8e7, 101), 8, 0.2)
+geometry_extinction_modes('canonical_spiral', np.linspace(1e8, 15e9, 101), 
+                          3, 1e-3, parameters={'arm_length' : 12e-3, 'inner_radius' : 2e-3},
+                            plot_currents = True, plot_admittance = True)
+#geometry_extinction_modes('v_antenna', np.linspace(1e8, 15e9, 101), 
+#                          2, 1.5e-3)
 
