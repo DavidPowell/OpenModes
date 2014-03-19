@@ -148,14 +148,14 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
 
 
 def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
-                                  basis_s=None, nodes_s=None):
+                                  basis_s, nodes_s):
     """EFIE derived Impedance matrix for RWG or loop-star basis functions"""
 
     xi_eta_eval, weights = quadrature_rule
     transform_L_o, transform_S_o = basis_o.transformation_matrices
     num_faces_o = len(basis_o.mesh.polygons)
 
-    if (basis_s is None):
+    if (basis_s.id == basis_o.id):
         # calculate self impedance
 
         singular_terms = singular_impedance_rwg_efie_homogeneous(basis_o,
@@ -212,36 +212,37 @@ class EfieOperator(object):
         self.logger = logger
 
     def impedance_matrix(self, s, part_o, part_s=None):
-        """Calculate the impedance matrix for a single part, at a given
-        complex frequency s"""
+        """Calculate a self or mutual impedance matrix at a given complex 
+        frequency
+        
+        Parameters
+        ----------
+        s : complex
+            Complex frequency at which to calculate impedance
+        
+        part_o : Part
+            The observing part, which must be a single part, not a composite
+        
+        part_s : Part, optional
+            The source part, if not specified will default to observing part
+        """
+
+        # if source part is not given, default to observer part
+        part_s = part_s or part_o
 
         basis_o = get_basis_functions(part_o.mesh, self.basis_class, self.logger)
-
-        if part_s is None or part_s.id == part_o.id:
-            #print "self"
-            basis_s = None
-            nodes_s = None
-        else:
-            #print "mutual"
-            basis_s = get_basis_functions(part_s.mesh, self.basis_class, self.logger)
-            nodes_s = part_s.nodes
+        basis_s = get_basis_functions(part_s.mesh, self.basis_class, self.logger)
 
         if isinstance(self.greens_function, FreeSpaceGreensFunction):
             if isinstance(basis_o, LinearTriangleBasis):
                 L, S = impedance_rwg_efie_free_space(s, self.quadrature_rule,
                                                      basis_o, part_o.nodes,
-                                                     basis_s, nodes_s)
+                                                     basis_s, part_s.nodes)
             else:
                 raise NotImplementedError
 
         else:
             raise NotImplementedError
-
-        # For impedance calculation need basis_s to be None to indicate a
-        # self impedance, but for constructing the impedance matrix object
-        # it should be set the same
-        if basis_s is None:
-            basis_s = basis_o
 
         if issubclass(self.basis_class, LoopStarBasis):
             return EfieImpedanceMatrixLoopStar(s, L, S, basis_o, basis_s)
