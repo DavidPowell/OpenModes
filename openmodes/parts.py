@@ -171,3 +171,13 @@ class CompositePart(Part):
                 for sub_part in part.iter_single():
                     yield sub_part
         
+    def iter_all(self):
+        """Returns a generator which iterates over all parts, with parents
+        being visited before children"""
+        yield self
+        for part in self.parts:
+            if isinstance(part, SinglePart):
+                yield part
+            else:
+                for sub_part in part.iter_all():
+                    yield sub_part
