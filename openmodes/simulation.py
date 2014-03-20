@@ -27,7 +27,7 @@ import os.path as osp
 
 from openmodes import integration, gmsh
 from openmodes.parts import SinglePart, CompositePart
-from openmodes.impedance import ImpedanceParts, ImpedancePartsLoopStar
+from openmodes.impedance import ImpedanceParts
 from openmodes.basis import LoopStarBasis, get_basis_functions
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
 from openmodes.eig import eig_linearised, eig_newton
@@ -245,13 +245,8 @@ class Simulation(Identified):
                     res = self.impedance_part(s, part_a, part_b)
                 matrices[-1].append(res)
 
-        if issubclass(self.basis_class, LoopStarBasis):
-            ImpedancePartsClass = ImpedancePartsLoopStar
-        else:
-            ImpedancePartsClass = ImpedanceParts
-
         # TODO: make this work for a tree!
-        return ImpedancePartsClass(s, len(self.parts.parts), matrices)
+        return ImpedanceParts(s, len(self.parts.parts), matrices, type(res))
 
     def source_plane_wave(self, e_inc, jk_inc):
         """Evaluate the source vectors due to an incident plane wave, returning
