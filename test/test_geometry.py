@@ -141,9 +141,10 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
 
 #geometry_extinction_modes('horseshoe_rect', np.linspace(1e8, 20e9, 101), 3, 1.5e-3)
 #geometry_extinction_modes('sphere', np.linspace(0.2e7, 8e7, 101), 8, 0.2)
-geometry_extinction_modes('canonical_spiral', np.linspace(1e8, 15e9, 101), 
-                          3, 1e-3, parameters={'arm_length' : 12e-3, 'inner_radius' : 2e-3},
-                            plot_currents = True, plot_admittance = True)
+#geometry_extinction_modes('canonical_spiral', np.linspace(1e8, 15e9, 101), 
+#                          3, 1e-3, parameters={'arm_length' : 12e-3, 'inner_radius' : 2e-3},
+#                            plot_currents = False, plot_admittance = True)
 #geometry_extinction_modes('v_antenna', np.linspace(1e8, 15e9, 101), 
 #                          2, 1.5e-3)
 
+geometry_extinction_modes('cross', np.linspace(1e8, 20e9, 101), 5, 1e-3, plot_currents=True)
