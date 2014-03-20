@@ -41,7 +41,7 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
                                log_display_level=20)
     mesh = sim.load_mesh(osp.join(openmodes.geometry_dir, name+'.geo'),
                          mesh_tol=mesh_tol, parameters=parameters)
-    sim.place_part(mesh)
+    part = sim.place_part(mesh)
     
     s_start = 2j*np.pi*0.5*(freqs[0]+freqs[-1])
     
@@ -70,10 +70,10 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
 #    z_eem_direct = np.empty((num_freqs, num_modes), np.complex128)
     
     for freq_count, s in sim.iter_freqs(freqs):
-        Z = sim.impedance(s)[0][0]
+        Z = sim.impedance(s)#[part, part]
         V = sim.source_plane_wave(e_inc, s/c*k_hat)[0]
         
-        extinction[freq_count] = np.vdot(V, la.solve(Z[:], V))
+        extinction[freq_count] = np.vdot(V, Z.solve(V))
         
         z_sem[freq_count] = [model.scalar_impedance(s) for model in models]
         extinction_sem[freq_count] = [np.vdot(V, model.solve(s, V)) for model in models]
@@ -147,4 +147,4 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
 #geometry_extinction_modes('v_antenna', np.linspace(1e8, 15e9, 101), 
 #                          2, 1.5e-3)
 
-geometry_extinction_modes('cross', np.linspace(1e8, 20e9, 101), 5, 1e-3, plot_currents=True)
+geometry_extinction_modes('cross', np.linspace(1e8, 20e9, 101), 5, 1e-3, plot_currents=False)

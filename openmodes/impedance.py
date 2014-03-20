@@ -414,70 +414,15 @@ class ImpedanceParts(object):
                 self.matrices[part_s, part_o] = new_matrix.T
             return new_matrix
 
-    def solve(self, vector):
+    def solve(self, *args, **kwargs):
         """Solve the complete system for some vector, combining it first if
         required"""
-        return self[self.parts, self.parts].solve(vector)
-
-    def combine_parts(self, V=None):
-        """Evaluate the self and mutual impedances of all parts combined into
-        a pair of matrices for the whole system.
-
-        Parameters
-        ----------
-        V : list of arrays, optional
-            The corresponding voltages, which can also be combined in the
-            same fashion
-
-        Returns
-        -------
-        impedance : impedance object of appropriate type
-            An object containing the combined impedance matrices
-        V : array
-            If given as an input, the voltage vector will also be combined and
-            returned as an output
-        """
-        
-        return self.impedance_class.combine_parts(self.matrices, self.s, V)
+        return self[self.parts, self.parts].solve(*args, **kwargs)
 
     def eigenmodes(self, *args, **kwargs):
-        """Calculate the eigenimpedance and eigencurrents of each part's modes
-
-        The modes with the smallest imaginary part of their impedance will be
-        returned.
-
-        Note that the impedance matrix is typically *ill-conditioned*.
-        Therefore this routine can return junk results, particularly if the
-        mesh is dense.
-
-        Parameters
-        ----------
-        num_modes : integer
-            The number of modes to find for each part
-        use_gram : boolean, optional
-            Solve a generalised problem involving the Gram matrix, which scales
-            out the basis functions to get the physical eigenimpedances
-        """
-
-        # TODO: cache this if parts are identical (should be upstream caching
-        # of L and S for this to work)
-        if 'start_j' in kwargs:
-            start_j = kwargs.pop('start_j')
-        else:
-            start_j = None
-        mode_impedances = []
-        mode_currents = []
-        for count in xrange(self.num_parts):
-            Z = self.matrices[count][count]
-            if start_j is None:
-                eig_z, eig_current = Z.eigenmodes(*args, **kwargs)
-            else:
-                eig_z, eig_current = Z.eigenmodes(*args, start_j=start_j[count], **kwargs)
-                
-            mode_impedances.append(eig_z)
-            mode_currents.append(eig_current)
-
-        return mode_impedances, mode_currents
+        """Solve the eigenmodes of the complete system, combining it first if
+        required"""
+        return self[self.parts, self.parts].eigenmodes(*args, **kwargs)
 
     def impedance_modes(self, num_modes, mode_currents, combine=True):
         """Calculate a reduced impedance matrix based on the scalar impedance
