@@ -208,6 +208,55 @@ class EfieImpedanceMatrix(object):
         return self.__class__(self.s, self.L.T, self.S.T, self.basis_s,
                               self.basis_o)
 
+    @staticmethod
+    def combine_parts(matrices, s, V=None):
+        """Combine a set of impedance matrices for sub-parts for a single
+        matrix
+
+        Parameters
+        ----------
+        matrices : list of list of EfieImpedanceMatrix
+            The impedance matrices to be combined
+        s : complex
+            The frequency at which the impedance was evaluated
+        V : list of arrays, optional
+            The corresponding voltages, which can also be combined in the
+            same fashion
+
+        Returns
+        -------
+        impedance : EfieImpedanceMatrix
+            An object containing the combined impedance matrices
+        V : array
+            If given as an input, the voltage vector will also be combined and
+            returned as an output
+        """
+
+        total_rows = sum(M[0].shape[0] for M in matrices)
+        total_cols = sum(M.shape[1] for M in matrices[0])
+        L_tot = np.empty((total_rows, total_cols), np.complex128)
+        S_tot = np.empty_like(L_tot)
+
+        row_offset = 0
+        for row in matrices:
+            row_size = row[0].shape[0]
+            col_offset = 0
+
+            for matrix in row:
+                col_size = matrix.shape[1]
+                L_tot[row_offset:row_offset+row_size, col_offset:col_offset+col_size] = matrix.L
+                S_tot[row_offset:row_offset+row_size, col_offset:col_offset+col_size] = matrix.S
+                col_offset += col_size
+            row_offset += row_size
+
+        basis = get_combined_basis(basis_list = [m.basis_o for m in row])
+        Z = EfieImpedanceMatrix(s, L_tot, S_tot, basis, basis)
+
+        if V is not None:
+            return Z, np.hstack(V)
+        else:
+            return Z
+
 
 class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
     """A specialised impedance matrix which contains the results calculated in
@@ -230,6 +279,77 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
     @property
     def star_range_s(self):
         return slice(self.basis_s.num_loops, self.shape[1])
+
+    @staticmethod
+    def combine_parts(matrices, s, V=None):
+        """Combine a set of impedance matrices for sub-parts for a single
+        matrix
+
+        Parameters
+        ----------
+        matrices : list of list of EfieImpedanceMatrix
+            The impedance matrices to be combined
+        s : complex
+            The frequency at which the impedance was evaluated
+        V : list of arrays, optional
+            The corresponding voltages, which can also be combined in the
+            same fashion
+
+        Returns
+        -------
+        impedance : EfieLoopStarImpedanceMatrix
+            An object containing the combined impedance matrices
+        V : array
+            If given as an input, the voltage vector will also be combined and
+            returned as an output
+        """
+
+        total_rows = sum(M[0].shape[0] for M in matrices)
+        total_cols = sum(M.shape[1] for M in matrices[0])
+        L_tot = np.empty((total_rows, total_cols), np.complex128)
+        S_tot = np.empty_like(L_tot)
+        
+        basis = get_combined_basis(basis_list=[row[0].basis_o for row in matrices])
+
+        if V is not None:
+            V_tot = np.empty(total_rows, np.complex128)
+
+        loop_range_o = slice(0, 0)
+        star_range_o = slice(basis.num_loops, basis.num_loops)
+
+        for col_count, row in enumerate(matrices):
+            m = row[0]
+            loop_range_o = inc_slice(loop_range_o, m.basis_o.num_loops)
+            star_range_o = inc_slice(star_range_o, m.basis_o.num_stars)
+
+            loop_range_s = slice(0, 0)
+            star_range_s = slice(basis.num_loops, basis.num_loops)
+
+            if V is not None:
+                V_tot[loop_range_o] = V[col_count][m.loop_range_o]
+                V_tot[star_range_o] = V[col_count][m.star_range_o]
+
+            for row_count, m in enumerate(row):
+                loop_range_s = inc_slice(loop_range_s, m.basis_s.num_loops)
+                star_range_s = inc_slice(star_range_s, m.basis_s.num_stars)
+
+                # S only has stars
+                S_tot[star_range_o, star_range_s] = m.S[m.star_range_o, m.star_range_s]
+
+                # Some of these arrays may have one dimension of size zero if
+                # there are no loops, but this is handled automatically.
+                L_tot[loop_range_o, loop_range_s] = m.L[m.loop_range_o, m.loop_range_s]
+                L_tot[loop_range_o, star_range_s] = m.L[m.loop_range_o, m.star_range_s]                    
+                L_tot[star_range_o, loop_range_s] = m.L[m.star_range_o, m.loop_range_s]
+                L_tot[star_range_o, star_range_s] = m.L[m.star_range_o, m.star_range_s]
+        
+        Z = EfieImpedanceMatrixLoopStar(s, L_tot, S_tot, basis, basis)
+
+        if V is not None:
+            return Z, V_tot
+        else:
+            return Z
+
 
 
 class ImpedanceParts(object):
