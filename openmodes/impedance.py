@@ -30,7 +30,6 @@ from openmodes.basis import get_combined_basis
 from openmodes.eig import eig_newton_linear
 
 
-# TODO: ImpedanceMatrix may need to know about number of loops and stars?
 class EfieImpedanceMatrix(object):
     """Holds an impedance matrix from the electric field integral equation,
     which contains two separate parts corresponding to the vector and scalar
@@ -42,11 +41,13 @@ class EfieImpedanceMatrix(object):
     
     reciprocal = True
 
-    def __init__(self, s, L, S, basis_o, basis_s):
+    def __init__(self, s, L, S, basis_o, basis_s, operator):
         self.s = s
         assert(L.shape == S.shape)
         self.L = L
         self.S = S
+
+        self.operator = operator
 
         self.basis_o = basis_o
         self.basis_s = basis_s
@@ -186,7 +187,7 @@ class EfieImpedanceMatrix(object):
         if return_arrays:
             return L_red, S_red
         else:
-            return self.__class__(self.s, L_red, S_red, None, None)
+            return self.__class__(self.s, L_red, S_red, None, None, self.operator)
 
     def source_modes(self, V, num_modes, mode_currents):
         "Take a source field, and project it onto the modes of the system"
@@ -208,7 +209,7 @@ class EfieImpedanceMatrix(object):
         "A transposed version of the impedance matrix"
         # note interchange of source and observer basis functions
         return self.__class__(self.s, self.L.T, self.S.T, self.basis_s,
-                              self.basis_o)
+                              self.basis_o, self.operator)
 
     @staticmethod
     def combine_parts(matrices, s, V=None):
@@ -252,7 +253,7 @@ class EfieImpedanceMatrix(object):
             row_offset += row_size
 
         basis = get_combined_basis(basis_list = [m.basis_o for m in row])
-        Z = EfieImpedanceMatrix(s, L_tot, S_tot, basis, basis)
+        Z = EfieImpedanceMatrix(s, L_tot, S_tot, basis, basis, matrix.operator)
 
         if V is not None:
             return Z, np.hstack(V)
@@ -345,7 +346,7 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
                 L_tot[star_range_o, loop_range_s] = m.L[m.star_range_o, m.loop_range_s]
                 L_tot[star_range_o, star_range_s] = m.L[m.star_range_o, m.star_range_s]
         
-        Z = EfieImpedanceMatrixLoopStar(s, L_tot, S_tot, basis, basis)
+        Z = EfieImpedanceMatrixLoopStar(s, L_tot, S_tot, basis, basis, self.operator)
 
         if V is not None:
             return Z, V_tot
@@ -468,7 +469,7 @@ class ImpedanceParts(object):
         if combine:
             L_red = L_red.reshape((num_parts*num_modes, num_parts*num_modes))
             S_red = S_red.reshape((num_parts*num_modes, num_parts*num_modes))
-            return EfieImpedanceMatrix(self.s, L_red, S_red, None, None)
+            return EfieImpedanceMatrix(self.s, L_red, S_red, None, None, M.operator)
         else:
             raise NotImplementedError
 
