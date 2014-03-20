@@ -234,7 +234,8 @@ class Simulation(Identified):
 
         # TODO: cache individual part impedances to avoid repetition?
         # May not be worth it because mutual impedances cannot be cached
-        # except in specific cases such as arrays
+        # except in specific cases such as arrays, and self terms may be
+        # invalidated by green's functions which depend on coordinates
 
         for part_o in parent.iter_single():
             for part_s in parent.iter_single():
@@ -245,7 +246,6 @@ class Simulation(Identified):
                     res = self.operator.impedance_matrix(s, part_o, part_s)
                 matrices[part_o, part_s] = res
 
-        # TODO: make this work for a tree!
         return ImpedanceParts(s, parent, matrices, type(res))
 
     def source_plane_wave(self, e_inc, jk_inc):

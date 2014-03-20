@@ -353,7 +353,6 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
             return Z
 
 
-
 class ImpedanceParts(object):
     """Holds a impedance matrices calculated at a specific frequency
 
@@ -381,12 +380,11 @@ class ImpedanceParts(object):
         """Allow self or mutual impedances of parts at any level to be 
         accessed. If the impedance of a part is not found, then it will be
         constructed by combining the sub-parts
-        
+
         Parameters
         ----------
         index : tuple, len 2
-            A tuple containing the source and observer part.        
-        
+            A tuple containing the source and observer part.
         """
         try:
             return self.matrices[index]
@@ -403,12 +401,13 @@ class ImpedanceParts(object):
                 combined.append([])
                 for part_s in parent_s.iter_single():
                     combined[-1].append(self.matrices[part_o, part_s])
-            
+
             if (len(combined) == 1) and len(combined[0]) == 1:
                 # don't bother combining if we only have a single matrix
                 new_matrix = combined[0][0]
             else:
-                new_matrix = self.impedance_class.combine_parts(combined, self.s)
+                new_matrix = self.impedance_class.combine_parts(combined,
+                                                                self.s)
             self.matrices[part_o, part_s] = new_matrix
             if self.impedance_class.reciprocal:
                 self.matrices[part_s, part_o] = new_matrix.T
