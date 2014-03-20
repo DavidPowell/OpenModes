@@ -22,7 +22,7 @@ derived quantities
 """
 
 import numpy as np
-import uuid
+from openmodes.helpers import Identified
 
 
 def nodes_not_in_edge(nodes, edge):
@@ -63,7 +63,7 @@ def shared_nodes(nodes1, nodes2):
     return [node for node in nodes1 if node in nodes2]
 
 
-class TriangularSurfaceMesh(object):
+class TriangularSurfaceMesh(Identified):
     """A physical part represented by a surface mesh
 
     A part should correspond to the smallest unit of interest in the
@@ -102,6 +102,8 @@ class TriangularSurfaceMesh(object):
         fortran order as these arrays will be passed to fortran routines
         """
 
+        super(TriangularSurfaceMesh, self).__init__(self)
+
         self.nodes = np.asfortranarray(raw_mesh['nodes'])
         if scale is not None:
             self.nodes *= scale
@@ -114,8 +116,6 @@ class TriangularSurfaceMesh(object):
             self.physical_name = raw_mesh['physical_name']
         except KeyError:
             self.physical_name = None
-
-        self.id = uuid.uuid4()
 
         if logger is not None:
             logger.info('Creating triangular mesh\n%d nodes\n%d triangles' %

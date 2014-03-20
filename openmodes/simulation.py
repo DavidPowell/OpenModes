@@ -23,7 +23,6 @@ from __future__ import division
 # numpy and scipy
 import numpy as np
 
-import uuid
 import os.path as osp
 
 from openmodes import integration, gmsh
@@ -35,9 +34,10 @@ from openmodes.eig import eig_linearised, eig_newton
 from openmodes.visualise import plot_mayavi, write_vtk
 from openmodes.model import ScalarModel, ScalarModelLS
 from openmodes.mesh import TriangularSurfaceMesh
+from openmodes.helpers import Identified
 
 
-class Simulation(object):
+class Simulation(Identified):
     """This object controls everything within the simluation. It contains all
     the parts which have been placed, and the operator equation which is
     used to solve the scattering problem.
@@ -71,7 +71,7 @@ class Simulation(object):
             and 10 (full debugging information)
         """
 
-        self.id = uuid.uuid4()
+        super(Simulation, self).__init__(self)
 
         if name is None:
             name = self.id

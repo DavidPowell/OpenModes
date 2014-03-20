@@ -24,10 +24,9 @@ from collections import namedtuple
 from scipy.sparse import lil_matrix
 import scipy.linalg as la
 import numpy as np
-import uuid
 
 from openmodes.mesh import nodes_not_in_edge, shared_nodes
-from openmodes.helpers import cached_property, inc_slice
+from openmodes.helpers import cached_property, inc_slice, Identified
 
 # A named tuple for holding the positive and negative triangles and nodes
 # which are used by both RWG and loop-star basis functions
@@ -102,11 +101,11 @@ def inner_product_triangle_face(nodes):
     return res
 
 
-class AbstractBasis(object):
+class AbstractBasis(Identified):
     "An abstract class for arbitrary basis functions"
 
     def __init__(self):
-        self.id = uuid.uuid4()
+        super(AbstractBasis, self).__init__(self)
 
 
 class LinearTriangleBasis(AbstractBasis):

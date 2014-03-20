@@ -17,19 +17,19 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------------
 
-import uuid
+from openmodes.helpers import Identified
 import numpy as np
 import weakref
 
 # a constant, indicating that this material is a perfect electric conductor
 PecMaterial = "Perfect electric conductor"
     
-class Part(object):
+class Part(Identified):
     """A part which has been placed into the simulation, and which can be
     modified"""
 
     def __init__(self, location = None):
-        self.id = uuid.uuid4()
+        super(Part, self).__init__(self)
 
         self.initial_location = location
         self.transformation_matrix = np.empty((4, 4))
