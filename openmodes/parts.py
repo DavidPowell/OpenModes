@@ -29,7 +29,7 @@ class Part(Identified):
     modified"""
 
     def __init__(self, location = None):
-        super(Part, self).__init__(self)
+        super(Part, self).__init__()
 
         self.initial_location = location
         self.transformation_matrix = np.empty((4, 4))

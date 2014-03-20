@@ -105,7 +105,7 @@ class AbstractBasis(Identified):
     "An abstract class for arbitrary basis functions"
 
     def __init__(self):
-        super(AbstractBasis, self).__init__(self)
+        super(AbstractBasis, self).__init__()
 
 
 class LinearTriangleBasis(AbstractBasis):

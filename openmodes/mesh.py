@@ -102,7 +102,7 @@ class TriangularSurfaceMesh(Identified):
         fortran order as these arrays will be passed to fortran routines
         """
 
-        super(TriangularSurfaceMesh, self).__init__(self)
+        super(TriangularSurfaceMesh, self).__init__()
 
         self.nodes = np.asfortranarray(raw_mesh['nodes'])
         if scale is not None:

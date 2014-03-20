@@ -71,7 +71,7 @@ class Simulation(Identified):
             and 10 (full debugging information)
         """
 
-        super(Simulation, self).__init__(self)
+        super(Simulation, self).__init__()
 
         if name is None:
             name = self.id
