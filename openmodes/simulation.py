@@ -212,7 +212,7 @@ class Simulation(Identified):
         return self.operator.impedance_matrix(s, part_o, part_s)
 
 
-    def impedance(self, s):
+    def impedance(self, s, parent=None):
         """Evaluate the self and mutual impedances of all parts in the
         simulation. Return an `ImpedancePart` object which can calculate
         several derived impedance quantities
@@ -229,24 +229,24 @@ class Simulation(Identified):
             the object in several ways.
         """
 
-        matrices = []
+        matrices = {}
+        parent = parent or self.parts
 
         # TODO: cache individual part impedances to avoid repetition?
         # May not be worth it because mutual impedances cannot be cached
         # except in specific cases such as arrays
 
-        for index_a, part_a in enumerate(self.parts.iter_single()):
-            matrices.append([])
-            for index_b, part_b in enumerate(self.parts.iter_single()):
-                if (index_b < index_a) and self.operator.reciprocal:
+        for part_o in parent.iter_single():
+            for part_s in parent.iter_single():
+                if self.operator.reciprocal and (part_s, part_o) in matrices:
                     # use reciprocity to avoid repeated calculation
-                    res = matrices[index_b][index_a].T
+                    res = matrices[part_s, part_o].T
                 else:
-                    res = self.impedance_part(s, part_a, part_b)
-                matrices[-1].append(res)
+                    res = self.operator.impedance_matrix(s, part_o, part_s)
+                matrices[part_o, part_s] = res
 
         # TODO: make this work for a tree!
-        return ImpedanceParts(s, len(self.parts.parts), matrices, type(res))
+        return ImpedanceParts(s, parent, matrices, type(res))
 
     def source_plane_wave(self, e_inc, jk_inc):
         """Evaluate the source vectors due to an incident plane wave, returning

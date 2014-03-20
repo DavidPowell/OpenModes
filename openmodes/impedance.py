@@ -39,6 +39,8 @@ class EfieImpedanceMatrix(object):
     This is a single impedance matrix for the whole system. Note that elements
     of the matrix should not be modified after being added to this object.
     """
+    
+    reciprocal = True
 
     def __init__(self, s, L, S, basis_o, basis_s):
         self.s = s
@@ -359,7 +361,7 @@ class ImpedanceParts(object):
     coupling terms.
     """
 
-    def __init__(self, s, num_parts, matrices, impedance_class):
+    def __init__(self, s, parts, matrices, impedance_class):
         """
         Parameters
         ----------
@@ -371,18 +373,51 @@ class ImpedanceParts(object):
             The number of parts in the system
         """
         self.s = s
-        self.num_parts = num_parts
+        self.parts = parts
         self.matrices = matrices
         self.impedance_class = impedance_class
 
     def __getitem__(self, index):
-        """Allow matrices of individual parts to be accessed"""
+        """Allow self or mutual impedances of parts at any level to be 
+        accessed. If the impedance of a part is not found, then it will be
+        constructed by combining the sub-parts
+        
+        Parameters
+        ----------
+        index : tuple, len 2
+            A tuple containing the source and observer part.        
+        
+        """
         try:
             return self.matrices[index]
-        except TypeError:
-            if type(index[0]) == slice:
-                raise TypeError("Cannot slice the first dimension")
-            return self.matrices[index[0]][index[1]]
+        except KeyError:
+            if ((len(index) == 2) and (index[0] in self.parts) and 
+                  (index[1] in self.parts)):
+                # a valid self or mutual term
+                parent_o, parent_s = index
+            else:
+                raise KeyError("Invalid parts specified")
+
+            combined = []
+            for part_o in parent_o.iter_single():
+                combined.append([])
+                for part_s in parent_s.iter_single():
+                    combined[-1].append(self.matrices[part_o, part_s])
+            
+            if (len(combined) == 1) and len(combined[0]) == 1:
+                # don't bother combining if we only have a single matrix
+                new_matrix = combined[0][0]
+            else:
+                new_matrix = self.impedance_class.combine_parts(combined, self.s)
+            self.matrices[part_o, part_s] = new_matrix
+            if self.impedance_class.reciprocal:
+                self.matrices[part_s, part_o] = new_matrix.T
+            return new_matrix
+
+    def solve(self, vector):
+        """Solve the complete system for some vector, combining it first if
+        required"""
+        return self[self.parts, self.parts].solve(vector)
 
     def combine_parts(self, V=None):
         """Evaluate the self and mutual impedances of all parts combined into
