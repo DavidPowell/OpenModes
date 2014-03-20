@@ -64,7 +64,9 @@ def mesh_geometry(filename, mesh_tol=None, binary=True, dirname=None,
     This routine instructs gmsh to use algorithm 1 for 2D meshing, which seems
     to yield the most consistent and uniform mesh.
     """
-    
+
+    check_installed()    
+
     if not osp.exists(filename):
         raise MeshError("Geometry file %s not found" % filename)
     
@@ -301,8 +303,6 @@ def check_installed():
     if ver < MIN_VERSION:
         raise MeshError(("gmsh version %d.%d.%d found, "+
             "but version %d.%d.%d required") % (ver+MIN_VERSION))
-           
-check_installed()
 
 if __name__ == "__main__":
     file_name = mesh_geometry("geometry/asymmetric_ring.geo", 0.4e-3)
