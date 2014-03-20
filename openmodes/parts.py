@@ -134,6 +134,11 @@ class SinglePart(Part):
         transform = self.complete_transformation
         return transform[:3, :3].dot(self.mesh.nodes.T).T + transform[:3, 3]
 
+    def __contains__(self, key):
+        """Although a single part is not a container, implementing 
+        `__contains__` allows recursive checking to be greatly simplified"""
+        return self == key
+
 
 class CompositePart(Part):
     """A composite part containing sub-parts which should be treated as a
@@ -170,7 +175,7 @@ class CompositePart(Part):
             else:
                 for sub_part in part.iter_single():
                     yield sub_part
-        
+
     def iter_all(self):
         """Returns a generator which iterates over all parts, with parents
         being visited before children"""
@@ -181,3 +186,8 @@ class CompositePart(Part):
             else:
                 for sub_part in part.iter_all():
                     yield sub_part
+        
+    def __contains__(self, key):
+        """Check if the given part is stored within this tree of parts"""
+        return self == key or any(key in part for part in self.parts)
+
