@@ -346,7 +346,7 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
                 L_tot[star_range_o, loop_range_s] = m.L[m.star_range_o, m.loop_range_s]
                 L_tot[star_range_o, star_range_s] = m.L[m.star_range_o, m.star_range_s]
         
-        Z = EfieImpedanceMatrixLoopStar(s, L_tot, S_tot, basis, basis, self.operator)
+        Z = EfieImpedanceMatrixLoopStar(s, L_tot, S_tot, basis, basis, m.operator)
 
         if V is not None:
             return Z, V_tot
