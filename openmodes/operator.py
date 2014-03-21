@@ -251,9 +251,9 @@ class EfieOperator(object):
             raise NotImplementedError
 
         if issubclass(self.basis_class, LoopStarBasis):
-            return EfieImpedanceMatrixLoopStar(s, L, S, basis_o, basis_s, self)
+            return EfieImpedanceMatrixLoopStar(s, L, S, basis_o, basis_s, self, part_o, part_s)
         else:
-            return EfieImpedanceMatrix(s, L, S, basis_o, basis_s, self)
+            return EfieImpedanceMatrix(s, L, S, basis_o, basis_s, self, part_o, part_s)
 
     def source_plane_wave(self, part, e_inc, jk_inc):
         """Evaluate the source vector due to the incident wave

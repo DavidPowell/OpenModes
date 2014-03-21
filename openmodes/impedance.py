@@ -41,13 +41,15 @@ class EfieImpedanceMatrix(object):
     
     reciprocal = True
 
-    def __init__(self, s, L, S, basis_o, basis_s, operator):
+    def __init__(self, s, L, S, basis_o, basis_s, operator, part_o, part_s):
         self.s = s
         assert(L.shape == S.shape)
         self.L = L
         self.S = S
 
         self.operator = operator
+        self.part_o = part_o
+        self.part_s = part_s
 
         self.basis_o = basis_o
         self.basis_s = basis_s
@@ -211,7 +213,8 @@ class EfieImpedanceMatrix(object):
         "A transposed version of the impedance matrix"
         # note interchange of source and observer basis functions
         return self.__class__(self.s, self.L.T, self.S.T, self.basis_s,
-                              self.basis_o, self.operator)
+                              self.basis_o, self.operator, self.part_s,
+                              self.part_o)
 
     @staticmethod
     def combine_parts(matrices, s, V=None):
