@@ -28,6 +28,7 @@ import itertools
 from openmodes.helpers import inc_slice
 from openmodes.basis import get_combined_basis
 from openmodes.eig import eig_newton_linear
+from openmodes.vector import VectorParts
 
 
 class EfieImpedanceMatrix(object):
@@ -82,7 +83,12 @@ class EfieImpedanceMatrix(object):
                 self.factored_matrix = lu
 
         # must index the source vector with [:] to get the data
-        return la.lu_solve(lu, V[:])
+        res = la.lu_solve(lu, V[:])
+        if isinstance(V, VectorParts):
+            # Wrap the resulting vector so that it knows the part it
+            # is associated with
+            res = VectorParts(self.part_s, {self.part_s: res}, self.basis_s, self.operator)
+        return res
 
     def eigenmodes(self, num_modes=None, use_gram=None, start_j=None):
         """Calculate the eigenimpedance and eigencurrents of each part's modes
