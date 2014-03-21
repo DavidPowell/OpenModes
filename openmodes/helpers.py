@@ -59,4 +59,4 @@ class Identified(object):
         return self.id.__hash__()
         
     def __eq__(self, other):
-        return self.id == other.id
+        return hasattr(other, 'id') and (self.id == other.id)
