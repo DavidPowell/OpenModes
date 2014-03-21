@@ -266,6 +266,7 @@ class DivRwgBasis(LinearTriangleBasis):
                        mesh.polygons[tri_m[basis_count]], edges[edge_count])[0]
 
         self.rwg = RWG(tri_p, tri_m, node_p, node_m)
+        self.sections = (num_basis,)
         
         if logger:
             logger.info("Constructing %d RWG basis functions over %d faces"
@@ -484,6 +485,8 @@ class LoopStarBasis(LinearTriangleBasis):
                 loop_node_m.append(this_loop[3])
 
         self.rwg_loop = RWG(loop_tri_p, loop_tri_m, loop_node_p, loop_node_m)
+
+        self.sections = (num_loops, len(self.rwg_star))
 
         if logger:
             logger.info("Constructing %d loop-star basis functions\n" 
