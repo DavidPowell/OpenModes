@@ -220,7 +220,10 @@ class Simulation(Identified):
         Parameters
         ----------
         s : number
-            complex frequency at which to calculate impedance (in rad/s)
+            Complex frequency at which to calculate impedance (in rad/s)
+        parent : Part, optional
+            If specified, then only this part and its sub-parts will be
+            calculated
 
         Returns
         -------
