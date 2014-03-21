@@ -28,6 +28,7 @@ import os.path as osp
 from openmodes import integration, gmsh
 from openmodes.parts import SinglePart, CompositePart
 from openmodes.impedance import ImpedanceParts
+from openmodes.vector import VectorParts
 from openmodes.basis import LoopStarBasis, get_basis_functions
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
 from openmodes.eig import eig_linearised, eig_newton
@@ -251,7 +252,7 @@ class Simulation(Identified):
 
         return ImpedanceParts(s, parent, matrices, type(res))
 
-    def source_plane_wave(self, e_inc, jk_inc):
+    def source_plane_wave(self, e_inc, jk_inc, parent=None):
         """Evaluate the source vectors due to an incident plane wave, returning
         separate vectors for each part.
 
@@ -267,8 +268,14 @@ class Simulation(Identified):
         V : list of ndarray
             the source vector for each part
         """
-        return [self.operator.source_plane_wave(part, e_inc, jk_inc) for part
-                in self.parts.iter_single()]
+
+        parent = parent or self.parts
+
+        vectors = dict((part, 
+                         self.operator.source_plane_wave(part, e_inc, jk_inc))
+                         for part in parent.iter_single())
+        basis = dict((part, get_basis_functions(part.mesh, self.basis_class, self.logger)) for part in parent.iter_single())
+        return VectorParts(parent, vectors, basis, self.operator)
 
     def part_singularities(self, s_start, num_modes, use_gram=True):
         """Find the singularities of each part of the system in the complex

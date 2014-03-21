@@ -107,7 +107,7 @@ class ScalarModel(object):
 
     def solve(self, s, V):
         "Solve the model for the current at arbitrary frequency"
-        return self.mode_j*np.dot(self.mode_j, V)/self.scalar_impedance(s)
+        return self.mode_j*np.dot(self.mode_j, V[:])/self.scalar_impedance(s)
 
 def fit_LS(s_0, L_0, S_0):
     """

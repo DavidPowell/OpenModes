@@ -78,7 +78,9 @@ class EfieImpedanceMatrix(object):
             lu = la.lu_factor(self[:], overwrite_a=True)
             if cache:
                 self.factored_matrix = lu
-        return la.lu_solve(lu, V)
+
+        # must index the source vector with [:] to get the data
+        return la.lu_solve(lu, V[:])
 
     def eigenmodes(self, num_modes=None, use_gram=None, start_j=None):
         """Calculate the eigenimpedance and eigencurrents of each part's modes
