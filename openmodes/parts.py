@@ -126,7 +126,6 @@ class SinglePart(Part):
 
         self.initial_location = location
         self.reset()
-        self.atom = True
 
     @property
     def nodes(self):
@@ -144,31 +143,25 @@ class CompositePart(Part):
     """A composite part containing sub-parts which should be treated as a
     whole
     """
-    def __init__(self, location = None, atom=False):
+    def __init__(self, location = None):
 
         Part.__init__(self, location)                     
         self.initial_location = location
         self.reset()
         self.parts = []
-        self.atom = atom
 
     def add_part(self, part):
         self.parts.append(part)
         part.parent = weakref.proxy(self)
 
-    def iter_atoms(self):
-        """Returns a generator which iterates over all contained parts, but
-        does not look within any part which is designated as an atom"""
-        for part in self.parts:
-            if part.atom:
-                yield part
-            else:
-                for sub_part in part.iter_atoms():
-                    yield sub_part
-
     def iter_single(self):
-        """Returns a generator which iterates over all single parts, but
-        does not look within any part which is designated as an atom"""
+        """Returns a generator which iterates over all single parts
+
+        Returns
+        -------
+        it : iterator
+            An iterator object over all SingleParts
+        """
         for part in self.parts:
             if isinstance(part, SinglePart):
                 yield part
@@ -176,16 +169,30 @@ class CompositePart(Part):
                 for sub_part in part.iter_single():
                     yield sub_part
 
-    def iter_all(self):
-        """Returns a generator which iterates over all parts, with parents
-        being visited before children"""
-        yield self
+    def iter_all(self, parent_first=False):
+        """Returns a generator which iterates over all parts
+
+        Parameters
+        ----------
+        parent_first : boolean, optional
+            If True, the a node is visited before all of its children,
+            otherwise afterwards
+            
+        Returns
+        -------
+        it : iterator
+            An iterator object over all parts
+        """
+        if parent_first:
+            yield self
         for part in self.parts:
             if isinstance(part, SinglePart):
                 yield part
             else:
                 for sub_part in part.iter_all():
                     yield sub_part
+        if not parent_first:
+            yield self
         
     def __contains__(self, key):
         """Check if the given part is stored within this tree of parts"""
