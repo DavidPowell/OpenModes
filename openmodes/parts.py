@@ -138,6 +138,13 @@ class SinglePart(Part):
         `__contains__` allows recursive checking to be greatly simplified"""
         return self == key
 
+    def iter_single(self):
+        "Iterating over a single part just yields itself"
+        yield self
+
+    def iter_all(self, parent_first=None):
+        "Iterating over a single part just yields itself"
+        yield self
 
 class CompositePart(Part):
     """A composite part containing sub-parts which should be treated as a
@@ -189,7 +196,7 @@ class CompositePart(Part):
             if isinstance(part, SinglePart):
                 yield part
             else:
-                for sub_part in part.iter_all():
+                for sub_part in part.iter_all(parent_first=parent_first):
                     yield sub_part
         if not parent_first:
             yield self
