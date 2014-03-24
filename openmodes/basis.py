@@ -659,7 +659,7 @@ def get_basis_functions(mesh, basis_class, logger=None):
 class CombinedBasis(AbstractBasis):
     "A set of basis functions which have been combined together"
 
-    def __init__(self, basis_list):
+    def __init__(self, basis_list, logger=None):
         super(CombinedBasis, self).__init__()
         self.basis_list = basis_list
 
