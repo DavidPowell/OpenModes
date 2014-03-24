@@ -170,11 +170,8 @@ class CompositePart(Part):
             An iterator object over all SingleParts
         """
         for part in self.parts:
-            if isinstance(part, SinglePart):
-                yield part
-            else:
-                for sub_part in part.iter_single():
-                    yield sub_part
+            for sub_part in part.iter_single():
+                yield sub_part
 
     def iter_all(self, parent_first=False):
         """Returns a generator which iterates over all parts
@@ -193,11 +190,8 @@ class CompositePart(Part):
         if parent_first:
             yield self
         for part in self.parts:
-            if isinstance(part, SinglePart):
-                yield part
-            else:
-                for sub_part in part.iter_all(parent_first=parent_first):
-                    yield sub_part
+            for sub_part in part.iter_all(parent_first=parent_first):
+                yield sub_part
         if not parent_first:
             yield self
         
