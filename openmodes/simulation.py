@@ -280,9 +280,8 @@ class Simulation(Identified):
 
         return vector
 
-    def part_singularities(self, s_start, num_modes, use_gram=True):
-        """Find the singularities of each part of the system in the complex
-        frequency plane
+    def singularities(self, s_start, num_modes, part=None, use_gram=True):
+        """Find the singularities of a part or of the whole system
 
         Parameters
         ----------
@@ -290,121 +289,39 @@ class Simulation(Identified):
             The complex frequency at which to perform the estimate. Should be
             within the band of interest
         num_modes : integer
-            The number of modes to find for each part
+            The number of modes to find
+        part : Part, optional
+            The part to solve for. If not specified, the singularities of the
+            full system will be solved for
         use_gram : boolean, optional
             Use the Gram matrix to scale the eigenvectors, so that the
             eigenvalues will be independent of the basis functions.
-            
+
         Returns
         -------
-        mode_s : list of ndarray
+        mode_s : ndarray (num_modes)
             The location of the singularities
-        mode_j : list of ndarray
+        mode_j : ndarray (num_basis, num_modes)
             The current distributions at the singularities
         """
 
-        all_s = []
-        all_j = []
-
-        solved_parts = {}
-
-        for part in self.parts.iter_single():
-            # TODO: unique ID needs to be modified if different materials or
-            # placement above a layer are possible
-
-            unique_id = (part.mesh.id,)  # cache identical parts
-            if unique_id in solved_parts:
-                #print "got from cache"
-                mode_s, mode_j = solved_parts[unique_id]
-            else:
-                if self.logger:
-                    self.logger.info("Finding singularities for part %s"
-                                     % str(unique_id))
-                # first get an estimate of the pole locations
-                basis = get_basis_functions(part.mesh, self.basis_class, self.logger)
-                Z = self.impedance_part(s_start, part)
-                lin_s, lin_currents = eig_linearised(Z, num_modes)
-
-                mode_s = np.empty(num_modes, np.complex128)
-                mode_j = np.empty((len(basis), num_modes), np.complex128)
-
-                Z_func = lambda s: self.impedance_part(s, part)[:]
-
-                if use_gram:
-                    G = basis.gram_matrix
-
-                for mode in xrange(num_modes):
-                    res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode],
-                                     weight='max element', lambda_tol=1e-8,
-                                     max_iter=200)
-
-                    lin_hz = lin_s[mode]/2/np.pi
-                    nl_hz = res['eigval']/2/np.pi
-                    if self.logger:
-                        self.logger.info("Converged after %d iterations\n"
-                                         "%+.4e %+.4ej (linearised solution)\n"
-                                         "%+.4e %+.4ej (nonlinear solution)"
-                                         % (res['iter_count'],
-                                            lin_hz.real, lin_hz.imag,
-                                            nl_hz.real, nl_hz.imag))
-
-                    mode_s[mode] = res['eigval']
-                    j_calc = res['eigvec']
-
-                    if use_gram:
-                        j_calc /= np.sqrt(j_calc.T.dot(G.dot(j_calc)))
-                    else:
-                        j_calc /= np.sqrt(np.sum(j_calc**2))
-
-                    mode_j[:, mode] = j_calc
-
-                # add to cache
-                solved_parts[unique_id] = (mode_s, mode_j)
-
-            all_s.append(mode_s)
-            all_j.append(mode_j)
-
-        return all_s, all_j
-
-    def system_singularities(self, s_start, num_modes, use_gram=True):
-        """Find the singularities of the whole system in the complex frequency
-        plane
-
-        Parameters
-        ----------
-        s_start : number
-            The complex frequency at which to perform the estimate. Should be
-            within the band of interest
-        num_modes : integer
-            The number of modes to find
-        use_gram : boolean, optional
-            Use the Gram matrix to scale the eigenvectors, so that the
-            eigenvalues will be independent of the basis functions.
-
-        Returns
-        -------
-        mode_s : 1D array
-            The singularities coresponding to the resonant frequencies
-        mode_j : 2D array
-            The eigencurrents, the columns of which corresponding to the
-            solutions of the system without excitation, at the frequencies
-            given by `mode_s`
-        """
-
-        # first get an estimate of the pole locations
-        Z = self.impedance(s_start).combine_parts()
-        lin_s, lin_currents = eig_linearised(Z, num_modes)
-
-        mode_s = np.empty_like(lin_s)
-        mode_j = np.empty_like(lin_currents)
-
-        Z_func = lambda s: self.impedance(s).combine_parts()[:]
+        part = part or self.parts
 
         if self.logger:
-            self.logger.info("Finding singularities for the whole system")
+            self.logger.info("Finding singularities for part %s"
+                             % str(part.id))
+        # first get an estimate of the pole locations
+        Z = self.impedance(s_start, part)[part, part]
+        lin_s, lin_currents = eig_linearised(Z, num_modes)
+
+        mode_s = np.empty(num_modes, np.complex128)
+        mode_j = empty_vector_parts(part, self.basis_class, self.operator, 
+                                    self.logger, np.complex128, cols=num_modes)
+
+        Z_func = lambda s: self.impedance(s, part)[part, part][:]
 
         if use_gram:
-            G = Z.basis_o.gram_matrix
+            G = Z.basis_s.gram_matrix
 
         for mode in xrange(num_modes):
             res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode],
@@ -433,8 +350,8 @@ class Simulation(Identified):
 
         return mode_s, mode_j
 
-    def construct_model_system(self, mode_s, mode_j):
-        """Construct a scalar model for the modes of the whole system
+    def construct_models(self, mode_s, mode_j, part=None):
+        """Construct a scalar models from the modes of a part
 
         Parameters
         ----------
@@ -442,6 +359,9 @@ class Simulation(Identified):
             The mode frequency of the whole system
         mode_j : list of ndarray
             The currents for the modes of the whole system
+        part : Part, optional
+            The part for which to construct the model. If unspecified, a scalar
+            model will be created for the full system of all parts
 
         Returns
         -------
@@ -452,47 +372,10 @@ class Simulation(Identified):
         scalar_models = []
 
         for s_n, j_n in zip(mode_s, mode_j.T):
-            Z_func = lambda s: self.impedance(s).combine_parts()
+            Z_func = lambda s: self.impedance(s, part)[part, part]
             scalar_models.append(ScalarModel(s_n, j_n, Z_func,
                                              logger=self.logger))
         return scalar_models
-
-    def construct_models(self, mode_s, mode_j):
-        """Construct a scalar model for the modes of each part
-
-        Parameters
-        ----------
-        mode_s : list of ndarray
-            The mode frequency of each part
-        mode_j : list of ndarray
-            The currents for the modes of each part
-
-        Returns
-        -------
-        scalar_models : list
-            The scalar models
-        """
-
-        solved_parts = {}
-        scalar_models = []
-
-        for part_count, part in enumerate(self.parts.iter_single()):
-            # TODO: unique ID needs to be modified if different materials or
-            # placement above a layer are possible
-
-            unique_id = (part.mesh.id,)  # cache identical parts
-            if unique_id in solved_parts:
-                scalar_models.append(solved_parts[unique_id])
-            else:
-                scalar_models.append([])
-                for s_n, j_n in zip(mode_s[part_count], mode_j[part_count].T):
-                    Z_func = lambda s: self.impedance_part(s, part)
-                    scalar_models[-1].append(ScalarModel(s_n, j_n, Z_func,
-                                                         logger=self.logger))
-
-                solved_parts[unique_id] = scalar_models[-1]
-
-            return scalar_models
 
     def plot_solution(self, solution, output_format, filename=None,
                       compress_scalars=None, compress_separately=False):
