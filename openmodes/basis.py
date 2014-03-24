@@ -662,6 +662,7 @@ class CombinedBasis(AbstractBasis):
     def __init__(self, basis_list, logger=None):
         super(CombinedBasis, self).__init__()
         self.basis_list = basis_list
+        self.sections = (len(self),)
 
     @cached_property
     def gram_matrix(self):
@@ -685,6 +686,10 @@ class CombinedBasis(AbstractBasis):
 
 class CombinedLoopStarBasis(CombinedBasis):
     "A set of loop-star basis functions which have been combined together"
+
+    def __init__(self, basis_list, logger=None):
+        super(CombinedLoopStarBasis, self).__init__(basis_list, logger)
+        self.sections = (self.num_loops, len(self)-self.num_loops)
 
     @property
     def num_loops(self):
