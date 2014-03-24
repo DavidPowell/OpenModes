@@ -23,6 +23,8 @@ from __future__ import division
 from itertools import islice
 import numpy as np
 
+from openmodes.basis import get_basis_functions
+from openmodes.namedarray import NamedArray
 
 class VectorParts(object):
     def __init__(self, parts, vectors, basis, operator):
@@ -102,7 +104,70 @@ class VectorParts(object):
     def dot(self, x):
         "Dot product with another array or vector"
         return self[:].dot(x[:])
+def empty_vector_parts(parent, basis_class, operator, logger, dtype):
+    "Construct an empty vector which can be indexed by the parts"
+    # First go through all the SingleParts, and work out the size of the
+    # complete vector, and all the sections within it
+    sections = []
+    for part in parent.iter_single():
+        sections.append(operator.sections(get_basis_functions(
+                                part.mesh, basis_class, logger)))
+
+    num_sections = len(sections[0])
+    # insert zeros at the start to be the offset of the first part
+    sections.insert(0, [0 for n in xrange(num_sections)])
+    
+    # first index is section, second is the part
+    sections = np.array(sections).T
+    
+    # the offset of each part's sections in the final vector
+    offsets = np.cumsum(sections).reshape(sections.shape)
+    print sections
+
+    index_arrays = {}
+    single_part_num = 0
+    # knowing the sizes of all sections, work out the location of each part
+    # within the data
+    for part in parent.iter_all(parent_first=False):
+        if hasattr(part, 'parts'):
+            # build up the index array from the children
+            index_arrays[part] = np.hstack(index_arrays[child] for child in part.parts)
+        else:
+            part_index = []
+            # this is a SinglePart, so generate its index array from the sections
+            for sec_num in xrange(num_sections):
+                part_index.append(np.arange(offsets[sec_num, single_part_num],
+                                            offsets[sec_num, single_part_num+1]))
+            index_arrays[part] = np.hstack(part_index)
+            single_part_num += 1
+
+    return NamedArray(offsets[-1, -1], index_arrays, dtype=dtype)
+
+if __name__ == "__main__":
+    import openmodes
+    from openmodes.constants import c
+    import os.path as osp
+    
+    mesh_tol = 0.5e-3
+    name = 'SRR'
+    sim = openmodes.Simulation(name='vector_test', 
+                               basis_class=openmodes.basis.LoopStarBasis,
+                               log_display_level=20)
+    mesh = sim.load_mesh(osp.join(openmodes.geometry_dir, name+'.geo'),
+                         mesh_tol=mesh_tol)
+    part1 = sim.place_part(mesh)
+    part2 = sim.place_part(mesh)
+
+    e_inc = np.array([1, 0, 0], dtype=np.complex128)
+    k_hat = np.array([0, 0, 1], dtype=np.complex128)
+
+    s = 2j*np.pi*1e9
 
     def vdot(self, x):
         "Conjugated dot product with another array or vector"
         return np.dot(self[:], x[:])
+    V = sim.source_plane_wave(e_inc, s/c*k_hat)
+    V[part1] = 66
+    V[part2] = 7
+    print V
+    
