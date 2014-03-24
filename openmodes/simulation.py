@@ -189,32 +189,6 @@ class Simulation(Identified):
                                  (freq_count, num_freqs))
             yield freq_count, 2j*np.pi*freq
 
-    def impedance_part(self, s, part_o, part_s=None):
-        """Evaluate the self impedance of a part, or the mutual impedance
-        between parts.
-
-        Parameters
-        ----------
-        s : number
-            complex frequency at which to calculate impedance (in rad/s)
-        part_o : Part
-            The observer part, which may also be a composite part
-        part_s : Part, optional
-            The source part, which may also be a composite part. If
-            unspecified, then the source part will be used
-
-        Returns
-        -------
-        impedance_matrix : ImpedanceMatrix 
-            The single self or mutual impedance matrix
-        """
-
-        part_s = part_s or part_o
-
-        # if only one impedance term is required
-        return self.operator.impedance_matrix(s, part_o, part_s)
-
-
     def impedance(self, s, parent=None):
         """Evaluate the self and mutual impedances of all parts in the
         simulation. Return an `ImpedancePart` object which can calculate
