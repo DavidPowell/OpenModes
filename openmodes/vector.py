@@ -84,7 +84,8 @@ class VectorParts(object):
                     for orig_num, orig_iter in zip(new_sections, iterators):
                         new_vector.extend(islice(orig_iter, orig_num))
                 new_vector = np.array(new_vector)
-                self.vectors[sub_part] = new_vector
+
+            self.vectors[sub_part] = new_vector
         else:
             raise NotImplementedError
             # split a high-level vector
