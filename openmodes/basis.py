@@ -232,6 +232,7 @@ class DivRwgBasis(LinearTriangleBasis):
         basis functions.
         """
         super(DivRwgBasis, self).__init__(mesh)
+        self.canonical_basis = DivRwgBasis
 
         edges, triangles_shared_by_edges = mesh.get_edges(True)
 
@@ -415,6 +416,7 @@ class LoopStarBasis(LinearTriangleBasis):
 
     def __init__(self, mesh, logger=None):
         super(LoopStarBasis, self).__init__(mesh)
+        self.canonical_basis = LoopStarBasis
 
         edges, triangles_shared_by_edges = mesh.get_edges(True)
 
@@ -663,6 +665,7 @@ class CombinedBasis(AbstractBasis):
         super(CombinedBasis, self).__init__()
         self.basis_list = basis_list
         self.sections = (len(self),)
+        self.canonical_basis = DivRwgBasis
 
     @cached_property
     def gram_matrix(self):
@@ -690,6 +693,7 @@ class CombinedLoopStarBasis(CombinedBasis):
     def __init__(self, basis_list, logger=None):
         super(CombinedLoopStarBasis, self).__init__(basis_list, logger)
         self.sections = (self.num_loops, len(self)-self.num_loops)
+        self.canonical_basis = LoopStarBasis
 
     @property
     def num_loops(self):
