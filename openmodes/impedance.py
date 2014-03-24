@@ -78,12 +78,10 @@ class EfieImpedanceMatrix(object):
         if cache and hasattr(self, "factored_matrix"):
             lu = self.factored_matrix
         else:
-            lu = la.lu_factor(self[:], overwrite_a=True)
+            lu = la.lu_factor(self[:])
             if cache:
                 self.factored_matrix = lu
 
-        vector = empty_vector_parts(self.part_s, self.basis_s.__class__,
-                                    self.operator, logger=None,
         basis_parts = dict([(part, get_basis_functions(part.mesh, self.basis_s.canonical_basis, None))
                        for part in self.part_s.iter_single()])
 
@@ -383,7 +381,7 @@ class ImpedanceParts(object):
         ----------
         s : complex
             complex frequency at which to calculate impedance (in rad/s)
-        matrices : list of list of ImpedanceMatrix
+        matrices : dictionary of ImpedanceMatrix
             The impedance matrix for each part, or mutual terms between them
         num_parts : int
             The number of parts in the system
@@ -427,9 +425,9 @@ class ImpedanceParts(object):
                                                                 self.s,
                                                                 parent_o,
                                                                 parent_s)
-            self.matrices[part_o, part_s] = new_matrix
-            if self.impedance_class.reciprocal:
-                self.matrices[part_s, part_o] = new_matrix.T
+            self.matrices[parent_o, parent_s] = new_matrix
+            if parent_s != parent_o and self.impedance_class.reciprocal:
+                self.matrices[parent_s, parent_o] = new_matrix.T
             return new_matrix
 
     def solve(self, *args, **kwargs):

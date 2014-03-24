@@ -262,7 +262,7 @@ class Simulation(Identified):
         ----------
         e_inc: ndarray
             incident field polarisation in free space
-        jk_inc: ndarray.dot(
+        jk_inc: ndarray
             incident wave vector in free space
 
         Returns
