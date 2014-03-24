@@ -148,14 +148,14 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
 
 
 def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
-                                  basis_s, nodes_s):
+                                  basis_s, nodes_s, self_impedance):
     """EFIE derived Impedance matrix for RWG or loop-star basis functions"""
 
     xi_eta_eval, weights = quadrature_rule
     transform_L_o, transform_S_o = basis_o.transformation_matrices
     num_faces_o = len(basis_o.mesh.polygons)
 
-    if (basis_s.id == basis_o.id):
+    if (self_impedance):
         # calculate self impedance
 
         singular_terms = singular_impedance_rwg_efie_homogeneous(basis_o,
@@ -243,7 +243,8 @@ class EfieOperator(object):
             if isinstance(basis_o, LinearTriangleBasis):
                 L, S = impedance_rwg_efie_free_space(s, self.quadrature_rule,
                                                      basis_o, part_o.nodes,
-                                                     basis_s, part_s.nodes)
+                                                     basis_s, part_s.nodes,
+                                                     part_o == part_s)
             else:
                 raise NotImplementedError
 
