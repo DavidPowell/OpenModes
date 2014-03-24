@@ -339,6 +339,8 @@ class Simulation(Identified):
             The scalar models
         """
 
+        part = part or self.parts
+
         scalar_models = []
 
         for s_n, j_n in zip(mode_s, mode_j.T):
