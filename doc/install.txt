@@ -30,7 +30,7 @@ The following software packages are the absolute minimum to run OpenModes:
 Strongly recommended packages
 
 - IPython (the notebook is used by many of the examples)
-- pyvtk (to export 3D plots to vtk file format)
+- tvtk (to export 3D plots to vtk file format)
 - ViSit or ParaView (3D plotting software to view vtk files)
 
 Other packages which may be useful

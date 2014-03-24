@@ -391,28 +391,30 @@ class Simulation(Identified):
             between parts.
         """
 
+        parts_list = []
         charges = []
         currents = []
         centres = []
 
         for part_num, part in enumerate(self.parts.iter_single()):
-            I = solution[part_num]
+            parts_list.append(part)
+            I = solution[part]
             basis = get_basis_functions(part.mesh, self.basis_class, self.logger)
 
             centre, current, charge = basis.interpolate_function(I,
                                                             return_scalar=True,
                                                             nodes=part.nodes)
-            charges.append(charge.real)
-            currents.append(current.real)
+            charges.append(charge)
+            currents.append(current)
             centres.append(centre)
 
         output_format = output_format.lower()
         if output_format == 'mayavi':
-            plot_mayavi(self.parts, charges, currents, vector_points=centres,
+            plot_mayavi(parts_list, charges, currents, vector_points=centres,
                         compress_scalars=compress_scalars, filename=filename)
 
         elif output_format == 'vtk':
-            write_vtk(self.parts, charges, currents, filename=filename,
+            write_vtk(parts_list, charges, currents, filename=filename,
                       compress_scalars=compress_scalars,
                       autoscale_vectors=True,
                       compress_separately=compress_separately)

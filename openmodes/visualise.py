@@ -57,9 +57,6 @@ def plot_parts(parts, currents=None, figsize=(10, 4), view_angles = (40, 90)):
         for edge in mesh.get_edges():
             nodes = part.nodes[edge]
             ax.plot(nodes[:, 0], nodes[:, 1], nodes[:, 2], 'k')
-        #if currents is not None:
-        #    ax.quiver(
-        #ax.scatter(part.nodes[:, 0], part.nodes[:, 1], part.nodes[:, 2], marker='x')
      
     ax.view_init(*view_angles)
     ax.autoscale()
@@ -95,7 +92,7 @@ def plot_mayavi(parts, scalar_function=None, vector_function=None,
         If specified, the figure will be saved to this file, rather than
         being plotted on screen.
         
-    Note that the functions to be plotted must be real, not complex.
+    Only the real part of the scalar and vector functions will be plotted
     """
     try:
         from mayavi import mlab
@@ -116,7 +113,7 @@ def plot_mayavi(parts, scalar_function=None, vector_function=None,
         mlab.options.offscreen = True
 
     mlab.figure(bgcolor=(1.0, 1.0, 1.0))
-    for part_num, part in enumerate(parts.iter_single()):
+    for part_num, part in enumerate(parts):
 
         triangle_nodes = part.mesh.polygons
         nodes = part.nodes
@@ -132,7 +129,7 @@ def plot_mayavi(parts, scalar_function=None, vector_function=None,
                 part_scalars=scalar_function[part_num]
 
             cell_data = tri_plot.mlab_source.dataset.cell_data
-            cell_data.scalars = part_scalars
+            cell_data.scalars = part_scalars.real
             cell_data.scalars.name = scalar_name
             cell_data.update()
 
@@ -142,7 +139,7 @@ def plot_mayavi(parts, scalar_function=None, vector_function=None,
 
         if vector_function is not None:
             points = vector_points[part_num]
-            vectors = vector_function[part_num]
+            vectors = vector_function[part_num].real
             mlab.quiver3d(points[:, 0], points[:, 1], points[:, 2],
                           vectors[:, 0], vectors[:, 1], vectors[:, 2],
                           color=(0, 0, 0), opacity=0.75, line_width=1.0)
@@ -155,42 +152,55 @@ def plot_mayavi(parts, scalar_function=None, vector_function=None,
         mlab.options.offscreen = offscreen
 
 
-def write_vtk(parts, scalar_function=None, vector_function=None,  
+def write_vtk(parts, scalar_function=None, vector_function=None,
                 vector_points=None, scalar_name="scalar", vector_name="vector",
                 compress_scalars=None, filename=None, autoscale_vectors=False,
                 compress_separately=False):
     """Write the mesh and solution data to a VTK file
-    
+
     If the current vector is given, then currents and charges will be
     written to the VTK file. Otherwise only the mesh is written
-    
+
     Parameters
     ----------
     filename : string
-        file to save to (.vtk extension will be added)
-    I : ndarray, optional
-        current vector of MOM solution in RWG basis
-    scale_coords : number, optional
-        a scaling factor to apply to the coordinates
+        File to save to. If it has the extension `.vtk`, then the file will be
+        written in the simple legacy format. Otherwise the modern XML format
+        will be used, which should be correctly indicated by using the tile
+        extension `.vtp`.
+    parts : list
+        The list of all SingleParts
+    scalar_function : list, optional
+        The scalar function to plot for each part
+    vector_function : list, optional
+        The vector function to plot for each part
+    scalar_name : string, optional
+        The name of the scalar function
+    vector_name : string, optional
+        The name of the vector function
+    compress_scalar : float, optional
+        If specified, this compression factor will be applied to reduce the
+        dynamic range of the scalar data
+    autoscale_vectors : boolean, optional
+        Automatically scale the vectors so that the maximum value is 1.0
+    compress_separately : boolean, optional
+        Apply the compression and scaling separately to each part, which will
+        hide the differences between parts
         
-    Requires that pyvtk is installed
+    Requires that tvtk is installed
     """
 
-    try:    
-        from pyvtk import PolyData, VtkData, Scalars, CellData, Vectors
+    try:
+        from tvtk.api import tvtk, write_data
     except ImportError:
-        raise ImportError("Please ensure that PyVTK is correctly installed")
+        raise ImportError("Please ensure that tvtk is correctly installed")
 
-    data = []
+    meshes = [part.mesh for part in parts]
+    nodes = [part.nodes for part in parts]
+    mesh = combine_mesh(meshes, nodes)
 
-    if vector_function is not None:
-        if autoscale_vectors and compress_separately:
-            vector_function=[v/np.max(np.abs(v)) for v in vector_function]
-        vector_function = np.vstack(vector_function)
-        if autoscale_vectors and not compress_separately:
-            vector_function=vector_function/np.max(np.abs(vector_function))
-        data.append(Vectors(vector_function.real, name=vector_name+"_real"))
-        data.append(Vectors(vector_function.imag, name=vector_name+"_imag"))
+    polygons = mesh.polygons.tolist()
+    struct = tvtk.PolyData(points=mesh.nodes, polys=polygons)
 
     if scalar_function is not None:
         if compress_scalars and compress_separately:
@@ -198,22 +208,30 @@ def write_vtk(parts, scalar_function=None, vector_function=None,
         scalar_function = np.hstack(scalar_function)
         if compress_scalars and not compress_separately:
             scalar_function=compress(scalar_function, compress_scalars)
-
-        data.append(Scalars(scalar_function.real, name=scalar_name+"_real",
-                            lookup_table="default"))
-        data.append(Scalars(scalar_function.imag, name=scalar_name+"_imag",
-                            lookup_table="default"))
         
-    cell_data = CellData(*data)
+        scalar_real = tvtk.FloatArray(name=scalar_name+"_real")
+        scalar_real.from_array(scalar_function.real)
+        struct.cell_data.add_array(scalar_real)
 
-    meshes = [part.mesh for part in parts]
-    nodes = [part.nodes for part in parts]    
-    mesh = combine_mesh(meshes, nodes)
+        scalar_imag = tvtk.FloatArray(name=scalar_name+"_imag")
+        scalar_imag.from_array(scalar_function.imag)
+        struct.cell_data.add_array(scalar_imag)
 
-    polygons = mesh.polygons.tolist()
-    struct = PolyData(points=mesh.nodes, polygons=polygons)    
-    
-    vtk = VtkData(struct, cell_data, "OpenModes mesh and data")
-    vtk.tofile(filename, "ascii")
+    if vector_function is not None:
+        if autoscale_vectors and compress_separately:
+            vector_function=[v/np.max(np.abs(v)) for v in vector_function]
+        vector_function = np.vstack(vector_function)
+        if autoscale_vectors and not compress_separately:
+            vector_function=vector_function/np.max(np.abs(vector_function))
+        
+        vector_real = tvtk.FloatArray(name=vector_name+"_real")
+        vector_real.from_array(vector_function.real)
+        struct.cell_data.add_array(vector_real)
+
+        vector_imag = tvtk.FloatArray(name=vector_name+"_imag")
+        vector_imag.from_array(vector_function.imag)
+        struct.cell_data.add_array(vector_imag)
+
+    write_data(struct, filename)
     
         
