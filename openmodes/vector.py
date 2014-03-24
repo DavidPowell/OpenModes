@@ -104,8 +104,25 @@ class VectorParts(object):
     def dot(self, x):
         "Dot product with another array or vector"
         return self[:].dot(x[:])
-def empty_vector_parts(parent, basis_class, operator, logger, dtype):
-    "Construct an empty vector which can be indexed by the parts"
+
+
+def empty_vector_parts(parent, basis_class, operator, logger, dtype, 
+                       cols=None):
+    """Construct an empty vector which can be indexed by the parts
+    
+    Parameters
+    ----------
+    parent : Part
+        The part which contains everything in the vector
+
+    dtype : dtype
+        The numpy data type of the vector
+        
+    cols : integer, optional
+        If specified, then this array will have multiple columns, which will
+        not be associated with any names
+    """
+
     # First go through all the SingleParts, and work out the size of the
     # complete vector, and all the sections within it
     sections = []
@@ -116,10 +133,10 @@ def empty_vector_parts(parent, basis_class, operator, logger, dtype):
     num_sections = len(sections[0])
     # insert zeros at the start to be the offset of the first part
     sections.insert(0, [0 for n in xrange(num_sections)])
-    
+
     # first index is section, second is the part
     sections = np.array(sections).T
-    
+
     # the offset of each part's sections in the final vector
     offsets = np.cumsum(sections).reshape(sections.shape)
 
@@ -130,7 +147,8 @@ def empty_vector_parts(parent, basis_class, operator, logger, dtype):
     for part in parent.iter_all(parent_first=False):
         if hasattr(part, 'parts'):
             # build up the index array from the children
-            index_arrays[part] = np.hstack(index_arrays[child] for child in part.parts)
+            index_arrays[part] = np.hstack(index_arrays[child] 
+                                           for child in part.parts)
         else:
             part_index = []
             # this is a SinglePart, so generate its index array from the sections
@@ -140,7 +158,11 @@ def empty_vector_parts(parent, basis_class, operator, logger, dtype):
             index_arrays[part] = np.hstack(part_index)
             single_part_num += 1
 
-    return NamedArray(offsets[-1, -1], index_arrays, dtype=dtype)
+    if cols is None:
+        return NamedArray(offsets[-1, -1], index_arrays, dtype=dtype)
+    else:
+        return NamedArray((offsets[-1, -1], cols), (index_arrays, {}),
+                          dtype=dtype)
 
 if __name__ == "__main__":
     import openmodes
