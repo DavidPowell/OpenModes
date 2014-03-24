@@ -45,16 +45,18 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
     
     s_start = 2j*np.pi*0.5*(freqs[0]+freqs[-1])
     
-    mode_s, mode_j = sim.part_singularities(s_start, num_modes)
+    mode_s, mode_j = sim.singularities(s_start, num_modes, part)
 
     if plot_currents:
         for mode in xrange(num_modes):
-            sim.plot_solution([mode_j[0][:, mode]], 'mayavi', compress_scalars=1)
+            current = sim.empty_vector()
+            current[:] = mode_j[:, mode]
+            sim.plot_solution(current, 'mayavi', compress_scalars=1)
    
     if not plot_admittance:
         return
    
-    models = sim.construct_models(mode_s, mode_j)[0]
+    models = sim.construct_models(mode_s, mode_j, part)
     
     num_freqs = len(freqs)
     
@@ -79,7 +81,7 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
         extinction_sem[freq_count] = [np.vdot(V, model.solve(s, V)) for model in models]
 
 #        z_eem_direct[freq_count], _ = Z.eigenmodes(num_modes, use_gram=False)
-        z_eem[freq_count], j_eem = Z.eigenmodes(start_j = mode_j[0], use_gram=True)
+        z_eem[freq_count], j_eem = Z.eigenmodes(start_j = mode_j, use_gram=True)
         extinction_eem[freq_count] = [np.vdot(V, j_eem[:, mode])*V.dot(j_eem[:, mode])/z_eem[freq_count, mode] for mode in xrange(num_modes)]
         
         
@@ -147,4 +149,4 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
 #geometry_extinction_modes('v_antenna', np.linspace(1e8, 15e9, 101), 
 #                          2, 1.5e-3)
 
-geometry_extinction_modes('cross', np.linspace(1e8, 20e9, 101), 5, 1e-3, plot_currents=False)
+geometry_extinction_modes('cross', np.linspace(1e8, 20e9, 101), 2, 1e-3, plot_currents=True, plot_admittance=True)
