@@ -82,7 +82,7 @@ class NamedArray(np.ndarray):
         name of a range, in addition to all the usual fancy indexing options"""
         if not hasattr(self, 'ranges'):
             # if ranges is not set, just behave like a normal array
-            super(NamedArray, self).__setitem__(idx, value)
+            return super(NamedArray, self).__setitem__(idx, value)
 
         if not isinstance(idx, tuple):
             # force a single index to be a tuple
