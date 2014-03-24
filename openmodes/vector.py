@@ -106,18 +106,18 @@ class VectorParts(object):
         return self[:].dot(x[:])
 
 
-def empty_vector_parts(parent, basis_class, operator, logger, dtype, 
-                       cols=None):
+def empty_vector_parts(parent, basis_functions, dtype, cols=None):
     """Construct an empty vector which can be indexed by the parts
     
     Parameters
     ----------
     parent : Part
         The part which contains everything in the vector
-
+    basis_functions : dictionary
+        For each SinglePart, the corresponding basis functions should be in
+        this dictionary
     dtype : dtype
         The numpy data type of the vector
-        
     cols : integer, optional
         If specified, then this array will have multiple columns, which will
         not be associated with any names
@@ -127,8 +127,7 @@ def empty_vector_parts(parent, basis_class, operator, logger, dtype,
     # complete vector, and all the sections within it
     sections = []
     for part in parent.iter_single():
-        sections.append(operator.sections(get_basis_functions(
-                                part.mesh, basis_class, logger)))
+        sections.append(basis_functions[part].sections)
 
     num_sections = len(sections[0])
     # insert zeros at the start to be the offset of the first part

@@ -272,8 +272,9 @@ class Simulation(Identified):
         """
 
         parent = parent or self.parts
-        vector = empty_vector_parts(parent, self.basis_class, self.operator, 
-                                    self.logger, dtype=np.complex128)
+        basis_parts = dict([(part, get_basis_functions(part.mesh, self.basis_class, self.logger))
+                       for part in parent.iter_single()])
+        vector = empty_vector_parts(parent, basis_parts, dtype=np.complex128)
 
         for part in parent.iter_single():
             vector[part] = self.operator.source_plane_wave(part, e_inc, jk_inc)
@@ -315,8 +316,10 @@ class Simulation(Identified):
         lin_s, lin_currents = eig_linearised(Z, num_modes)
 
         mode_s = np.empty(num_modes, np.complex128)
-        mode_j = empty_vector_parts(part, self.basis_class, self.operator, 
-                                    self.logger, np.complex128, cols=num_modes)
+        basis_parts = dict([(partn, get_basis_functions(partn.mesh, self.basis_class, self.logger))
+                       for partn in part.iter_single()])
+        mode_j = empty_vector_parts(part, basis_parts, 
+                                    np.complex128, cols=num_modes)
 
         Z_func = lambda s: self.impedance(s, part)[part, part][:]
 
