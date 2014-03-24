@@ -28,7 +28,6 @@ import os.path as osp
 from openmodes import integration, gmsh
 from openmodes.parts import SinglePart, CompositePart
 from openmodes.impedance import ImpedanceParts
-#from openmodes.vector import VectorParts
 from openmodes.basis import LoopStarBasis, get_basis_functions
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
 from openmodes.eig import eig_linearised, eig_newton
@@ -36,7 +35,6 @@ from openmodes.visualise import plot_mayavi, write_vtk
 from openmodes.model import ScalarModel, ScalarModelLS
 from openmodes.mesh import TriangularSurfaceMesh
 from openmodes.helpers import Identified
-#from openmodes.namedarray import NamedArray
 from openmodes.vector import empty_vector_parts
 
 
@@ -246,9 +244,7 @@ class Simulation(Identified):
         """
 
         parent = parent or self.parts
-        basis_parts = dict([(part, get_basis_functions(part.mesh, self.basis_class, self.logger))
-                       for part in parent.iter_single()])
-        vector = empty_vector_parts(parent, basis_parts, dtype=np.complex128)
+        vector = self.empty_vector(parent)
 
         for part in parent.iter_single():
             vector[part] = self.operator.source_plane_wave(part, e_inc, jk_inc)
@@ -290,10 +286,7 @@ class Simulation(Identified):
         lin_s, lin_currents = eig_linearised(Z, num_modes)
 
         mode_s = np.empty(num_modes, np.complex128)
-        basis_parts = dict([(partn, get_basis_functions(partn.mesh, self.basis_class, self.logger))
-                       for partn in part.iter_single()])
-        mode_j = empty_vector_parts(part, basis_parts, 
-                                    np.complex128, cols=num_modes)
+        mode_j = self.empty_vector(part, cols=num_modes)
 
         Z_func = lambda s: self.impedance(s, part)[part, part][:]
 
@@ -351,8 +344,30 @@ class Simulation(Identified):
         for s_n, j_n in zip(mode_s, mode_j.T):
             Z_func = lambda s: self.impedance(s, part)[part, part]
             scalar_models.append(ScalarModel(s_n, j_n, Z_func,
-                                             logger=self.logger))
+                                 logger=self.logger))
         return scalar_models
+
+    def empty_vector(self, part=None, cols=None):
+        """
+        Create a zero vector of the appropriate size to contain solutions for
+        all of the parts, or a single part and its sub-parts
+
+        Parameters
+        ----------
+        part : Part, optional
+            The part for which to create the vector. If not specified, the full
+            simulation
+        cols : integer, optional
+            If specified, this many columns will be included
+        """
+
+        part = part or self.parts
+        basis_parts = dict([(partn, get_basis_functions(partn.mesh, 
+                                                        self.basis_class, 
+                                                        self.logger))
+                            for partn in part.iter_single()])
+        return empty_vector_parts(part, basis_parts, dtype=np.complex128,
+                                  cols=cols)        
 
     def plot_solution(self, solution, output_format, filename=None,
                       compress_scalars=None, compress_separately=False):
