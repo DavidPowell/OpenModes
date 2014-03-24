@@ -228,7 +228,7 @@ class EfieImpedanceMatrix(object):
                               self.part_o)
 
     @staticmethod
-    def combine_parts(matrices, s, V=None):
+    def combine_parts(matrices, s, part_o, part_s, V=None):
         """Combine a set of impedance matrices for sub-parts for a single
         matrix
 
@@ -269,7 +269,7 @@ class EfieImpedanceMatrix(object):
             row_offset += row_size
 
         basis = get_combined_basis(basis_list = [m.basis_o for m in row])
-        Z = EfieImpedanceMatrix(s, L_tot, S_tot, basis, basis, matrix.operator)
+        Z = EfieImpedanceMatrix(s, L_tot, S_tot, basis, basis, matrix.operator, part_o, part_s)
 
         if V is not None:
             return Z, np.hstack(V)
@@ -300,7 +300,7 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
         return slice(self.basis_s.num_loops, self.shape[1])
 
     @staticmethod
-    def combine_parts(matrices, s, V=None):
+    def combine_parts(matrices, s, part_o, part_s, V=None):
         """Combine a set of impedance matrices for sub-parts for a single
         matrix
 
@@ -362,7 +362,7 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
                 L_tot[star_range_o, loop_range_s] = m.L[m.star_range_o, m.loop_range_s]
                 L_tot[star_range_o, star_range_s] = m.L[m.star_range_o, m.star_range_s]
         
-        Z = EfieImpedanceMatrixLoopStar(s, L_tot, S_tot, basis, basis, m.operator)
+        Z = EfieImpedanceMatrixLoopStar(s, L_tot, S_tot, basis, basis, m.operator, part_o, part_s)
 
         if V is not None:
             return Z, V_tot
@@ -424,7 +424,9 @@ class ImpedanceParts(object):
                 new_matrix = combined[0][0]
             else:
                 new_matrix = self.impedance_class.combine_parts(combined,
-                                                                self.s)
+                                                                self.s,
+                                                                parent_o,
+                                                                parent_s)
             self.matrices[part_o, part_s] = new_matrix
             if self.impedance_class.reciprocal:
                 self.matrices[part_s, part_o] = new_matrix.T
