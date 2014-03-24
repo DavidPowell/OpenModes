@@ -28,7 +28,7 @@ import os.path as osp
 from openmodes import integration, gmsh
 from openmodes.parts import SinglePart, CompositePart
 from openmodes.impedance import ImpedanceParts
-from openmodes.vector import VectorParts
+#from openmodes.vector import VectorParts
 from openmodes.basis import LoopStarBasis, get_basis_functions
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
 from openmodes.eig import eig_linearised, eig_newton
@@ -36,6 +36,8 @@ from openmodes.visualise import plot_mayavi, write_vtk
 from openmodes.model import ScalarModel, ScalarModelLS
 from openmodes.mesh import TriangularSurfaceMesh
 from openmodes.helpers import Identified
+#from openmodes.namedarray import NamedArray
+from openmodes.vector import empty_vector_parts
 
 
 class Simulation(Identified):
@@ -270,12 +272,13 @@ class Simulation(Identified):
         """
 
         parent = parent or self.parts
+        vector = empty_vector_parts(parent, self.basis_class, self.operator, 
+                                    self.logger, dtype=np.complex128)
 
-        vectors = dict((part, 
-                         self.operator.source_plane_wave(part, e_inc, jk_inc))
-                         for part in parent.iter_single())
-        basis = dict((part, get_basis_functions(part.mesh, self.basis_class, self.logger)) for part in parent.iter_single())
-        return VectorParts(parent, vectors, basis, self.operator)
+        for part in parent.iter_single():
+            vector[part] = self.operator.source_plane_wave(part, e_inc, jk_inc)
+
+        return vector
 
     def part_singularities(self, s_start, num_modes, use_gram=True):
         """Find the singularities of each part of the system in the complex

@@ -72,15 +72,15 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
     for freq_count, s in sim.iter_freqs(freqs):
         Z = sim.impedance(s)
         V = sim.source_plane_wave(e_inc, s/c*k_hat)
-        
-        extinction[freq_count] = V.vdot(Z.solve(V))
+        I = Z.solve(V)
+        extinction[freq_count] = np.vdot(V[part], I)
         
         z_sem[freq_count] = [model.scalar_impedance(s) for model in models]
-        extinction_sem[freq_count] = [V.vdot(model.solve(s, V)) for model in models]
+        extinction_sem[freq_count] = [np.vdot(V, model.solve(s, V)) for model in models]
 
 #        z_eem_direct[freq_count], _ = Z.eigenmodes(num_modes, use_gram=False)
         z_eem[freq_count], j_eem = Z.eigenmodes(start_j = mode_j[0], use_gram=True)
-        extinction_eem[freq_count] = [V.vdot(j_eem[:, mode])*V.dot(j_eem[:, mode])/z_eem[freq_count, mode] for mode in xrange(num_modes)]
+        extinction_eem[freq_count] = [np.vdot(V, j_eem[:, mode])*V.dot(j_eem[:, mode])/z_eem[freq_count, mode] for mode in xrange(num_modes)]
         
         
     plt.figure(figsize=(10,5))

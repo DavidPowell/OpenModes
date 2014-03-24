@@ -122,7 +122,6 @@ def empty_vector_parts(parent, basis_class, operator, logger, dtype):
     
     # the offset of each part's sections in the final vector
     offsets = np.cumsum(sections).reshape(sections.shape)
-    print sections
 
     index_arrays = {}
     single_part_num = 0
