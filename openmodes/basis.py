@@ -486,7 +486,7 @@ class LoopStarBasis(LinearTriangleBasis):
 
         self.rwg_loop = RWG(loop_tri_p, loop_tri_m, loop_node_p, loop_node_m)
 
-        self.sections = (num_loops, len(self.rwg_star))
+        self.sections = (num_loops, self.num_stars)
 
         if logger:
             logger.info("Constructing %d loop-star basis functions\n" 
