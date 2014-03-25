@@ -68,9 +68,15 @@ class NamedArray(np.ndarray):
             # force a single index to be a tuple
             idx = idx,
         new_idx = []
+
+        # Find out how many fancy indices were used, to know what dimensions
+        # to broadcase the array over
+        num_ranges_used = sum(not isinstance(idn, slice) and (idn in sec) 
+                              for (idn, sec) in zip(idx, self.ranges))
+
         for count, (idn, sec) in enumerate(zip(idx, self.ranges)):
             try:
-                new_idx.append(sec[idn][(slice(None),)+(None,)*(len(self.ranges)-count-1)])
+                new_idx.append(sec[idn][(slice(None),)+(None,)*(num_ranges_used-count-1)])
             except (KeyError, TypeError):
                 # index item not found in list
                 new_idx.append(idn)
@@ -88,9 +94,15 @@ class NamedArray(np.ndarray):
             # force a single index to be a tuple
             idx = idx,
         new_idx = []
+
+        # Find out how many fancy indices were used, to know what dimensions
+        # to broadcase the array over
+        num_ranges_used = sum(not isinstance(idn, slice) and (idn in sec) 
+                              for (idn, sec) in zip(idx, self.ranges))
+
         for count, (idn, sec) in enumerate(zip(idx, self.ranges)):
             try:
-                new_idx.append(sec[idn][(slice(None),)+(None,)*(len(self.ranges)-count-1)])
+                new_idx.append(sec[idn][(slice(None),)+(None,)*(num_ranges_used-count-1)])
             except (KeyError, TypeError):
                 # index item not found in list
                 new_idx.append(idn)
