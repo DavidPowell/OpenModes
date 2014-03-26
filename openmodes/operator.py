@@ -211,12 +211,6 @@ class EfieOperator(object):
         self.greens_function = greens_function
         self.logger = logger
 
-    @staticmethod
-    def sections(basis):
-        """Determine the size of the sections within a matrix or vector based
-        on this operator class, and on the specific basis functions"""
-        return basis.sections
-
     def impedance_matrix(self, s, part_o, part_s=None):
         """Calculate a self or mutual impedance matrix at a given complex 
         frequency
