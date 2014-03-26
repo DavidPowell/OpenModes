@@ -35,7 +35,7 @@ from openmodes.visualise import plot_mayavi, write_vtk
 from openmodes.model import ScalarModel, ScalarModelLS
 from openmodes.mesh import TriangularSurfaceMesh
 from openmodes.helpers import Identified
-from openmodes.vector import empty_vector_parts
+from openmodes.vector import PartsVector
 
 
 class Simulation(Identified):
@@ -364,12 +364,8 @@ class Simulation(Identified):
         """
 
         part = part or self.parts
-        basis_parts = dict([(partn, get_basis_functions(partn.mesh, 
-                                                        self.basis_class, 
-                                                        self.logger))
-                            for partn in part.iter_single()])
-        return empty_vector_parts(part, basis_parts, dtype=np.complex128,
-                                  cols=cols)        
+        return PartsVector(part, self.basis_class, dtype=np.complex128,
+                                  cols=cols, logger=self.logger)        
 
     def plot_solution(self, solution, output_format, filename=None,
                       compress_scalars=None, compress_separately=False):
