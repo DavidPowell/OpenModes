@@ -23,7 +23,6 @@ from __future__ import division
 # numpy and scipy
 import numpy as np
 import scipy.linalg as la
-import itertools
 
 from openmodes.helpers import inc_slice
 from openmodes.basis import get_combined_basis
@@ -82,8 +81,12 @@ class EfieImpedanceMatrix(object):
             if cache:
                 self.factored_matrix = lu
 
-        vector = VectorParts(self.part_s, self.basis_s.canonical_basis,
-                                    dtype=np.complex128)
+        if self.part_s is None:
+            # e.g. if this is the result of a projection onto modes
+            vector = np.empty_like(V)
+        else:
+            vector = VectorParts(self.part_s, self.basis_s.canonical_basis,
+                                 dtype=np.complex128)
 
         vector[:] = la.lu_solve(lu, V)
         return vector
@@ -100,11 +103,21 @@ class EfieImpedanceMatrix(object):
 
         Parameters
         ----------
-        num_modes : integer
+        num_modes : integer, optional
             The number of modes to find for each part
         use_gram : boolean, optional
             Solve a generalised problem involving the Gram matrix, which scales
             out the basis functions to get the physical eigenimpedances
+        start_j : ndarray, optional
+            If specified, then iterative solutions will be found, starting
+            from the vectors in this array
+
+        Returns
+        -------
+        eigenimpedance : ndarray (num_modes)
+            The scalar eigenimpedance for each mode
+        eigencurrent : VectorParts (num_basis, num_modes)
+            A vector containing the eigencurrents of each mode in its columns
         """
 
         if start_j is not None:
@@ -151,22 +164,16 @@ class EfieImpedanceMatrix(object):
 
         return eigenimpedance, eigencurrent
 
-    def impedance_modes(self, num_modes, mode_currents_o,
-                        mode_currents_s=None, return_arrays=False):
+    def project_modes(self, modes_o, modes_s=None, return_arrays=False):
         """Calculate a reduced impedance matrix based on the scalar impedance
         of the modes of each part, and the scalar coupling coefficients.
 
         Parameters
         ----------
-        s : number
-            complex frequency at which to calculate impedance (in rad/s)
-        num_modes : integer
-            The number of modes to take into account for each part
-        mode_currents_o : array
+        modes_o : ndarray
             The modal currents of the observer part
-        mode_currents_s : array, optional
-            The modal currents of the source part (only for off-diagonal terms
-            where the source differs from the observer)
+        modes_s : ndarray, optional
+            The modal currents of the source part
         return_arrays : boolean, optional
             Return the impedance arrays directly, instead of constructing an
             `ImpedanceMatrix` object
@@ -175,27 +182,25 @@ class EfieImpedanceMatrix(object):
         -------
         L_red, S_red : ndarray
             the reduced inductance and susceptance matrices
+
+        or,
+
+        Z : ImpedanceMatrix
+            the reduced impedance matrix object
         """
+        if modes_s is None:
+            modes_s = modes_o
+        
+        # TODO: special handling of self terms to zero off-diagonal terms?
 
-        # Parts are already combined, so we are talking about modes of
-        # the complete coupled system
-        L_red = np.zeros((num_modes, num_modes), np.complex128)
-        S_red = np.zeros_like(L_red)
-
-        if mode_currents_s is None:
-            for i in xrange(num_modes):
-                # only diagonal terms are non-zero
-                L_red[i, i] = mode_currents_o[:, i].dot(self.L.dot(mode_currents_o[:, i]))
-                S_red[i, i] = mode_currents_o[:, i].dot(self.S.dot(mode_currents_o[:, i]))
-        else:
-            for i, j in itertools.product(xrange(num_modes), xrange(num_modes)):
-                L_red[i, j] = mode_currents_o[:, i].dot(self.L.dot(mode_currents_s[:, j]))
-                S_red[i, j] = mode_currents_o[:, i].dot(self.S.dot(mode_currents_s[:, j]))
+        L_red = modes_o.T.dot(self.L.dot(modes_s))
+        S_red = modes_o.T.dot(self.S.dot(modes_s))
 
         if return_arrays:
             return L_red, S_red
         else:
-            return self.__class__(self.s, L_red, S_red, None, None, self.operator)
+            return self.__class__(self.s, L_red, S_red, None, None,
+                                  self.operator, None, None)
 
     def source_modes(self, V, num_modes, mode_currents):
         "Take a source field, and project it onto the modes of the system"
@@ -416,57 +421,83 @@ class ImpedanceParts(object):
         part = part or self.parent_part
         return self[part, part].solve(V, cache=cache)
 
-    def eigenmodes(self, part=None, *args, **kwargs):
-        """Solve the eigenmodes for a part or all of the system"""
-        part = part or self.parent_part
+    def eigenmodes(self, part=None, num_modes=None, use_gram=None,
+                   start_j=None):
+        """Calculate the eigenimpedance and eigencurrents of each part's modes
 
-        return self[part, part].eigenmodes(*args, **kwargs)
+        The modes with the smallest imaginary part of their impedance will be
+        returned.
 
-    def impedance_modes(self, num_modes, mode_currents):
-        """Calculate a reduced impedance matrix based on the scalar impedance
-        of the modes of each part, and the scalar coupling coefficients.
+        Note that the impedance matrix can easily be *ill-conditioned*.
+        Therefore this routine can return junk results, particularly if the
+        mesh is dense.
 
         Parameters
         ----------
-        s : number
-            complex frequency at which to calculate impedance (in rad/s)
-        num_modes : integer
-            The number of modes to take into account for each part
-        mode_currents : list
-            The modal currents of each part
+        part : Part
+            The part for which to find the eigenmodes. If not specified, the
+            eigenmodes of the whole system will be calculated
+        num_modes : integer, optional
+            The number of modes to find for each part
+        use_gram : boolean, optional
+            Solve a generalised problem involving the Gram matrix, which scales
+            out the basis functions to get the physical eigenimpedances
+        start_j : ndarray, optional
+            If specified, then iterative solutions will be found, starting
+            from the vectors in this array
 
         Returns
         -------
-        L_red, S_red : ndarray
-            the reduced inductance and susceptance matrices
+        eigenimpedance : ndarray (num_modes)
+            The scalar eigenimpedance for each mode
+        eigencurrent : VectorParts (num_basis, num_modes)
+            A vector containing the eigencurrents of each mode in its columns
+        """
+        part = part or self.parent_part
+        return self[part, part].eigenmodes(num_modes, use_gram, start_j)
+
+    def project_modes(self, part_modes):
+        """Calculate a reduced impedance matrix based on the scalar impedance
+        of the modes of each part, and the scalar coupling coefficients. These
+        are determined by projecting segments of the impedance matrix onto
+        the provided modes.
+
+        Parameters
+        ----------
+        part_modes : sequence of tuples of (part, modes_vec)
+            For each part `modes_vec` will be used as modes in which to base
+            the reduced model. Multiple modes should be represented by mutiple
+            columns of `modes_vec`.
+
+        Returns
+        -------
+        Z : ImpedanceMatrix
+            the reduced impedance matrix object
+
+        Note that indirectly including a part more than once in part_modes
+        (e.g. by including it and its parent part) will yield invalid results.
         """
 
         # calculate modal impedances for each part separately, and include
-        # coupling between all modes of different parts
-        num_parts = self.num_parts
-        L_red = np.zeros((num_parts, num_modes, num_parts, num_modes),
-                         np.complex128)
-        S_red = np.zeros_like(L_red)
+        # coupling between all modess of different parts
+        L_red = []
+        S_red = []
 
-        for i, j in itertools.product(xrange(num_parts), xrange(num_parts)):
-            # The mutual impedance terms of modes within the
-            # same resonator have L and S exactly cancelling,
-            # so currently they are not calculated
-            M = self.matrices[i][j]
+        for part_o, modes_o in part_modes:
+            L_row = []
+            S_row = []
+            for part_s, modes_s in part_modes:
+                L, S = self[part_o, part_s].project_modes(modes_o, modes_s,
+                                                            return_arrays=True)
+                L_row.append(L)
+                S_row.append(S)
+            L_red.append(np.hstack(L_row))
+            S_red.append(np.hstack(S_row))
 
-            if i == j:
-                # explicitly handle the diagonal cse
-                L, S = M.impedance_modes(num_modes, mode_currents[i],
-                                         return_arrays=True)
-            else:
-                L, S = M.impedance_modes(num_modes, mode_currents[i],
-                                         mode_currents[j], return_arrays=True)
-            L_red[i, :, j, :] = L
-            S_red[i, :, j, :] = S
-
-        L_red = L_red.reshape((num_parts*num_modes, num_parts*num_modes))
-        S_red = S_red.reshape((num_parts*num_modes, num_parts*num_modes))
-        return EfieImpedanceMatrix(self.s, L_red, S_red, None, None, M.operator)
+        L_red = np.vstack(L_red)
+        S_red = np.vstack(S_red)
+        return self.impedance_class(self.s, L_red, S_red, None, None, 
+                                   self[part_o, part_s].operator, None, None)
 
     def source_modes(self, V, num_modes, mode_currents, combine=True):
         "Take a source field, and project it onto the modes of each part"

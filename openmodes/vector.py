@@ -193,6 +193,32 @@ class VectorParts(np.ndarray):
             new_idx.extend(idx[1:])
         super(VectorParts, self).__setitem__(tuple(new_idx), value)
 
+    def project_modes(self, part_modes):
+        """Project the vector onto a set of modes for each part
+
+        Parameters
+        ----------
+        part_modes : sequence of tuples of (part, modes_vec)
+            For each part `modes_vec` will be used as modes in which to base
+            the reduced model. Multiple modes should be represented by mutiple
+            columns of `modes_vec`.
+
+        Returns
+        -------
+        V : ndarray
+            the reduced vector
+
+        Note that indirectly including a part more than once in part_modes
+        (e.g. by including it and its parent part) will yield invalid results.
+        """
+
+        V_red = []
+
+        for part, modes in part_modes:
+            V_red.append(modes.T.dot(self[part]))
+
+        return np.hstack(V_red)
+
 
 if __name__ == "__main__":
     import openmodes
