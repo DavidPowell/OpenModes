@@ -26,7 +26,9 @@ from openmodes.constants import epsilon_0, mu_0, pi
 from openmodes.basis import (LinearTriangleBasis, LoopStarBasis,
                              get_basis_functions)
 from openmodes.impedance import (EfieImpedanceMatrix,
-                                 EfieImpedanceMatrixLoopStar)
+                                 EfieImpedanceMatrixLoopStar,
+                                 ImpedanceParts)
+from openmodes.vector import VectorParts
 
 
 class FreeSpaceGreensFunction(object):
@@ -196,7 +198,76 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
     return L, S
 
 
-class EfieOperator(object):
+class Operator(object):
+    "A base class for operator equations"
+
+    def impedance(self, s, parent):
+        """Evaluate the self and mutual impedances of all parts in the
+        simulation. Return an `ImpedancePart` object which can calculate
+        several derived impedance quantities
+
+        Parameters
+        ----------
+        s : number
+            Complex frequency at which to calculate impedance (in rad/s)
+        parent : Part
+            Only this part and its sub-parts will be calculated
+
+        Returns
+        -------
+        impedance_matrices : ImpedanceParts
+            The impedance matrix object which can represent the impedance of
+            the object in several ways.
+        """
+
+        matrices = {}
+
+        # TODO: cache individual part impedances to avoid repetition?
+        # May not be worth it because mutual impedances cannot be cached
+        # except in specific cases such as arrays, and self terms may be
+        # invalidated by green's functions which depend on coordinates
+
+        for part_o in parent.iter_single():
+            for part_s in parent.iter_single():
+                if self.reciprocal and (part_s, part_o) in matrices:
+                    # use reciprocity to avoid repeated calculation
+                    res = matrices[part_s, part_o].T
+                else:
+                    res = self.impedance_single_parts(s, part_o, part_s)
+                matrices[part_o, part_s] = res
+
+        return ImpedanceParts(s, parent, matrices, type(res))
+
+    def source_plane_wave(self, e_inc, jk_inc, parent):
+        """Evaluate the source vectors due to an incident plane wave, returning
+        separate vectors for each part.
+
+        Parameters
+        ----------
+        e_inc: ndarray
+            incident field polarisation in free space
+        jk_inc: ndarray
+            incident wave vector in free space
+        parent: Part
+            The part for which to calculate the source vector
+
+        Returns
+        -------
+        V : list of ndarray
+            the source vector for each part
+        """
+
+        vector = VectorParts(parent, self.basis_class, dtype=np.complex128,
+                             logger=self.logger)        
+
+
+        for part in parent.iter_single():
+            vector[part] = self.source_plane_wave_single_part(part, e_inc, jk_inc)
+
+        return vector
+
+
+class EfieOperator(Operator):
     """An operator for the electric field integral equation, discretised with
     respect to some set of basis functions. Assumes that Galerkin's method is
     used, such that the testing functions are the same as the basis functions.
@@ -211,18 +282,16 @@ class EfieOperator(object):
         self.greens_function = greens_function
         self.logger = logger
 
-    def impedance_matrix(self, s, part_o, part_s=None):
+    def impedance_single_parts(self, s, part_o, part_s=None):
         """Calculate a self or mutual impedance matrix at a given complex 
         frequency
         
         Parameters
         ----------
         s : complex
-            Complex frequency at which to calculate impedance
-        
+            Complex frequency at which to calculate impedance        
         part_o : SinglePart
-            The observing part, which must be a single part, not a composite
-        
+            The observing part, which must be a single part, not a composite        
         part_s : SinglePart, optional
             The source part, if not specified will default to observing part
         """
@@ -241,7 +310,6 @@ class EfieOperator(object):
                                                      part_o == part_s)
             else:
                 raise NotImplementedError
-
         else:
             raise NotImplementedError
 
@@ -250,7 +318,7 @@ class EfieOperator(object):
         else:
             return EfieImpedanceMatrix(s, L, S, basis_o, basis_s, self, part_o, part_s)
 
-    def source_plane_wave(self, part, e_inc, jk_inc):
+    def source_plane_wave_single_part(self, part, e_inc, jk_inc):
         """Evaluate the source vector due to the incident wave
 
         Parameters

@@ -207,24 +207,8 @@ class Simulation(Identified):
             the object in several ways.
         """
 
-        matrices = {}
         parent = parent or self.parts
-
-        # TODO: cache individual part impedances to avoid repetition?
-        # May not be worth it because mutual impedances cannot be cached
-        # except in specific cases such as arrays, and self terms may be
-        # invalidated by green's functions which depend on coordinates
-
-        for part_o in parent.iter_single():
-            for part_s in parent.iter_single():
-                if self.operator.reciprocal and (part_s, part_o) in matrices:
-                    # use reciprocity to avoid repeated calculation
-                    res = matrices[part_s, part_o].T
-                else:
-                    res = self.operator.impedance_matrix(s, part_o, part_s)
-                matrices[part_o, part_s] = res
-
-        return ImpedanceParts(s, parent, matrices, type(res))
+        return self.operator.impedance(s, parent)
 
     def source_plane_wave(self, e_inc, jk_inc, parent=None):
         """Evaluate the source vectors due to an incident plane wave, returning
@@ -244,12 +228,7 @@ class Simulation(Identified):
         """
 
         parent = parent or self.parts
-        vector = self.empty_vector(parent)
-
-        for part in parent.iter_single():
-            vector[part] = self.operator.source_plane_wave(part, e_inc, jk_inc)
-
-        return vector
+        return self.operator.source_plane_wave(e_inc, jk_inc, parent)
 
     def singularities(self, s_start, num_modes, part=None, use_gram=True):
         """Find the singularities of a part or of the whole system
