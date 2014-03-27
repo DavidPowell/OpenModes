@@ -147,7 +147,7 @@ class SinglePart(Part):
         yield self
 
 class CompositePart(Part):
-    """A composite part containing sub-parts which should be treated as a
+    """A composite part containing sub-parts which can be treated as a
     whole
     """
     def __init__(self, location = None):
@@ -158,6 +158,9 @@ class CompositePart(Part):
         self.parts = []
 
     def add_part(self, part):
+        "Add a part to this part"
+        if part.parent is not None:
+            raise ValueError("Part already has a different parent")
         self.parts.append(part)
         part.parent = weakref.proxy(self)
 
