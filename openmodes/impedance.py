@@ -343,19 +343,22 @@ class ImpedanceParts(object):
     coupling terms.
     """
 
-    def __init__(self, s, parts, matrices, impedance_class):
+    def __init__(self, s, parent_part, matrices, impedance_class):
         """
         Parameters
         ----------
         s : complex
             complex frequency at which to calculate impedance (in rad/s)
+        parent_part : CompositePart
+            The main part which holds all other parts represented by this
+            impedance matrix
         matrices : dictionary of ImpedanceMatrix
             The impedance matrix for each part, or mutual terms between them
-        num_parts : int
-            The number of parts in the system
+        impedance_class : type
+            The class of the impedance matrices of each part
         """
         self.s = s
-        self.parts = parts
+        self.parent_part = parent_part
         self.matrices = matrices
         self.impedance_class = impedance_class
 
@@ -372,8 +375,8 @@ class ImpedanceParts(object):
         try:
             return self.matrices[index]
         except KeyError:
-            if ((len(index) == 2) and (index[0] in self.parts) and 
-                  (index[1] in self.parts)):
+            if ((len(index) == 2) and (index[0] in self.parent_part) and 
+                  (index[1] in self.parent_part)):
                 # a valid self or mutual term
                 parent_o, parent_s = index
             else:
@@ -398,17 +401,28 @@ class ImpedanceParts(object):
                 self.matrices[parent_s, parent_o] = new_matrix.T
             return new_matrix
 
-    def solve(self, *args, **kwargs):
-        """Solve the complete system for some vector, combining it first if
-        required"""
-        return self[self.parts, self.parts].solve(*args, **kwargs)
+    def solve(self, V, part=None, cache=True):
+        """Solve a particular part in the system for a source vector vector
+        
+        Parameters
+        ----------
+        V : ndarray
+            The vector for which to solve this impedance matrix
+        part : Part, optional
+            Can be used to specify a portion of this matrix to solve, which
+            corresponds to a particular sub-part. If not specified, the
+            full matrix will be solved
+        """
+        part = part or self.parent_part
+        return self[part, part].solve(V, cache=cache)
 
-    def eigenmodes(self, *args, **kwargs):
-        """Solve the eigenmodes of the complete system, combining it first if
-        required"""
-        return self[self.parts, self.parts].eigenmodes(*args, **kwargs)
+    def eigenmodes(self, part=None, *args, **kwargs):
+        """Solve the eigenmodes for a part or all of the system"""
+        part = part or self.parent_part
 
-    def impedance_modes(self, num_modes, mode_currents, combine=True):
+        return self[part, part].eigenmodes(*args, **kwargs)
+
+    def impedance_modes(self, num_modes, mode_currents):
         """Calculate a reduced impedance matrix based on the scalar impedance
         of the modes of each part, and the scalar coupling coefficients.
 
@@ -450,12 +464,9 @@ class ImpedanceParts(object):
             L_red[i, :, j, :] = L
             S_red[i, :, j, :] = S
 
-        if combine:
-            L_red = L_red.reshape((num_parts*num_modes, num_parts*num_modes))
-            S_red = S_red.reshape((num_parts*num_modes, num_parts*num_modes))
-            return EfieImpedanceMatrix(self.s, L_red, S_red, None, None, M.operator)
-        else:
-            raise NotImplementedError
+        L_red = L_red.reshape((num_parts*num_modes, num_parts*num_modes))
+        S_red = S_red.reshape((num_parts*num_modes, num_parts*num_modes))
+        return EfieImpedanceMatrix(self.s, L_red, S_red, None, None, M.operator)
 
     def source_modes(self, V, num_modes, mode_currents, combine=True):
         "Take a source field, and project it onto the modes of each part"
