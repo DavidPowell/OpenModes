@@ -75,19 +75,19 @@ def build_index_arrays(parent_part, basis_class):
     total_length = offsets[-1, -1]
     return index_arrays, total_length
 
-class PartsVector(np.ndarray):
+class VectorParts(np.ndarray):
     """
     A subclass of a numpy array, where elements along the last dimension are
     specified by a Part
-    
+
     For explanation of subclassing numpy arrays, see
     http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
     """
-    
+
     def __new__(subtype, parent_part, basis_class,
                 dtype=float, cols=None, logger=None):
         """Construct an empty vector which can be indexed by the parts
-        
+
         Parameters
         ----------
         parent_part : Part
@@ -102,50 +102,35 @@ class PartsVector(np.ndarray):
             If specified, then this array will have multiple columns, which will
             not be associated with any names
         """
-    
+
         # knowing the sizes of all sections, work out the location of each part
         # within the data
         index_arrays, total_length = build_index_arrays(parent_part, basis_class)
-        
+
         if cols is None:
             shape = (total_length,)
-            #return NamedArray(offsets[-1, -1], index_arrays, dtype=dtype)
         else:
             shape =  (total_length, cols)
-            #return NamedArray((offsets[-1, -1], cols), (index_arrays, {}),
-            #                  dtype=dtype)
-                    
-                    
-        # NB: shape could also contain the data
+
         obj = np.ndarray.__new__(subtype, shape, dtype)
-        
-        #if isinstance(ranges, dict):
-        #    # force ranges to be a tuple
-        #    ranges = ranges,
-        #elif not isinstance(ranges, tuple):
-        #    raise ValueError("Invalid ranges")
+
         obj.parent_part = parent_part
         obj.index_arrays = index_arrays
         obj.basis_class = basis_class
         obj.logger = logger
-        #obj.sections_dict = {}
-        
+
         # Finally, we must return the newly created object:
         return obj
 
     def __array_finalize__(self, obj):
         "Function is called when creating array from view as well"
         if obj is None: return
-        
+
         # set default values for the custom attributes
         self.basis_class = obj.basis_class
         self.parent_part = getattr(self, 'parent_part', None)
         self.index_arrays = getattr(self, 'index_arrays', {})
-        #print self.parent_part
-        
-        # ranges are only valid when explictly creating a matrix. They are
-        # not added when taking a view
-        
+
     def __getslice__(self, start, stop):
         "Needed due to CPython bug"
         return self.__getitem__(slice(start, stop))
@@ -171,14 +156,13 @@ class PartsVector(np.ndarray):
             new_idx.append(idx[0])
         if len(idx) > 1:
             new_idx.extend(idx[1:])
-        #print "before assignment"
         try:
-            result = super(PartsVector, self).__getitem__(tuple(new_idx))
+            result = super(VectorParts, self).__getitem__(tuple(new_idx))
         except IndexError:
             raise IndexError("Invalid index")
-        
-        if isinstance(result, PartsVector):
-            # If the result is a PartsVector, then set the metadata to the
+
+        if isinstance(result, VectorParts):
+            # If the result is a VectorPart, then set the metadata to the
             # appropriate values
             if idx[0] == slice(None):
                 # indexing this full dimension, just pass on the parent
@@ -207,7 +191,7 @@ class PartsVector(np.ndarray):
             new_idx.append(idx[0])
         if len(idx) > 1:
             new_idx.extend(idx[1:])
-        super(PartsVector, self).__setitem__(tuple(new_idx), value)
+        super(VectorParts, self).__setitem__(tuple(new_idx), value)
 
 
 if __name__ == "__main__":

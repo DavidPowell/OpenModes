@@ -28,7 +28,7 @@ import itertools
 from openmodes.helpers import inc_slice
 from openmodes.basis import get_combined_basis
 from openmodes.eig import eig_newton_linear
-from openmodes.vector import PartsVector
+from openmodes.vector import VectorParts
 
 
 class EfieImpedanceMatrix(object):
@@ -82,7 +82,7 @@ class EfieImpedanceMatrix(object):
             if cache:
                 self.factored_matrix = lu
 
-        vector = PartsVector(self.part_s, self.basis_s.canonical_basis,
+        vector = VectorParts(self.part_s, self.basis_s.canonical_basis,
                                     dtype=np.complex128)
 
         vector[:] = la.lu_solve(lu, V)
