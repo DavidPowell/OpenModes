@@ -348,7 +348,8 @@ class ImpedanceParts(object):
     coupling terms.
     """
 
-    def __init__(self, s, parent_part, matrices, impedance_class):
+    def __init__(self, s, parent_part_o, parent_part_s, matrices,
+                 impedance_class):
         """
         Parameters
         ----------
@@ -363,7 +364,8 @@ class ImpedanceParts(object):
             The class of the impedance matrices of each part
         """
         self.s = s
-        self.parent_part = parent_part
+        self.parent_part_o = parent_part_o
+        self.parent_part_s = parent_part_s
         self.matrices = matrices
         self.impedance_class = impedance_class
 
@@ -380,8 +382,8 @@ class ImpedanceParts(object):
         try:
             return self.matrices[index]
         except KeyError:
-            if ((len(index) == 2) and (index[0] in self.parent_part) and 
-                  (index[1] in self.parent_part)):
+            if ((len(index) == 2) and (index[0] in self.parent_part_o) and 
+                  (index[1] in self.parent_part_s)):
                 # a valid self or mutual term
                 parent_o, parent_s = index
             else:
@@ -418,7 +420,11 @@ class ImpedanceParts(object):
             corresponds to a particular sub-part. If not specified, the
             full matrix will be solved
         """
-        part = part or self.parent_part
+        if part is None:
+            if self.parent_part_o != self.parent_part_s:
+                raise ValueError("Cannot solve partial impedance matrix")
+            else:
+                part = self.parent_part_o
         return self[part, part].solve(V, cache=cache)
 
     def eigenmodes(self, part=None, num_modes=None, use_gram=None,
@@ -453,7 +459,11 @@ class ImpedanceParts(object):
         eigencurrent : VectorParts (num_basis, num_modes)
             A vector containing the eigencurrents of each mode in its columns
         """
-        part = part or self.parent_part
+        if part is None:
+            if self.parent_part_o != self.parent_part_s:
+                raise ValueError("Cannot get eigenvalues of partial impedance matrix")
+            else:
+                part = self.parent_part_o
         return self[part, part].eigenmodes(num_modes, use_gram, start_j)
 
     def project_modes(self, part_modes):

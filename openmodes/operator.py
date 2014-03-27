@@ -201,7 +201,7 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
 class Operator(object):
     "A base class for operator equations"
 
-    def impedance(self, s, parent):
+    def impedance(self, s, parent_o, parent_s):
         """Evaluate the self and mutual impedances of all parts in the
         simulation. Return an `ImpedancePart` object which can calculate
         several derived impedance quantities
@@ -227,8 +227,8 @@ class Operator(object):
         # except in specific cases such as arrays, and self terms may be
         # invalidated by green's functions which depend on coordinates
 
-        for part_o in parent.iter_single():
-            for part_s in parent.iter_single():
+        for part_o in parent_o.iter_single():
+            for part_s in parent_s.iter_single():
                 if self.reciprocal and (part_s, part_o) in matrices:
                     # use reciprocity to avoid repeated calculation
                     res = matrices[part_s, part_o].T
@@ -236,7 +236,7 @@ class Operator(object):
                     res = self.impedance_single_parts(s, part_o, part_s)
                 matrices[part_o, part_s] = res
 
-        return ImpedanceParts(s, parent, matrices, type(res))
+        return ImpedanceParts(s, parent_o, parent_s, matrices, type(res))
 
     def source_plane_wave(self, e_inc, jk_inc, parent):
         """Evaluate the source vectors due to an incident plane wave, returning

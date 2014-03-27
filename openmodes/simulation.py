@@ -27,7 +27,6 @@ import os.path as osp
 
 from openmodes import integration, gmsh
 from openmodes.parts import SinglePart, CompositePart
-from openmodes.impedance import ImpedanceParts
 from openmodes.basis import LoopStarBasis, get_basis_functions
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
 from openmodes.eig import eig_linearised, eig_newton
@@ -208,7 +207,7 @@ class Simulation(Identified):
         """
 
         parent = parent or self.parts
-        return self.operator.impedance(s, parent)
+        return self.operator.impedance(s, parent, parent)
 
     def source_plane_wave(self, e_inc, jk_inc, parent=None):
         """Evaluate the source vectors due to an incident plane wave, returning
