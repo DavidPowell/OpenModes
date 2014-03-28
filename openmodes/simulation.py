@@ -74,7 +74,7 @@ class Simulation(Identified):
         super(Simulation, self).__init__()
 
         if name is None:
-            name = self.id
+            name = str(self.id)
 
         if enable_logging:
             # create a unique logger for each simulation object
