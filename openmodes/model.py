@@ -175,3 +175,33 @@ class ScalarModelLS(object):
     def solve(self, s, V):
         "Solve the model for the current at arbitrary frequency"
         return self.mode_j*np.dot(self.mode_j, V)/self.scalar_impedance(s)
+
+
+class MutualPolyModel(object):
+    "A model for mutual impedance between parts with multiple modes"
+    def __init__(self, part_o, current_o, part_s, current_s):
+        self.part_o = part_o
+        self.current_o = current_o
+        self.part_s = part_s
+        self.current_s = current_s
+
+    def block_impedance(self, s):
+        "Calculate the impedance block matrix at the specified frequency"
+        Z = self.operator.impedance(s, self.part_o, self.part_s)[self.part_o, self.part_s][:]
+        return self.current_o.T.dot(Z.dot(self.current_s))
+
+
+class SelfModel(object):
+    "A model for the self-impedance of a part with multiple modes"
+    def __init__(self, part, mode_s, mode_j, operator):
+        self.num_modes = len(mode_s)
+        self.models = []
+        for mode_num, s in enumerate(mode_s):
+            self.models.append(ScalarModel(s, mode_j[:, mode_num]), 
+                               operator.impedance(s, part, part)[part, part])
+
+    def block_impedance(self, s):
+        "Calculate the impedance block matrix at the specified frequency"
+        Z = np.zeros((self.num_modes, self.num_modes), np.complex128)
+        for mode_count, model in enumerate(self.models):
+            Z[mode_count, mode_count] = model.scalar_impedance(s)
