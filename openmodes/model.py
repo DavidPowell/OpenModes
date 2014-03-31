@@ -20,6 +20,7 @@
 
 import numpy as np
 from scipy.optimize import nnls
+import scipy.linalg as la
 
 
 def delta_eig(s, j, Z_func, eps = None):
@@ -179,11 +180,13 @@ class ScalarModelLS(object):
 
 class MutualPolyModel(object):
     "A model for mutual impedance between parts with multiple modes"
-    def __init__(self, part_o, current_o, part_s, current_s):
+    def __init__(self, part_o, current_o, part_s, current_s, operator,
+                 logger=None):
         self.part_o = part_o
         self.current_o = current_o
         self.part_s = part_s
         self.current_s = current_s
+        self.operator = operator
 
     def block_impedance(self, s):
         "Calculate the impedance block matrix at the specified frequency"
@@ -193,15 +196,92 @@ class MutualPolyModel(object):
 
 class SelfModel(object):
     "A model for the self-impedance of a part with multiple modes"
-    def __init__(self, part, mode_s, mode_j, operator):
+    def __init__(self, part, mode_s, mode_j, operator, logger=None):
         self.num_modes = len(mode_s)
         self.models = []
         for mode_num, s in enumerate(mode_s):
-            self.models.append(ScalarModel(s, mode_j[:, mode_num]), 
-                               operator.impedance(s, part, part)[part, part])
+            self.models.append(ScalarModel(s, mode_j[:, mode_num], 
+                               lambda sn: operator.impedance(sn, part, part)[part, part],
+                               logger=logger))
 
     def block_impedance(self, s):
         "Calculate the impedance block matrix at the specified frequency"
         Z = np.zeros((self.num_modes, self.num_modes), np.complex128)
         for mode_count, model in enumerate(self.models):
             Z[mode_count, mode_count] = model.scalar_impedance(s)
+        return Z
+
+
+class ModelPolyInteraction(object):
+    """A model for a system of several parts.
+
+    Self-impedance terms are modelled as 4-term scalar impedances. Mutual terms
+    are modelled by weighting L and S with the modes, and fitting with a
+    polynomial.
+    """
+    def __init__(self, operator, parts_modes, logger=None):
+        """
+        Construct a model for a set of parts
+
+        Parameters
+        ----------
+        operator: Operator
+            The operator for the system of equations
+        parts_modes: list of tuple of (Part, eigenfreq, eigencurrent)
+            These parts will form the basis of the model
+        poly_order: integer
+            The order of polynomial to use for mutual terms
+        """
+
+        self.operator = operator
+        self.models = {}
+
+        self.num_rows = 0
+        self.parts = []
+
+        row = 0
+        for part, mode_s, mode_j in parts_modes:
+            num_rows = len(mode_s)
+            self.parts.append((part, slice(row, row+num_rows)))
+            row += num_rows
+        self.num_rows = row
+
+        for count_o, (part_o, mode_s_o, current_o) in enumerate(parts_modes):
+            for count_s, (part_s, mode_s_s, current_s) in enumerate(parts_modes):
+                if count_o == count_s:
+                    # within the same part
+                    self.models[part_o, part_s] = SelfModel(part_o, mode_s_o,
+                                                            current_o,
+                                                            operator,
+                                                            logger)
+                elif (not operator.reciprocal) or (count_o < count_s):
+                    # between different parts
+                    self.models[part_o, part_s] = MutualPolyModel(part_o,
+                                                            current_o,
+                                                            part_s,
+                                                            current_s,
+                                                            operator,
+                                                            logger)
+
+    def impedance(self, s):
+        """Calculate the reduced impedance matrix at a given frequency
+
+        Parameters
+        ----------
+        s: complex
+            Frequency at which to calculate
+        """
+        matrix = np.empty((self.num_rows, self.num_rows), np.complex128)
+
+        for count_o, (part_o, slice_o) in enumerate(self.parts):
+            for count_s, (part_s, slice_s) in enumerate(self.parts):
+                if self.operator.reciprocal and count_o > count_s:
+                    matrix[slice_o, slice_s] = matrix[slice_s, slice_o]
+                else:
+                    matrix[slice_o, slice_s] = self.models[part_o, part_s].block_impedance(s)
+        return matrix
+
+    def solve(self, s, V):
+        "Solve the model for a particular incident field"
+        Z = self.impedance(s)
+        return la.solve(Z, V)

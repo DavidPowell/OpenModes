@@ -13,8 +13,9 @@ import matplotlib.pyplot as plt
 import openmodes
 import openmodes.basis
 from openmodes.constants import c
+from openmodes.model import ModelPolyInteraction
     
-mesh_tol = 0.5e-3
+mesh_tol = 1e-3
     
 sim = openmodes.Simulation(name='Test DSRR', 
                            basis_class=openmodes.basis.LoopStarBasis,
@@ -33,15 +34,19 @@ srr_outer_mesh = sim.load_mesh(osp.join(openmodes.geometry_dir, 'SRR.geo'),
 srr_outer = sim.place_part(srr_outer_mesh, parent=srr)
 srr_outer.rotate([0, 0, 1], 180)
 
-#s = 2j*np.pi*1e9
 
-#current = sim.empty_vector()
+start_s = 2j*np.pi*1e9
 
-# for most of the parts, just calculate the lowest-order mode
-#for part in (canonical, v_antenna, srr, horseshoe):
-#mode_s, current = sim.singularities(s, 1)
-#mode_s, mode_j = sim.singularities(s, 1)
-#current = mode_j[:, 0]
+s_inner, current_inner = sim.singularities(start_s, 3, srr_inner)
+s_outer, current_outer = sim.singularities(start_s, 3, srr_outer)
+
+parts_modes = [(srr_inner, s_inner, current_inner),
+               (srr_outer, s_outer, current_outer)]
+
+model = ModelPolyInteraction(sim.operator, parts_modes, logger=sim.logger)
+
+projection_sem = [(srr_inner, current_inner),
+                  (srr_outer, current_outer)]
 
 
 #sim.plot_solution(current, 'mayavi') #, compress_scalars=1)
@@ -54,12 +59,15 @@ srr_outer.rotate([0, 0, 1], 180)
 #z_inner, modes_inner = Z.eigenmodes(srr_inner, 1)
 #z_outer, modes_outer = Z.eigenmodes(srr_outer, 1)
 #
-#projection = [(srr_inner, modes_inner), (srr_outer, modes_outer)]
+#
 #
 #Z_red = Z.project_modes(projection)
 #V_red = V.project_modes(projection)
 #
 #I_red = Z_red.solve(V_red)
+
+
+
 
 k_hat = np.array([1, 0, 0])
 e_inc = np.array([0, 1, 0])
@@ -69,6 +77,7 @@ freqs = np.linspace(2e9, 10e9, num_freqs)
 
 extinction = np.empty(num_freqs, np.complex128)
 extinction_red = np.empty(num_freqs, np.complex128)
+extinction_sem = np.empty(num_freqs, np.complex128)
 
 for freq_count, s in sim.iter_freqs(freqs):
     Z = sim.impedance(s)
@@ -83,10 +92,14 @@ for freq_count, s in sim.iter_freqs(freqs):
     Z_red = Z.project_modes(projection)
     V_red = V.project_modes(projection)
     extinction_red[freq_count] = np.vdot(V_red, Z_red.solve(V_red))
+    
+    V_sem = V.project_modes(projection_sem)
+    extinction_sem[freq_count] = np.vdot(V_sem, model.solve(s, V_sem))
 
 
 plt.figure()
 plt.plot(freqs*1e-9, extinction.real)
 plt.plot(freqs*1e-9, extinction_red.real)
+plt.plot(freqs*1e-9, extinction_sem.real)
 plt.show()
     
