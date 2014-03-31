@@ -219,10 +219,10 @@ def write_vtk(parts, scalar_function=None, vector_function=None,
 
     if vector_function is not None:
         if autoscale_vectors and compress_separately:
-            vector_function=[v/np.max(np.abs(v)) for v in vector_function]
+            vector_function=[v/np.average(np.abs(v)) for v in vector_function]
         vector_function = np.vstack(vector_function)
         if autoscale_vectors and not compress_separately:
-            vector_function=vector_function/np.max(np.abs(vector_function))
+            vector_function=vector_function/np.average(np.abs(vector_function))
         
         vector_real = tvtk.FloatArray(name=vector_name+"_real")
         vector_real.from_array(vector_function.real)
