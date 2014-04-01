@@ -194,7 +194,7 @@ class VectorParts(np.ndarray):
         super(VectorParts, self).__setitem__(tuple(new_idx), value)
 
     def weight(self, part_modes, normalise_modes=None):
-        """Project the vector onto a set of modes for each part
+        """Weight the vector using a set of modes for each part
 
         Parameters
         ----------
@@ -202,6 +202,10 @@ class VectorParts(np.ndarray):
             For each part `modes_vec` will be used as modes in which to base
             the reduced model. Multiple modes should be represented by mutiple
             columns of `modes_vec`.
+        normalise_modes : string, optional
+            If `None`, no normalisation will be performed
+            If 'complex', then the sum of each vector squared will be normalised
+            to 1, without taking the magnitude of each element
 
         Returns
         -------
@@ -215,6 +219,8 @@ class VectorParts(np.ndarray):
         V_red = []
 
         for part, modes in part_modes:
+            if normalise_modes == 'complex':
+                modes = modes/np.sqrt(np.sum(modes**2, axis=0))
             V_red.append(modes.T.dot(self[part]))
 
         return np.hstack(V_red)
