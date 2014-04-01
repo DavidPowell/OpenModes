@@ -164,7 +164,7 @@ class EfieImpedanceMatrix(object):
 
         return eigenimpedance, eigencurrent
 
-    def project_modes(self, modes_o, modes_s=None, return_arrays=False):
+    def weight(self, modes_o, modes_s=None, return_arrays=False):
         """Calculate a reduced impedance matrix based on the scalar impedance
         of the modes of each part, and the scalar coupling coefficients.
 
@@ -466,7 +466,7 @@ class ImpedanceParts(object):
                 part = self.parent_part_o
         return self[part, part].eigenmodes(num_modes, use_gram, start_j)
 
-    def project_modes(self, part_modes):
+    def weight(self, part_modes):
         """Calculate a reduced impedance matrix based on the scalar impedance
         of the modes of each part, and the scalar coupling coefficients. These
         are determined by projecting segments of the impedance matrix onto
@@ -497,7 +497,7 @@ class ImpedanceParts(object):
             L_row = []
             S_row = []
             for part_s, modes_s in part_modes:
-                L, S = self[part_o, part_s].project_modes(modes_o, modes_s,
+                L, S = self[part_o, part_s].weight(modes_o, modes_s,
                                                             return_arrays=True)
                 L_row.append(L)
                 S_row.append(S)

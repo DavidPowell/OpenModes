@@ -193,7 +193,7 @@ class VectorParts(np.ndarray):
             new_idx.extend(idx[1:])
         super(VectorParts, self).__setitem__(tuple(new_idx), value)
 
-    def project_modes(self, part_modes):
+    def weight(self, part_modes, normalise_modes=None):
         """Project the vector onto a set of modes for each part
 
         Parameters
