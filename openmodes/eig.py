@@ -26,7 +26,7 @@ import scipy.linalg as la
 import numpy as np
 
 
-def eig_linearised(Z, num_modes):
+def eig_linearised(Z, modes):
     """Solves a linearised approximation to the eigenvalue problem from
     the impedance calculated at some fixed frequency.
 
@@ -36,8 +36,8 @@ def eig_linearised(Z, num_modes):
     ----------
     Z : EfieImpedanceMatrixLoopStar
         The impedance matrix calculated in a loop-star basis
-    num_modes : int
-        The number of modes required.
+    modes : ndarray (int)
+        A list or array of the mode numbers required
 
     Returns
     -------
@@ -51,6 +51,8 @@ def eig_linearised(Z, num_modes):
     #if not isinstance(Z, EfieImpedanceMatrixLoopStar):
     #    raise ValueError(
     #        "Loop-star basis functions required for linearised eigenvalues")
+
+    modes = np.asarray(modes)
 
     star_range = Z.star_range_o
 
@@ -84,7 +86,7 @@ def eig_linearised(Z, num_modes):
 
     #w_selected = np.ma.masked_array(w_freq, w_freq.real < w_freq.imag)
     w_selected = np.ma.masked_array(w_freq, abs(w_freq.real) > abs(w_freq.imag))
-    which_modes = np.argsort(abs(w_selected.imag))[:num_modes]
+    which_modes = np.argsort(abs(w_selected.imag))[modes]
 
     return w_freq[which_modes], vr[:, which_modes]
 

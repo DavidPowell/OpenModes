@@ -229,7 +229,7 @@ class Simulation(Identified):
         parent = parent or self.parts
         return self.operator.source_plane_wave(e_inc, jk_inc, parent)
 
-    def singularities(self, s_start, num_modes, part=None, use_gram=True):
+    def singularities(self, s_start, modes, part=None, use_gram=True):
         """Find the singularities of a part or of the whole system
 
         Parameters
@@ -237,8 +237,9 @@ class Simulation(Identified):
         s_start : complex
             The complex frequency at which to perform the estimate. Should be
             within the band of interest
-        num_modes : integer
-            The number of modes to find
+        num_modes : integer or list
+            An integer specifying the number of modes to find, or a list of
+            mode numbers to find
         part : Part, optional
             The part to solve for. If not specified, the singularities of the
             full system will be solved for
@@ -259,9 +260,18 @@ class Simulation(Identified):
         if self.logger:
             self.logger.info("Finding singularities for part %s"
                              % str(part.id))
+
+        try:
+            # check if a list of mode numbers was passed
+            num_modes = len(modes)
+        except TypeError:
+            # assume that an integer was given
+            num_modes = modes
+            modes = range(num_modes)
+
         # first get an estimate of the pole locations
         Z = self.impedance(s_start, part)[part, part]
-        lin_s, lin_currents = eig_linearised(Z, num_modes)
+        lin_s, lin_currents = eig_linearised(Z, modes)
 
         mode_s = np.empty(num_modes, np.complex128)
         mode_j = self.empty_vector(part, cols=num_modes)
@@ -271,6 +281,8 @@ class Simulation(Identified):
         if use_gram:
             G = Z.basis_s.gram_matrix
 
+        # Note that mode refers to the position in the array modes, which
+        # at this point need not correspond to the original mode numbering
         for mode in xrange(num_modes):
             res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode],
                              weight='max element', lambda_tol=1e-8,
@@ -343,7 +355,7 @@ class Simulation(Identified):
 
         part = part or self.parts
         return VectorParts(part, self.basis_class, dtype=np.complex128,
-                                  cols=cols, logger=self.logger)        
+                                  cols=cols, logger=self.logger)
 
     def plot_solution(self, solution, output_format, filename=None,
                       compress_scalars=None, compress_separately=False):
