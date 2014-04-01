@@ -179,9 +179,26 @@ class ScalarModelLS(object):
 
 
 class MutualPolyModel(object):
-    "A model for mutual impedance between parts with multiple modes"
+    """A model for mutual impedance between parts with multiple modes
+    """
     def __init__(self, part_o, current_o, part_s, current_s, operator,
-                 logger=None):
+                 poly_order, s_max, logger=None):
+        """
+        Create the model for mutual terms
+            
+        Parameters
+        ----------
+        part_o, part_s: Part
+            The observing and source parts
+        current_o, current_s: ndarray(num_basis, num_modes)
+            The current distribution of the modes
+        operator: Operator
+            The operator describing the equations
+        poly_order: integer
+            The order of polynomial to use for mutual terms
+        s_max: complex
+            The highest frequency to calculate expansion for
+        """
         self.part_o = part_o
         self.current_o = current_o
         self.part_s = part_s
@@ -219,7 +236,7 @@ class ModelPolyInteraction(object):
     are modelled by weighting L and S with the modes, and fitting with a
     polynomial.
     """
-    def __init__(self, operator, parts_modes, logger=None):
+    def __init__(self, operator, parts_modes, poly_order, s_max, logger=None):
         """
         Construct a model for a set of parts
 
@@ -231,6 +248,8 @@ class ModelPolyInteraction(object):
             These parts will form the basis of the model
         poly_order: integer
             The order of polynomial to use for mutual terms
+        s_max: complex
+            The highest frequency to calculate expansion for
         """
 
         self.operator = operator
@@ -261,6 +280,8 @@ class ModelPolyInteraction(object):
                                                             part_s,
                                                             current_s,
                                                             operator,
+                                                            poly_order,
+                                                            s_max,
                                                             logger)
 
     def impedance(self, s):
@@ -276,7 +297,7 @@ class ModelPolyInteraction(object):
         for count_o, (part_o, slice_o) in enumerate(self.parts):
             for count_s, (part_s, slice_s) in enumerate(self.parts):
                 if self.operator.reciprocal and count_o > count_s:
-                    matrix[slice_o, slice_s] = matrix[slice_s, slice_o]
+                    matrix[slice_o, slice_s] = matrix[slice_s, slice_o].T
                 else:
                     matrix[slice_o, slice_s] = self.models[part_o, part_s].block_impedance(s)
         return matrix
