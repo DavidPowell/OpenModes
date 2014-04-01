@@ -262,7 +262,7 @@ def eig_newton_linear(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
 
     for iter_count in xrange(max_iter):
         if G is not None:
-            u = la.solve(Z-lambda_s*G, -np.dot(G, x_s))
+            u = la.solve(Z-lambda_s*G, -G.dot(x_s))
         else:
             u = la.solve(Z, x_s)
             
@@ -270,9 +270,9 @@ def eig_newton_linear(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
             v_s = np.zeros_like(x_s)
             v_s[np.argmax(abs(x_s))] = 1.0
         elif weight.lower() == 'rayleigh':
-            v_s = np.dot((Z-lambda_s*G).T, x_s.conj())
+            v_s = np.dot(np.array(Z-lambda_s*G).T, x_s.conj())
         elif weight.lower() == 'rayleigh symmetric':
-            v_s = np.dot((Z-lambda_s*G).T, x_s)
+            v_s = np.dot(np.array(Z-lambda_s*G).T, x_s)
 
         lambda_s1 = lambda_s - np.dot(v_s, x_s)/(np.dot(v_s, u))
         x_s1 = u/np.sqrt(np.sum(np.abs(u)**2))
