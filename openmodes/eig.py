@@ -36,7 +36,7 @@ def eig_linearised(Z, modes):
     ----------
     Z : EfieImpedanceMatrixLoopStar
         The impedance matrix calculated in a loop-star basis
-    modes : ndarray (int)
+0    modes : ndarray (int)
         A list or array of the mode numbers required
 
     Returns
@@ -266,6 +266,8 @@ def eig_newton_linear(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
         if G is not None:
             u = la.solve(Z-lambda_s*G, -G.dot(x_s))
         else:
+            raise NotImplementedError
+            # this should have identity matrix?
             u = la.solve(Z, x_s)
             
         if weight.lower() == 'max element':
@@ -277,7 +279,13 @@ def eig_newton_linear(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
             v_s = np.dot(np.array(Z-lambda_s*G).T, x_s)
 
         lambda_s1 = lambda_s - np.dot(v_s, x_s)/(np.dot(v_s, u))
-        x_s1 = u/np.sqrt(np.sum(np.abs(u)**2))
+        
+        if G is None:
+            x_s1 = u/np.sqrt(np.sum(np.abs(u)**2))
+        else:
+            # this assumes the rayleigh complex-symmetric normalisation
+            x_s1 = u/np.sqrt(np.sum(u.dot(G.dot(u))))
+            
         #x_s1 = u/np.sqrt(np.sum(u**2))
 
         delta_lambda = abs((lambda_s1 - lambda_s)/lambda_s)
