@@ -379,6 +379,9 @@ class ImpedanceParts(object):
         index : tuple, len 2
             A tuple containing the source and observer part.
         """
+        if index == slice(None):
+            index = (self.parent_part_o, self.parent_part_s)
+
         try:
             return self.matrices[index]
         except KeyError:
@@ -508,17 +511,3 @@ class ImpedanceParts(object):
         S_red = np.vstack(S_red)
         return self.impedance_class(self.s, L_red, S_red, None, None, 
                                    self[part_o, part_s].operator, None, None)
-
-    def source_modes(self, V, num_modes, mode_currents, combine=True):
-        "Take a source field, and project it onto the modes of each part"
-
-        V_red = np.zeros((self.num_parts, num_modes), np.complex128)
-
-        for i in xrange(self.num_parts):
-            V_red[i] = self.matrices[i][i].source_modes(V[i], num_modes,
-                                                        mode_currents[i])
-
-        if combine:
-            V_red = V_red.reshape(self.num_parts*num_modes)
-
-        return V_red
