@@ -26,7 +26,7 @@ import scipy.linalg as la
 
 from openmodes.helpers import inc_slice
 from openmodes.basis import get_combined_basis
-from openmodes.eig import eig_newton_linear
+from openmodes.eig import eig_newton_bordered
 from openmodes.vector import VectorParts
 
 
@@ -134,7 +134,7 @@ class EfieImpedanceMatrix(object):
             Z = self[:]
             for mode in xrange(num_modes):
                 start_z = start_j[:, mode].dot(Z.dot(start_j[:, mode]))
-                res = eig_newton_linear(Z, start_z, start_j[:, mode], G=G)
+                res = eig_newton_bordered(Z, start_z, start_j[:, mode], G=G)
                 eigencurrent[:, mode] = res['eigvec']
                 eigenimpedance[mode] = res['eigval']
 

@@ -306,6 +306,99 @@ def eig_newton_linear(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
 
     return res
 
+def eig_newton_bordered(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
+               G=None):
+    """Solve a linear (generalised) eigenvalue problem by Newton iteration
+
+    Parameters
+    ----------
+    Z : ndarray
+        The matrix
+    lambda_0 : complex
+        The starting guess for the eigenvalue
+    x_0 : ndarray
+        The starting guess for the eigenvector
+    lambda_tol : float
+        The relative tolerance in the eigenvalue for convergence
+    max_iter : int
+        The maximum number of iterations to perform
+    G : ndarray, optional
+        The RHS matrix for the generalised problem. If omitted, the identity
+        matrix will be used
+
+    Returns
+    -------
+    res : dictionary
+        A dictionary containing the following members:
+
+        'eigval' : the eigenvalue
+        'eigvect' : the eigenvector
+        'iter_count' : the number of iterations performed
+        'delta_lambda' : the change in the eigenvalue on the final iteration
+
+    See:
+    1.  P. Lancaster, Lambda Matrices and Vibrating Systems.
+        Oxford: Pergamon, 1966.
+
+    2.  A. Ruhe, “Algorithms for the Nonlinear Eigenvalue Problem,”
+        SIAM J. Numer. Anal., vol. 10, no. 4, pp. 674–689, Sep. 1973.
+
+    3.  A. L. Andrew, E. K. Chu, and P. Lancaster, “On the numerical solution
+        of nonlinear eigenvalue problems,” Computing, vol. 55, no. 2,
+        pp. 91–111, Jun. 1995.
+    """
+
+    N = Z.shape[0]
+
+    if G is None:
+        G = np.eye(N)
+    elif hasattr(G, 'toarray'):
+        # handle the sparse case
+        G = G.toarray()
+    else:
+        G = np.asarray(G)
+
+    x_s = x_0/np.sqrt(np.sum(x_0.dot(G.dot(x_0))))
+    lambda_s = lambda_0
+
+    converged = False
+
+    augmented = np.empty((N+1, N+1), dtype=Z.dtype)
+    augmented[N, N] = 0.0
+
+    rhs = np.zeros(N+1, Z.dtype)
+    rhs[-1] = 1
+
+    for iter_count in xrange(max_iter):
+        augmented[:N, :N] = Z-lambda_s*G
+        augmented[N, :N] = x_s
+        augmented[:N, N] = x_s
+        
+        sg = la.solve(augmented, rhs)
+        u = sg[:N]
+
+        # the improved eigenvector estimate scaled appropriately
+        x_s1 = u/np.sqrt(np.sum(u.dot(G.dot(u))))
+        
+        # determine the Rayleigh quotient, assuming complex-symmetric form
+        #quot = x_s.dot(np.dot(np.array(Z-lambda_s*G).T, x_s))/x_s.dot(G.dot(x_s))
+
+        lambda_s1 = x_s.dot(Z.dot(x_s)) # lambda_s - quot
+
+        delta_lambda = abs((lambda_s1 - lambda_s)/lambda_s)
+        converged = delta_lambda < lambda_tol
+
+        lambda_s = lambda_s1
+        x_s = x_s1
+
+        if converged: break
+
+    if not converged:
+        raise ValueError("maximum iterations reached, no convergence")
+
+    return {'eigval': lambda_s, 'eigvec': x_s, 'iter_count': iter_count+1,
+           'delta_lambda': delta_lambda}
+
 
 def project_modes(mode_j, E):
     """Take the projection of some field onto mode currents. Mostly useful
