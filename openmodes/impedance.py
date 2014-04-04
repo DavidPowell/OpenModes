@@ -144,23 +144,23 @@ class EfieImpedanceMatrix(object):
             # The direct solution, which may or may not use the Gram matrix
 
             if use_gram:
-                Gw, Gv = self.basis_o.gram_factored
-                Gwm = np.diag(1.0/Gw)
-                Zd = Gwm.dot(Gv.T.dot(self[:].dot(Gv.dot(Gwm))))
-                z_all, v_all = la.eig(Zd)
-                #G = self.basis_o.gram_matrix
-                #z_all, v_all = la.eig(self[:], G)
+                G = self.basis_o.gram_matrix
+                z_all, v_all = la.eig(self[:], G)
             else:
                 z_all, v_all = la.eig(self[:])
 
-            which_z = np.argsort(abs(z_all.imag))[:num_modes]
-            eigenimpedance = z_all[which_z]
-    
+            if start_j is None:
+                which_z = np.argsort(abs(z_all.imag))[:num_modes]
+            else:
+                which_z = np.dot(start_j.T, v_all).argmax(1)
+            
+            eigenimpedance = z_all[which_z]    
             v = v_all[:, which_z]
-            eigencurrent = v/np.sqrt(np.sum(v**2, axis=0))
     
             if use_gram:
-                eigencurrent = Gv.dot(Gwm.dot(eigencurrent))
+                eigencurrent = v/np.sqrt(np.diag(v.T.dot(G.dot(v))))
+            else:                
+                eigencurrent = v/np.sqrt(np.sum(v**2, axis=0))
 
         return eigenimpedance, eigencurrent
 
