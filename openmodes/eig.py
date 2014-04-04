@@ -36,7 +36,7 @@ def eig_linearised(Z, modes):
     ----------
     Z : EfieImpedanceMatrixLoopStar
         The impedance matrix calculated in a loop-star basis
-0    modes : ndarray (int)
+    modes : ndarray (int)
         A list or array of the mode numbers required
 
     Returns
@@ -92,7 +92,7 @@ def eig_linearised(Z, modes):
 
 
 def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
-               func_gives_der=False, args=[], weight='rayleigh symmetric'):
+               func_gives_der=False, G=None, args=[], weight='rayleigh symmetric'):
     """Solve a nonlinear eigenvalue problem by Newton iteration
 
     Parameters
@@ -154,8 +154,8 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
     if not func_gives_der:
         # evaluate at an arbitrary nearby starting point to allow finite
         # differences to be taken
-        #lambda_sm = lambda_0*(1+2*lambda_tol)
         lambda_sm = lambda_0*(1+10j*lambda_tol)
+        #lambda_sm = lambda_0*(1+10j*lambda_tol)
         T_sm = func(lambda_sm, *args)
 
     for iter_count in xrange(max_iter):
@@ -370,6 +370,8 @@ def eig_newton_bordered(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
     rhs[-1] = 1
 
     for iter_count in xrange(max_iter):
+        # Fill the augmented matrix with the impedance, and the previous
+        # estimate of the eigenvector
         augmented[:N, :N] = Z-lambda_s*G
         augmented[N, :N] = x_s
         augmented[:N, N] = x_s
@@ -383,7 +385,7 @@ def eig_newton_bordered(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
         # determine the Rayleigh quotient, assuming complex-symmetric form
         #quot = x_s.dot(np.dot(np.array(Z-lambda_s*G).T, x_s))/x_s.dot(G.dot(x_s))
 
-        lambda_s1 = x_s.dot(Z.dot(x_s)) # lambda_s - quot
+        lambda_s1 = x_s.dot(Z.dot(x_s))
 
         delta_lambda = abs((lambda_s1 - lambda_s)/lambda_s)
         converged = delta_lambda < lambda_tol
@@ -398,6 +400,146 @@ def eig_newton_bordered(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
 
     return {'eigval': lambda_s, 'eigvec': x_s, 'iter_count': iter_count+1,
            'delta_lambda': delta_lambda}
+
+
+def eig_newton_bordered_nonlinear(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
+               func_gives_der=False, args=[], G=None, weight=None):
+    """Solve a nonlinear eigenvalue problem by Newton iteration
+
+    Parameters
+    ----------
+    func : function
+        The function with input `lambda` which returns the matrix
+    lambda_0 : complex
+        The starting guess for the eigenvalue
+    x_0 : ndarray
+        The starting guess for the eigenvector
+    lambda_tol : float
+        The relative tolerance in the eigenvalue for convergence
+    max_iter : int
+        The maximum number of iterations to perform
+    func_gives_der : boolean, optional
+        If `True`, then the function also returns the derivative as the second
+        returned value. If `False` finite differences will be used instead,
+        which will have reduced accuracy
+    args : list, optional
+        Any additional arguments to be supplied to `func`
+    weight : string, optional
+        How to perform the weighting of the eigenvector
+
+        'max element' : The element with largest magnitude will be preserved
+
+        'rayleigh' : Rayleigh iteration for Hermition matrices will be used
+
+        'rayleigh symmetric' : Rayleigh iteration for complex symmetric
+        (i.e. non-Hermitian) matrices will be used
+
+    Returns
+    -------
+    res : dictionary
+        A dictionary containing the following members:
+
+        `eigval` : the eigenvalue
+
+        'eigvect' : the eigenvector
+
+        'iter_count' : the number of iterations performed
+
+        'delta_lambda' : the change in the eigenvalue on the final iteration
+
+
+    See:
+    1.  P. Lancaster, Lambda Matrices and Vibrating Systems.
+        Oxford: Pergamon, 1966.
+
+    2.  A. Ruhe, “Algorithms for the Nonlinear Eigenvalue Problem,”
+        SIAM J. Numer. Anal., vol. 10, no. 4, pp. 674–689, Sep. 1973.
+
+    """
+
+    N = len(x_0)
+    augmented = np.empty((N+1, N+1), dtype=np.complex128)
+    augmented[N, N] = 0.0
+
+    if G is None:
+        G = np.eye(N)
+
+    rhs = np.zeros(N+1, np.complex128)
+    rhs[-1] = 1
+
+    #x_s = x_0
+    x_s = x_0/np.sqrt(np.sum(x_0.dot(G.dot(x_0))))
+    lambda_s = lambda_0
+
+    converged = False
+
+    if not func_gives_der:
+        # evaluate at an arbitrary nearby starting point to allow finite
+        # differences to be taken
+        lambda_sm = lambda_0*(1+10j*lambda_tol)
+        #lambda_sm = lambda_0*lambda_tol
+        T_sm = func(lambda_sm, *args)
+
+
+
+    for iter_count in xrange(max_iter):
+        if func_gives_der:
+            T_s, T_ds = func(lambda_s, *args)
+        else:
+            T_s = func(lambda_s, *args)
+            T_ds = (T_s - T_sm)/(lambda_s - lambda_sm)
+
+        augmented[:N, :N] = T_s
+        augmented[N, :N] = x_s
+        augmented[:N, N] = x_s
+        
+        sg = la.solve(augmented, rhs)
+        u = sg[:N]
+
+
+#        u = la.solve(T_s, np.dot(T_ds, x_s))
+#
+#        # if known_vects is supplied, we should take this into account when
+#        # finding v
+#        if weight.lower() == 'max element':
+#            v_s = np.zeros_like(x_s)
+#            v_s[np.argmax(abs(x_s))] = 1.0
+#        elif weight.lower() == 'rayleigh':
+#            v_s = np.dot(T_s.T, x_s.conj())
+#        elif weight.lower() == 'rayleigh symmetric':
+#            v_s = np.dot(T_s.T, x_s)
+
+        delta_lambda_abs = x_s.dot(T_s.dot(x_s))/x_s.dot(T_ds.dot(x_s))
+        #print delta_lambda_abs
+
+        delta_lambda = abs(delta_lambda_abs/lambda_s)
+        #print delta_lambda
+        converged = delta_lambda < lambda_tol
+        if converged: break
+        
+        lambda_s1 = lambda_s - delta_lambda_abs
+        #x_s1 = u/np.sqrt(np.sum(np.abs(u)**2))
+        x_s1 = u/np.sqrt(np.sum(u.dot(G.dot(u))))
+
+        # update variables for next iteration
+        if not func_gives_der:
+            lambda_sm = lambda_s
+            T_sm = T_s
+
+        lambda_s = lambda_s1
+        x_s = x_s1
+        #print x_s
+        #print lambda_s
+
+
+    if not converged:
+        raise ValueError("maximum iterations reached, no convergence")
+
+    res = {'eigval': lambda_s, 'eigvec': x_s, 'iter_count': iter_count+1,
+           'delta_lambda': delta_lambda}
+
+    return res
+
 
 
 def project_modes(mode_j, E):
