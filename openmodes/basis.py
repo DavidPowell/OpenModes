@@ -672,7 +672,7 @@ class CombinedBasis(AbstractBasis):
         "Calculate the total Gram matrix of the complete system"
         total_size = len(self)
 
-        G_tot = lil_matrix((total_size, total_size))
+        G_tot = np.zeros((total_size, total_size))
 
         row_offset = 0
         for basis in self.basis_list:
@@ -681,7 +681,7 @@ class CombinedBasis(AbstractBasis):
 
             row_offset += row_size
 
-        return G_tot.tocsr()
+        return G_tot
 
     def __len__(self):
         return sum(len(basis) for basis in self.basis_list)
@@ -706,7 +706,7 @@ class CombinedLoopStarBasis(CombinedBasis):
         total_size = len(self)
         num_loops = self.num_loops
 
-        G_tot = lil_matrix((total_size, total_size))
+        G_tot = np.zeros((total_size, total_size))
 
         loop_range = slice(0, 0)
         star_range = slice(num_loops, num_loops)
@@ -723,7 +723,7 @@ class CombinedLoopStarBasis(CombinedBasis):
                 G_tot[star_range, loop_range] = G[basis.star_range, basis.loop_range]
             G_tot[star_range, star_range] = G[basis.star_range, basis.star_range]
 
-        return G_tot.tocsr()
+        return G_tot
 
 CACHED_COMBINED_BASIS = {}
 
