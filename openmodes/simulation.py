@@ -334,8 +334,7 @@ class Simulation(Identified):
         scalar_models = []
 
         for s_n, j_n in zip(mode_s, mode_j.T):
-            Z_func = lambda s: self.impedance(s, part)[part, part]
-            scalar_models.append(ScalarModel(s_n, j_n, Z_func,
+            scalar_models.append(ScalarModel(part, s_n, j_n, self.operator,
                                  logger=self.logger))
         return scalar_models
 

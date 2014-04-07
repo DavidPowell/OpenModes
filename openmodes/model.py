@@ -86,10 +86,12 @@ class ScalarModel(object):
     and the derivative of the eigenimpedancec at resonance, as well as the
     condition of open-circuit impedance at zero frequency."""
 
-    def __init__(self, mode_s, mode_j, Z_func, logger=None):
+    def __init__(self, part, mode_s, mode_j, operator, logger=None):
         "Construct the scalar model"
         self.mode_s = mode_s
         self.mode_j = mode_j
+        
+        Z_func = lambda s: operator.impedance(s, part, part)[part, part]
         self.z_der = delta_eig(mode_s, mode_j, Z_func)
         self.scale_factor = abs(mode_s.imag)/10
         self.coefficients = fit_four_term(mode_s/self.scale_factor,
@@ -109,6 +111,7 @@ class ScalarModel(object):
     def solve(self, s, V):
         "Solve the model for the current at arbitrary frequency"
         return self.mode_j*np.dot(self.mode_j, V[:])/self.scalar_impedance(s)
+
 
 def fit_LS(s_0, L_0, S_0):
     """
@@ -217,9 +220,8 @@ class SelfModel(object):
         self.num_modes = len(mode_s)
         self.models = []
         for mode_num, s in enumerate(mode_s):
-            self.models.append(ScalarModel(s, mode_j[:, mode_num], 
-                               lambda sn: operator.impedance(sn, part, part)[part, part],
-                               logger=logger))
+            self.models.append(ScalarModel(part, s, mode_j[:, mode_num], 
+                               operator, logger=logger))
 
     def block_impedance(self, s):
         "Calculate the impedance block matrix at the specified frequency"
