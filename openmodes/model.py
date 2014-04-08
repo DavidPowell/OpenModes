@@ -91,15 +91,16 @@ class ScalarModel(object):
         self.mode_s = mode_s
         self.mode_j = mode_j
         
-        Z_func = lambda s: operator.impedance(s, part, part)[part, part]
-        self.z_der = delta_eig(mode_s, mode_j, Z_func)
         self.scale_factor = abs(mode_s.imag)/10
+        
+        Z_func = lambda s: operator.impedance(s, part, part)[part, part]
+        z_der = delta_eig(mode_s, mode_j, Z_func)
         self.coefficients = fit_four_term(mode_s/self.scale_factor,
-                                          self.z_der*self.scale_factor,
+                                          z_der*self.scale_factor,
                                           logger)
         if logger:
             logger.info("Creating scalar model\ndlambda/ds = %+.4e %+.4e\n"
-                        "Coefficients: %s" % (self.z_der.real, self.z_der.imag,
+                        "Coefficients: %s" % (z_der.real, z_der.imag,
                                               str(self.coefficients)))
 
     def scalar_impedance(self, s):
