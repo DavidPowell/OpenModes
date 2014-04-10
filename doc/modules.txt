@@ -1,30 +1,7 @@
-Documentation of modules
-========================
+openmodes
+=========
 
+.. toctree::
+   :maxdepth: 4
 
-``openmodes``
--------------
-
-.. automodule:: openmodes
-    :members:
-
-
-``openmodes.simulation``
---------------------
-
-.. automodule:: openmodes.simulation
-    :members:
-
-
-``openmodes.visualise``
------------------------
-
-.. automodule:: openmodes.visualise
-    :members:
-
-
-``openmodes.parts``
--------------------
-
-.. automodule:: openmodes.parts
-    :members:
+   openmodes

@@ -4,18 +4,19 @@ Installation Instructions
 OpenModes is written in the `Python <http://www.python.org/>`_ language, and
 utilises the program gmsh to mesh the structure geometries.
 
-Windows Quick Install
----------------------
+Quick Install Instructions
+--------------------------
 
-The simplest way to get started is to download `Python(x,y) 
-<https://code.google.com/p/pythonxy/>`_, which includes python and all the required python 
-libraries. 
+The simplest way to get started is to download the 64 bit version of `Anaconda 
+<http://docs.continuum.io/anaconda/install.html>`_, which includes python and all the required python 
+libraries. It is possible to install Anaconda even if you don't have administrator access, and
+it is available for Windows, Linux and Mac OSX.
 
-Then install `gmsh <http://geuz.org/gmsh/>`_, and make sure that the gmsh
+Then install `gmsh <http://geuz.org/gmsh/>`_, and make sure that the location of the gmsh
 executable is added to the windows PATH environment variable.
 
-Download the `OpenModes <http://pypi.python.org/pypi/OpenModes>`_ executable package and
-install it using the WinPython or Python(x,y) package manager.
+From the anaconda command-line, `OpenModes <http://pypi.python.org/pypi/OpenModes>`_ 
+can be installed with the command ``pip install openmodes``.
 
 Requirements
 ------------
@@ -30,54 +31,60 @@ The following software packages are the absolute minimum to run OpenModes:
 Strongly recommended packages
 
 - IPython (the notebook is used by many of the examples)
-- tvtk (to export 3D plots to vtk file format)
+- Mayavi (to export 3D plots to vtk file format, or to directly view the results)
 - ViSit or ParaView (3D plotting software to view vtk files)
 
 Other packages which may be useful
 
 - spyder (a GUI for editing python)
-- mayavi (a python package for producing 3D plots)
 
 OpenModes contains some core routines which are optimised using fortran.
 Therefore, on platforms where a binary package of OpenModes is not provided,
 a fortran compiler is required.
 
-
 For windows users, there are several choices of scientific python distribution
-which may also be suitable
+which may be suitable
 
-- WinPython (known to work)
+- WinPython
 - Anaconda
 - Enthought Python Distribution
+- Enthought Canopy
 
-Due to the lack of reliable free 64 bit fortran compilers for windows, you will
-need to install a 32 bit version of any of these distributions
+Compiling yourself under windows is quite difficult, due to incompatibility
+of the freely available fortran compilers with windows, particularly under 64 bit.
+The pre-compiled versions were created with Microsoft C compilers and Intel
+Fortran compiler.
 
 Ubuntu Linux
 ------------
 
+Most Linux distributions come with python and most of the required libraries. 
 For ubuntu users, the appropriate packages can be installed using the following
 command
 
 ``sudo apt-get install python python-numpy python-matplotlib gmsh gfortran
-ipython python-dev pyvtk python-pip``
+ipython python-dev python-mayavi python-pip``
 
 OpenModes itself can then be installed using the command
 
 ``sudo pip install OpenModes``
 
+If you don't have root access to your Linux machine, then the Anaconda distribution
+can be used, as explained above.
+
 Mac OSX
 -------
 
 This code has not been tested for Mac OSX, but there is no known reason why it should
-not work. All required packages are available from the MacPorts project. 
+not work. All required packages should be available from the MacPorts project, or
+by installing Anaconda.
 
 Manual Install for Windows
 --------------------------
 
 Manual installation under windows is difficult, therefore it is recommended to use the
-precomplied binaries. Compliation requires the use of 
-mingw32 or mingw64 compilers, as these are the only free fortran compilers available for
+pre-compiled binaries. Compilation requires the use of 
+mingw32 or mingw64 compilers, as these are the only free Fortran compilers available for
 windows. Unfortunately the default setting on most systems will not successfully
 compile the required libraries.
 
@@ -86,7 +93,7 @@ fortran extensions to randomly generate NaNs in the returned arrays if
 optimisation levels -O2 or -O3 are specified, therefore the default optimisation
 level has been set to -O1.
 
-The 32 bit windows binaries were successfully built under the mingw-64 
+Previously 32 bit windows binaries were successfully built under the mingw-64 
 x32-4.8.1-posix-dwarf-rev5 compiler. For 64 bit windows, binaries were successfully
 build using the x64-4.8.1-posix-seh-rev5 compiler. Both were installed using the
 `mingw-builds<http://sourceforge.net/projects/mingwbuilds/>`_ installer.
@@ -110,7 +117,8 @@ Building the Documentation
 
 In order to build the documentation, the following packages are required
 
-- numpydocs
+- numpydoc
 - Sphinx
+- pandoc
 
 At a system command prompt, enter the ``doc`` directory and type ``make html``.
