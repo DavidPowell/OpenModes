@@ -140,6 +140,7 @@ setup(name = 'OpenModes',
     install_requires = ['numpy >= 1.6.2', 'scipy', 'matplotlib'],
     long_description=long_description,
     platforms = "Windows, Linux",
+    use_2to3 = True,
     classifiers=[
           'Development Status :: 4 - Beta',
           'Environment :: Console',

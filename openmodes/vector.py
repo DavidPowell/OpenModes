@@ -131,6 +131,8 @@ class VectorParts(np.ndarray):
         self.parent_part = getattr(self, 'parent_part', None)
         self.index_arrays = getattr(self, 'index_arrays', {})
 
+    # Under python 3.x, these members will not be called. However, they should
+    # not cause any trouble.
     def __getslice__(self, start, stop):
         "Needed due to CPython bug"
         return self.__getitem__(slice(start, stop))
