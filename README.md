@@ -11,6 +11,7 @@ excitation, coupling between them and scattering to be solved easily, and
 broadband models to be created
 
 Requires the python packages numpy, scipy and matplotlib, and the free meshing
-program gmsh. See doc/install.txt for full instructions and requirements.
+program gmsh. See the `documentation <http://www.pythonhosted.org/OpenModes/>`_ 
+for full installation instructions and requirements.
 
 The source is available on `GitHub <https://github.com/DavidPowell/OpenModes>`_
