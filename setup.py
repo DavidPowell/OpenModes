@@ -124,7 +124,7 @@ redist_data = []
 if osp.exists(redist_path):
     redist_data.append(redist_path)
 
-with open('README.txt') as description_file:
+with open('README.md') as description_file:
     long_description = description_file.read()
 
 setup(name = 'OpenModes',
