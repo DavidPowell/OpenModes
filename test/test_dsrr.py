@@ -15,7 +15,7 @@ import openmodes.basis
 from openmodes.constants import c
 from openmodes.model import ModelPolyInteraction
     
-mesh_tol = 1e-3
+mesh_tol = 0.3e-3
     
 sim = openmodes.Simulation(name='Test DSRR', 
                            basis_class=openmodes.basis.LoopStarBasis,
@@ -37,9 +37,12 @@ srr_outer.rotate([0, 0, 1], 180)
 
 start_s = 2j*np.pi*1e9
 
-num_modes = 3
-s_inner, current_inner = sim.singularities(start_s, num_modes, srr_inner)
-s_outer, current_outer = sim.singularities(start_s, num_modes, srr_outer)
+modes = [0, 2] #3
+num_modes = len(modes)
+s_inner, current_inner = sim.singularities(start_s, modes, srr_inner)
+s_outer, current_outer = sim.singularities(start_s, modes, srr_outer)
+
+#s_full, current_full = sim.singularities(start_s, 3, srr)
 
 parts_modes = [(srr_inner, s_inner, current_inner),
                (srr_outer, s_outer, current_outer)]
@@ -70,17 +73,23 @@ for freq_count, s in sim.iter_freqs(freqs):
     Z = sim.impedance(s)
     jk = s/c
     V = sim.source_plane_wave(e_inc, jk*k_hat)
-    extinction[freq_count] = np.vdot(V, Z.solve(V))
+    I = Z.solve(V)
+    extinction[freq_count] = np.vdot(V, I)
 
-    #z_inner, modes_inner = Z.eigenmodes(srr_inner, 1)
-    #z_outer, modes_outer = Z.eigenmodes(srr_outer, 1)
-    #projection = [(srr_inner, modes_inner), (srr_outer, modes_outer)]
+    z_inner, modes_inner = Z.eigenmodes(srr_inner, start_j=current_inner)
+    z_outer, modes_outer = Z.eigenmodes(srr_outer, start_j=current_outer)
+    projection = [(srr_inner, modes_inner), (srr_outer, modes_outer)]
     
-    Z_red = Z.project_modes(projection_sem)
-    V_red = V.project_modes(projection_sem)
-    extinction_red[freq_count] = np.vdot(V_red, Z_red.solve(V_red))
+    #z_full, modes_full = Z.eigenmodes(srr, start_j=current_full)
+    #projection = [(srr, current_full)]
     
-    V_sem = V.project_modes(projection_sem)
+    Z_red = Z.weight(projection)
+    V_red = V.weight(projection)
+    I_red = Z_red.solve(V_red)
+    extinction_red[freq_count] = np.vdot(V_red, I_red)
+    #extinction_red[freq_count] = np.vdot(V.project(projection), I.project(projection))
+    
+    V_sem = V.weight(projection_sem)
     extinction_sem[freq_count] = np.vdot(V_sem, model.solve(s, V_sem))
     
     z_eem[freq_count] = np.diag(Z_red[:])[:num_modes]
@@ -99,12 +108,16 @@ plt.plot(freqs*1e-9, extinction_red.imag)
 plt.plot(freqs*1e-9, extinction_sem.imag)
 plt.show()
 
-plt.figure()
-plt.plot(freqs*1e-9, z_eem[:, 0].real)
-plt.plot(freqs*1e-9, z_sem[:, 0].real, '--')
-plt.show()
-
-plt.figure()
-plt.plot(freqs*1e-9, z_eem[:, 0].imag)
-plt.plot(freqs*1e-9, z_sem[:, 0].imag, '--')
-plt.show()
+#plt.figure()
+##plt.plot(freqs*1e-9, z_eem[:, 0].real)
+##plt.plot(freqs*1e-9, z_sem[:, 0].real, '--')
+#plt.plot(freqs*1e-9, z_eem.real)
+#plt.plot(freqs*1e-9, z_sem.real, '--')
+#plt.show()
+#
+#plt.figure()
+##plt.plot(freqs*1e-9, z_eem[:, 0].imag)
+##plt.plot(freqs*1e-9, z_sem[:, 0].imag, '--')
+#plt.plot(freqs*1e-9, z_eem.imag)
+#plt.plot(freqs*1e-9, z_sem.imag, '--')
+#plt.show()
