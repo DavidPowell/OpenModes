@@ -83,10 +83,10 @@ class Part(Identified):
         # TODO: enable rotation about arbitrary coordinates, and about the
         # centre of the object        
         
-        axis = np.array(axis)
+        axis = np.array(axis, np.float64)
         axis /= np.sqrt(np.dot(axis, axis))
         
-        angle *= np.pi/180.0        
+        angle = angle*np.pi/180.0        
         
         a = np.cos(0.5*angle)
         b, c, d = axis*np.sin(0.5*angle)
