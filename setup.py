@@ -22,7 +22,8 @@ ez_setup.use_setuptools()
 
 import setuptools
 
-from os.path import join
+from distutils.util import get_platform
+import os.path as osp
 
 try:
     import numpy
@@ -73,14 +74,14 @@ fcompiler_dependent_options['intelem'] = fcompiler_dependent_options['intel']
 fcompiler_dependent_options['intelvem'] = fcompiler_dependent_options['intel']
 
 core = Extension(name = 'openmodes.core',
-                 sources = [join('src', 'core.pyf'),
-                            join('src', 'common.f90'),
-                            join('src', 'rwg.f90')],
+                 sources = [osp.join('src', 'core.pyf'),
+                            osp.join('src', 'common.f90'),
+                            osp.join('src', 'rwg.f90')],
                 )
 
 dunavant = Extension(name = 'openmodes.dunavant',
-                     sources=[join('src', 'dunavant.pyf'),
-                              join('src', 'dunavant.f90')])
+                     sources=[osp.join('src', 'dunavant.pyf'),
+                              osp.join('src', 'dunavant.f90')])
 
 from numpy.distutils.command.build_ext import build_ext
 
@@ -92,14 +93,6 @@ class compiler_dependent_build_ext( build_ext ):
     
     Based on http://stackoverflow.com/a/5192738/482420
     """
-    
-#    user_options = build_ext.user_options+[
-#                ('package-dlls', None, 'Include Mingw32 dlls in binary package')
-#                ]  
-#                
-#    def initialize_options(self):
-#        build_ext.initialize_options(self)
-#        self.package_dlls=False
     
     def build_extensions(self):
         ccompiler = self.compiler.compiler_type
@@ -123,6 +116,14 @@ class compiler_dependent_build_ext( build_ext ):
         
         build_ext.build_extensions(self)
 
+# Find library files which must be included, which should be placed in the
+# appropriate subdirectory of the redist directory. This must be done manually,
+# as this code cannot detect which compiler will be used.
+redist_path = osp.join("redist", get_platform())
+redist_data = []
+if osp.exists(redist_path):
+    redist_data.append(redist_path)
+
 with open('README.txt') as description_file:
     long_description = description_file.read()
 
@@ -133,7 +134,7 @@ setup(name = 'OpenModes',
     license ='GPLv3+',
     #url = '',
     packages = ['openmodes'],
-    package_data={'openmodes': [join("geometry", "*.geo")]},
+    package_data={'openmodes': [osp.join("geometry", "*.geo")]},
     ext_modules = [dunavant, core],
     version = '0.1dev',
     install_requires = ['numpy >= 1.6.2', 'scipy', 'matplotlib'],
@@ -154,8 +155,7 @@ setup(name = 'OpenModes',
           ],
     cmdclass = {'build_ext': compiler_dependent_build_ext},
 
-    # This is a horrible workaround, the dll files will be included for all
-    # operating systems.
-    #data_files = [('', ['libgomp-1.dll', 'libgfortran-3.dll', 'libgcc_s_dw2-1.dll'])]
+    # Include any required library files
+    data_files = [('openmodes', redist_data)]
     )
 
