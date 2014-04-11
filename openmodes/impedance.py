@@ -38,7 +38,7 @@ class EfieImpedanceMatrix(object):
     This is a single impedance matrix for the whole system. Note that elements
     of the matrix should not be modified after being added to this object.
     """
-    
+
     reciprocal = True
 
     def __init__(self, s, L, S, basis_o, basis_s, operator, part_o, part_s):
@@ -127,10 +127,10 @@ class EfieImpedanceMatrix(object):
             eigencurrent = np.empty_like(start_j)
             num_modes = start_j.shape[1]
             eigenimpedance = np.empty(num_modes, np.complex128)
-            
+
             G = self.basis_o.gram_matrix
             start_j /= np.sqrt(np.diag(start_j.T.dot(G.dot(start_j))))
-            
+
             Z = self[:]
             for mode in xrange(num_modes):
                 start_z = start_j[:, mode].dot(Z.dot(start_j[:, mode]))
@@ -190,7 +190,7 @@ class EfieImpedanceMatrix(object):
         """
         if modes_s is None:
             modes_s = modes_o
-        
+
         # TODO: special handling of self terms to zero off-diagonal terms?
 
         L_red = modes_o.T.dot(self.L.dot(modes_s))
@@ -260,7 +260,7 @@ class EfieImpedanceMatrix(object):
                 col_offset += col_size
             row_offset += row_size
 
-        basis = get_combined_basis(basis_list = [m.basis_o for m in row])
+        basis = get_combined_basis(basis_list=[m.basis_o for m in row])
         return EfieImpedanceMatrix(s, L_tot, S_tot, basis, basis,
                                    matrix.operator, part_o, part_s)
 
@@ -310,7 +310,8 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
         L_tot = np.empty((total_rows, total_cols), np.complex128)
         S_tot = np.empty_like(L_tot)
 
-        basis = get_combined_basis(basis_list=[row[0].basis_o for row in matrices])
+        basis = get_combined_basis(basis_list=[row[0].basis_o
+                                               for row in matrices])
 
         loop_range_o = slice(0, 0)
         star_range_o = slice(basis.num_loops, basis.num_loops)
@@ -370,7 +371,7 @@ class ImpedanceParts(object):
         self.impedance_class = impedance_class
 
     def __getitem__(self, index):
-        """Allow self or mutual impedances of parts at any level to be 
+        """Allow self or mutual impedances of parts at any level to be
         accessed. If the impedance of a part is not found, then it will be
         constructed by combining the sub-parts
 
@@ -385,8 +386,8 @@ class ImpedanceParts(object):
         try:
             return self.matrices[index]
         except KeyError:
-            if ((len(index) == 2) and (index[0] in self.parent_part_o) and 
-                  (index[1] in self.parent_part_s)):
+            if ((len(index) == 2) and (index[0] in self.parent_part_o) and
+                (index[1] in self.parent_part_s)):
                 # a valid self or mutual term
                 parent_o, parent_s = index
             else:
@@ -413,7 +414,7 @@ class ImpedanceParts(object):
 
     def solve(self, V, part=None, cache=True):
         """Solve a particular part in the system for a source vector vector
-        
+
         Parameters
         ----------
         V : ndarray
@@ -501,7 +502,7 @@ class ImpedanceParts(object):
             S_row = []
             for part_s, modes_s in part_modes:
                 L, S = self[part_o, part_s].weight(modes_o, modes_s,
-                                                            return_arrays=True)
+                                                   return_arrays=True)
                 L_row.append(L)
                 S_row.append(S)
             L_red.append(np.hstack(L_row))
@@ -509,5 +510,5 @@ class ImpedanceParts(object):
 
         L_red = np.vstack(L_red)
         S_red = np.vstack(S_red)
-        return self.impedance_class(self.s, L_red, S_red, None, None, 
-                                   self[part_o, part_s].operator, None, None)
+        return self.impedance_class(self.s, L_red, S_red, None, None,
+                                    self[part_o, part_s].operator, None, None)

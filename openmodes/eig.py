@@ -63,8 +63,7 @@ def eig_linearised(Z, modes):
 
         L_conv = la.solve(Z.L[loop_range, loop_range],
                           Z.L[loop_range, star_range])
-        L_red = Z.L[star_range, star_range] - np.dot(Z.L[star_range, loop_range],
-                                                   L_conv)
+        L_red = Z.L[star_range, star_range] - np.dot(Z.L[star_range, loop_range], L_conv)
 
     # find eigenvalues, and star part of eigenvectors, for LS combined modes
     w, v_s = la.eig(Z.S[star_range, star_range], -L_red)
@@ -92,7 +91,8 @@ def eig_linearised(Z, modes):
 
 
 def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
-               func_gives_der=False, G=None, args=[], weight='rayleigh symmetric'):
+               func_gives_der=False, G=None, args=[],
+               weight='rayleigh symmetric'):
     """Solve a nonlinear eigenvalue problem by Newton iteration
 
     Parameters
@@ -181,8 +181,9 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
 
         delta_lambda = abs(delta_lambda_abs/lambda_s)
         converged = delta_lambda < lambda_tol
-        if converged: break
-        
+        if converged:
+            break
+
         lambda_s1 = lambda_s - delta_lambda_abs
         x_s1 = u/np.sqrt(np.sum(np.abs(u)**2))
 
@@ -196,7 +197,6 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
         #print x_s
         #print lambda_s
 
-
     if not converged:
         raise ValueError("maximum iterations reached, no convergence")
 
@@ -205,8 +205,9 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
 
     return res
 
+
 def eig_newton_linear(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
-               G=None, weight='rayleigh symmetric'):
+                      G=None, weight='rayleigh symmetric'):
     """Solve a linear (generalised) eigenvalue problem by Newton iteration
 
     Parameters
@@ -269,7 +270,7 @@ def eig_newton_linear(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
             raise NotImplementedError
             # this should have identity matrix?
             u = la.solve(Z, x_s)
-            
+
         if weight.lower() == 'max element':
             v_s = np.zeros_like(x_s)
             v_s[np.argmax(abs(x_s))] = 1.0
@@ -279,13 +280,13 @@ def eig_newton_linear(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
             v_s = np.dot(np.array(Z-lambda_s*G).T, x_s)
 
         lambda_s1 = lambda_s - np.dot(v_s, x_s)/(np.dot(v_s, u))
-        
+
         if G is None:
             x_s1 = u/np.sqrt(np.sum(np.abs(u)**2))
         else:
             # this assumes the rayleigh complex-symmetric normalisation
             x_s1 = u/np.sqrt(np.sum(u.dot(G.dot(u))))
-            
+
         #x_s1 = u/np.sqrt(np.sum(u**2))
 
         delta_lambda = abs((lambda_s1 - lambda_s)/lambda_s)
@@ -296,7 +297,8 @@ def eig_newton_linear(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
         #print x_s
         #print lambda_s
 
-        if converged: break
+        if converged:
+            break
 
     if not converged:
         raise ValueError("maximum iterations reached, no convergence")
@@ -306,8 +308,9 @@ def eig_newton_linear(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
 
     return res
 
+
 def eig_newton_bordered(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
-               G=None):
+                        G=None):
     """Solve a linear (generalised) eigenvalue problem by Newton iteration
 
     Parameters
@@ -375,13 +378,13 @@ def eig_newton_bordered(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
         augmented[:N, :N] = Z-lambda_s*G
         augmented[N, :N] = x_s
         augmented[:N, N] = x_s
-        
+
         sg = la.solve(augmented, rhs)
         u = sg[:N]
 
         # the improved eigenvector estimate scaled appropriately
         x_s1 = u/np.sqrt(np.sum(u.dot(G.dot(u))))
-        
+
         # determine the Rayleigh quotient, assuming complex-symmetric form
         #quot = x_s.dot(np.dot(np.array(Z-lambda_s*G).T, x_s))/x_s.dot(G.dot(x_s))
 
@@ -393,17 +396,19 @@ def eig_newton_bordered(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
         lambda_s = lambda_s1
         x_s = x_s1
 
-        if converged: break
+        if converged:
+            break
 
     if not converged:
         raise ValueError("maximum iterations reached, no convergence")
 
     return {'eigval': lambda_s, 'eigvec': x_s, 'iter_count': iter_count+1,
-           'delta_lambda': delta_lambda}
+            'delta_lambda': delta_lambda}
 
 
-def eig_newton_bordered_nonlinear(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
-               func_gives_der=False, args=[], G=None, weight=None):
+def eig_newton_bordered_nonlinear(func, lambda_0, x_0, lambda_tol=1e-8,
+                                  max_iter=20, func_gives_der=False, args=[],
+                                  G=None, weight=None):
     """Solve a nonlinear eigenvalue problem by Newton iteration
 
     Parameters
@@ -480,8 +485,6 @@ def eig_newton_bordered_nonlinear(func, lambda_0, x_0, lambda_tol=1e-8, max_iter
         #lambda_sm = lambda_0*lambda_tol
         T_sm = func(lambda_sm, *args)
 
-
-
     for iter_count in xrange(max_iter):
         if func_gives_der:
             T_s, T_ds = func(lambda_s, *args)
@@ -492,10 +495,9 @@ def eig_newton_bordered_nonlinear(func, lambda_0, x_0, lambda_tol=1e-8, max_iter
         augmented[:N, :N] = T_s
         augmented[N, :N] = x_s
         augmented[:N, N] = x_s
-        
+
         sg = la.solve(augmented, rhs)
         u = sg[:N]
-
 
 #        u = la.solve(T_s, np.dot(T_ds, x_s))
 #
@@ -515,8 +517,9 @@ def eig_newton_bordered_nonlinear(func, lambda_0, x_0, lambda_tol=1e-8, max_iter
         delta_lambda = abs(delta_lambda_abs/lambda_s)
         #print delta_lambda
         converged = delta_lambda < lambda_tol
-        if converged: break
-        
+        if converged:
+            break
+
         lambda_s1 = lambda_s - delta_lambda_abs
         #x_s1 = u/np.sqrt(np.sum(np.abs(u)**2))
         x_s1 = u/np.sqrt(np.sum(u.dot(G.dot(u))))
@@ -531,7 +534,6 @@ def eig_newton_bordered_nonlinear(func, lambda_0, x_0, lambda_tol=1e-8, max_iter
         #print x_s
         #print lambda_s
 
-
     if not converged:
         raise ValueError("maximum iterations reached, no convergence")
 
@@ -541,19 +543,18 @@ def eig_newton_bordered_nonlinear(func, lambda_0, x_0, lambda_tol=1e-8, max_iter
     return res
 
 
-
 def project_modes(mode_j, E):
     """Take the projection of some field onto mode currents. Mostly useful
     for degenerate modes, in order to make the polarisation of a particular
     mode deterministic
-    
+
     Parameters
     ----------
     mode_j : ndarray (n_basis, n_modes)
         The modal currents
     E : ndarray (n_basis)
         The solution on which to project
-        
+
     Returns
     -------
     projected : ndarray(n_basis)
@@ -562,5 +563,3 @@ def project_modes(mode_j, E):
     projected = mode_j.dot(mode_j.T.dot(E))
     projected /= np.sqrt(np.sum(projected**2))
     return projected
-
-    

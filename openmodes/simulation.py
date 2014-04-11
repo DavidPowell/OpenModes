@@ -103,7 +103,7 @@ class Simulation(Identified):
                 handler.setFormatter(formatter)
                 handler.setLevel(log_display_level)
                 self.logger.addHandler(handler)
-                
+
         else:
             self.logger = None
 
@@ -120,9 +120,9 @@ class Simulation(Identified):
         if self.logger:
             self.logger.info('Creating simulation\nQuadrature order %d\n'
                              'Basis function class %s\n'
-                             'Log file %s' %  (integration_rule,
-                                               basis_class,
-                                               self.logfile.name))
+                             'Log file %s' % (integration_rule,
+                                              basis_class,
+                                              self.logfile.name))
 
     def place_part(self, mesh=None, parent=None, location=None):
         """Add a part to the simulation domain
@@ -151,7 +151,7 @@ class Simulation(Identified):
             part = CompositePart(location)
         else:
             part = SinglePart(mesh, location=location)
-        
+
         # if not parent specified, use the root part of the simulation
         parent = parent or self.parts
         if not isinstance(parent, CompositePart):
@@ -354,7 +354,7 @@ class Simulation(Identified):
 
         part = part or self.parts
         return VectorParts(part, self.basis_class, dtype=np.complex128,
-                                  cols=cols, logger=self.logger)
+                           cols=cols, logger=self.logger)
 
     def plot_solution(self, solution, output_format, filename=None,
                       compress_scalars=None, compress_separately=False):
@@ -386,7 +386,8 @@ class Simulation(Identified):
         for part_num, part in enumerate(self.parts.iter_single()):
             parts_list.append(part)
             I = solution[part]
-            basis = get_basis_functions(part.mesh, self.basis_class, self.logger)
+            basis = get_basis_functions(part.mesh, self.basis_class,
+                                        self.logger)
 
             centre, current, charge = basis.interpolate_function(I,
                                                             return_scalar=True,
@@ -414,7 +415,7 @@ class Simulation(Identified):
         Open a geometry file and mesh it (or directly open a mesh file), then
         convert it into a mesh object. Note that the mesh is _not_ added to
         the simulation.
-    
+
         Parameters
         ----------
         filename : string
@@ -427,21 +428,22 @@ class Simulation(Identified):
             is found in the file
         scale : real, optional
             A scaling factor to apply to all nodes, in case conversion between
-            units is required. Note that `mesh_tol` is expressed in the original
-            units of the geometry, before this scale factor is applied.
+            units is required. Note that `mesh_tol` is expressed in the
+            original units of the geometry, before this scale factor is
+            applied.
         parameters : dictionary, optional
             A dictionary containing geometric parameters to be overridden in
             a geometry file, before meshing
-    
+
         Returns
         -------
         parts : tuple
-            A tuple of `SimulationParts`, one for each separate geometric entity
-            found in the gmsh file
-    
+            A tuple of `SimulationParts`, one for each separate geometric
+            entity found in the gmsh file
+
         Currently only `TriangularSurfaceMesh` objects are created
         """
-    
+
         if osp.splitext(osp.basename(filename))[1] == ".msh":
             # assume that this is a binary mesh already generate by gmsh
             meshed_name = filename
@@ -452,14 +454,16 @@ class Simulation(Identified):
             if self.logger:
                 self.logger.info("Meshing geometry %s with parameters %s"
                                  % (filename, str(parameters)))
-            meshed_name = gmsh.mesh_geometry(filename, mesh_tol, parameters=parameters)
+            meshed_name = gmsh.mesh_geometry(filename, mesh_tol,
+                                             parameters=parameters)
 
         if self.logger:
             self.logger.info("Loading mesh %s" % meshed_name)
-    
+
         raw_mesh = gmsh.read_mesh(meshed_name)
-    
-        parts = tuple(TriangularSurfaceMesh(sub_mesh, scale=scale, logger=self.logger)
+
+        parts = tuple(TriangularSurfaceMesh(sub_mesh, scale=scale,
+                                            logger=self.logger)
                       for sub_mesh in raw_mesh)
         if len(parts) == 1 and not force_tuple:
             return parts[0]

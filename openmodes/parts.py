@@ -23,23 +23,24 @@ import weakref
 
 # a constant, indicating that this material is a perfect electric conductor
 PecMaterial = "Perfect electric conductor"
-    
+
+
 class Part(Identified):
     """A part which has been placed into the simulation, and which can be
     modified"""
 
-    def __init__(self, location = None):
+    def __init__(self, location=None):
         super(Part, self).__init__()
 
         self.initial_location = location
         self.transformation_matrix = np.empty((4, 4))
         self.reset()
         self.parent = None
-        
+
     def reset(self):
         """Reset this part to the default values of the original `Mesh`
         from which this `Part` was created
-        """        
+        """
         self.transformation_matrix[:] = np.eye(4)
         if self.initial_location is not None:
             self.translate(self.initial_location)
@@ -56,19 +57,19 @@ class Part(Identified):
 
     def translate(self, offset_vector):
         """Translate a part by an arbitrary offset vector
-        
+
         Care needs to be take if this puts an object in a different layer
         """
         translation = np.eye(4)
         translation[:3, 3] = offset_vector
-         
+
         self.transformation_matrix[:] = translation.dot(
                                                     self.transformation_matrix)
-           
+
     def rotate(self, axis, angle):
         """
-        Rotate about an arbitrary axis        
-        
+        Rotate about an arbitrary axis
+
         Parameters
         ----------
         axis : ndarray
@@ -81,24 +82,24 @@ class Part(Identified):
         """
 
         # TODO: enable rotation about arbitrary coordinates, and about the
-        # centre of the object        
-        
+        # centre of the object
+
         axis = np.array(axis, np.float64)
         axis /= np.sqrt(np.dot(axis, axis))
-        
-        angle = angle*np.pi/180.0        
-        
+
+        angle = angle*np.pi/180.0
+
         a = np.cos(0.5*angle)
         b, c, d = axis*np.sin(0.5*angle)
-        
-        matrix = np.array([[a**2 + b**2 - c**2 - d**2, 
+
+        matrix = np.array([[a**2 + b**2 - c**2 - d**2,
                             2*(b*c - a*d), 2*(b*d + a*c), 0],
-                           [2*(b*c + a*d), a**2 + c**2 - b**2 - d**2, 
+                           [2*(b*c + a*d), a**2 + c**2 - b**2 - d**2,
                             2*(c*d - a*b), 0],
-                           [2*(b*d - a*c), 2*(c*d + a*b), 
+                           [2*(b*d - a*c), 2*(c*d + a*b),
                             a**2 + d**2 - b**2 - c**2, 0],
                            [0, 0, 0, 1.0]])
-        
+
         self.transformation_matrix[:] = matrix.dot(self.transformation_matrix)
 
     def scale(self, scale_factor):
@@ -115,12 +116,14 @@ class Part(Identified):
         raise NotImplementedError
         # non-affine transform, will cause MAJOR problems
 
+
 class SinglePart(Part):
-    """A single part, which corresponds exactly to one set of basis functions"""
+    """A single part, which corresponds exactly to one set of basis
+    functions"""
 
     def __init__(self, mesh, material=PecMaterial, location=None):
 
-        Part.__init__(self, location)                     
+        Part.__init__(self, location)
         self.mesh = mesh
         self.material = material
 
@@ -134,7 +137,7 @@ class SinglePart(Part):
         return transform[:3, :3].dot(self.mesh.nodes.T).T + transform[:3, 3]
 
     def __contains__(self, key):
-        """Although a single part is not a container, implementing 
+        """Although a single part is not a container, implementing
         `__contains__` allows recursive checking to be greatly simplified"""
         return self == key
 
@@ -146,13 +149,14 @@ class SinglePart(Part):
         "Iterating over a single part just yields itself"
         yield self
 
+
 class CompositePart(Part):
     """A composite part containing sub-parts which can be treated as a
     whole
     """
-    def __init__(self, location = None):
+    def __init__(self, location=None):
 
-        Part.__init__(self, location)                     
+        Part.__init__(self, location)
         self.initial_location = location
         self.reset()
         self.parts = []
@@ -184,7 +188,7 @@ class CompositePart(Part):
         parent_first : boolean, optional
             If True, the a node is visited before all of its children,
             otherwise afterwards
-            
+
         Returns
         -------
         it : iterator
@@ -197,8 +201,7 @@ class CompositePart(Part):
                 yield sub_part
         if not parent_first:
             yield self
-        
+
     def __contains__(self, key):
         """Check if the given part is stored within this tree of parts"""
         return self == key or any(key in part for part in self.parts)
-

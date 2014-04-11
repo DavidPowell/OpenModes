@@ -60,9 +60,9 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True,
             zeta = 1.0 - eta - xi
 
             # Cartesian coordinates of the point
-            r[tri_count, point_count] = xi*nodes[node_nums][0] + \
-                                        eta*nodes[node_nums][1] + \
-                                        zeta*nodes[node_nums][2]
+            r[tri_count, point_count] = (xi*nodes[node_nums][0] +
+                                         eta*nodes[node_nums][1] +
+                                         zeta*nodes[node_nums][2])
 
             scalar_func[tri_count, point_count] = sum(tri_func[tri_count])
 
@@ -168,7 +168,7 @@ class LinearTriangleBasis(AbstractBasis):
         "Return the gram matrix defined between faces"
         num_tri = len(self.mesh.polygons)
         G = np.zeros((num_tri, 3, num_tri, 3), dtype=np.float64)
-        for tri_count, (tri, area) in enumerate(zip(self.mesh.polygons, 
+        for tri_count, (tri, area) in enumerate(zip(self.mesh.polygons,
                                                     self.mesh.polygon_areas)):
             nodes = self.mesh.nodes[tri]
             G[tri_count, :, tri_count, :] = inner_product_triangle_face(nodes)/(2*area)
@@ -491,13 +491,13 @@ class LoopStarBasis(LinearTriangleBasis):
         self.sections = (num_loops, self.num_stars)
 
         if logger:
-            logger.info("Constructing %d loop-star basis functions\n" 
-            "%d loops\n%d stars\n%d faces\n%d edges\n%d unshared_edges\n"
-            "%d nodes on boundary\n%d boundary contours"
-            % (len(self), num_loops, self.num_stars, 
-               len(mesh.polygons), len(edges), len(unshared_edges),
-               len(outer_nodes), boundary_contours))
-
+            logger.info("Constructing %d loop-star basis functions\n"
+                        "%d loops\n%d stars\n%d faces\n%d edges\n"
+                        "%d unshared_edges\n"
+                        "%d nodes on boundary\n%d boundary contours"
+                        % (len(self), num_loops, self.num_stars,
+                           len(mesh.polygons), len(edges), len(unshared_edges),
+                           len(outer_nodes), boundary_contours))
 
     def __len__(self):
         return len(self.rwg_loop.tri_p)+len(self.rwg_star.tri_p)
