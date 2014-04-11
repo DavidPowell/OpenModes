@@ -23,7 +23,7 @@ from scipy.optimize import nnls
 import scipy.linalg as la
 
 
-def delta_eig(s, j, Z_func, eps = None):
+def delta_eig(s, j, Z_func, eps=None):
     """Find the derivative of the eigenimpedance at the resonant frequency
 
     See section 5.7 of numerical recipes for calculating the step size h
@@ -72,7 +72,7 @@ def fit_four_term(s_0, z_der, logger=None):
 
     rhs[2] = z_der.real
     rhs[3] = z_der.imag
-    
+
     if logger:
         logger.debug("Fitting 4 term polynomial\nM = %s\nrhs = %s" %
                     (str(M), str(rhs)))
@@ -90,9 +90,9 @@ class ScalarModel(object):
         "Construct the scalar model"
         self.mode_s = mode_s
         self.mode_j = mode_j
-        
+
         self.scale_factor = abs(mode_s.imag)/10
-        
+
         Z_func = lambda s: operator.impedance(s, part, part)[part, part]
         z_der = delta_eig(mode_s, mode_j, Z_func)
         self.coefficients = fit_four_term(mode_s/self.scale_factor,
@@ -117,8 +117,8 @@ class ScalarModel(object):
 def fit_LS(s_0, L_0, S_0):
     """
     Fit a polynomial model to the values of the scalar impedance components
-    at the resonant frequency. 
-    
+    at the resonant frequency.
+
     Parameters
     ----------
     s_0 : complex
@@ -142,16 +142,17 @@ def fit_LS(s_0, L_0, S_0):
     eq = np.array([1.0, s_0])
     M[:, 0] = eq.real
     M[:, 1] = eq.imag
-    
+
     S_coeffs = nnls(M, np.array([S_0.real, S_0.imag]))[0]
 
     return L_coeffs, S_coeffs
+
 
 class ScalarModelLS(object):
     """A scalar model of a mode of a structure, assuming that the eigencurrents
     are frequency independent. Fits to the diagonalised partial impedance
     matrices L and S at resonance."""
-    
+
     def __init__(self, mode_s, mode_j, Z_func, logger=None):
         "Construct the scalar model"
         self.mode_s = mode_s
@@ -162,21 +163,23 @@ class ScalarModelLS(object):
         L_0 = mode_j.dot(Z.L.dot(mode_j))
         S_0 = mode_j.dot(Z.S.dot(mode_j))
         self.scale_factor = abs(mode_s.imag)/10
-        self.L, self.S = fit_LS(mode_s/self.scale_factor, L_0*self.L_scale, S_0*self.S_scale)
+        self.L, self.S = fit_LS(mode_s/self.scale_factor, L_0*self.L_scale,
+                                S_0*self.S_scale)
 
         if logger:
             logger.info("Creating scalar model\nL(s_0) = %+.4e %+.4e\n"
                         "S(s_0) = %+.4e %+.4e\nL Coefficients: %s\n"
-                        "S Coefficients: %s" % 
+                        "S Coefficients: %s" %
                         (L_0.real, L_0.imag, S_0.real, S_0.imag,
                          str(self.L), str(self.S)))
-    
+
     def scalar_impedance(self, s):
         "The scalar impedance of this mode"
         powers_L = np.array([1.0, -s/self.scale_factor])
         powers_S = np.array([1.0, s/self.scale_factor])
-        return s*np.dot(self.L, powers_L.T)/self.L_scale + np.dot(self.S, powers_S.T)/s/self.S_scale
-    
+        return (s*np.dot(self.L, powers_L.T)/self.L_scale +
+                np.dot(self.S, powers_S.T)/s/self.S_scale)
+
     def solve(self, s, V):
         "Solve the model for the current at arbitrary frequency"
         return self.mode_j*np.dot(self.mode_j, V)/self.scalar_impedance(s)
@@ -189,7 +192,7 @@ class MutualPolyModel(object):
                  poly_order, s_max, logger=None):
         """
         Create the model for mutual terms
-            
+
         Parameters
         ----------
         part_o, part_s: Part
@@ -212,13 +215,14 @@ class MutualPolyModel(object):
         self.scale_factor = s_max.imag/20
         self.poly_order = poly_order
 
-        num_modes_o = current_o.shape[1]
-        num_modes_s = current_s.shape[1]        
+        self.num_modes_o = current_o.shape[1]
+        self.num_modes_s = current_s.shape[1]
 
         # number of points is order divided by two, rounded up
         num_s = sum(divmod(poly_order, 2))
         s_range = np.linspace(s_max, 0, num_s, endpoint=False)/self.scale_factor
-        S_data = np.empty((num_s, num_modes_o, num_modes_s), np.complex128)
+        S_data = np.empty((num_s, self.num_modes_o, self.num_modes_s),
+                          np.complex128)
         L_data = np.empty_like(S_data)
 
         # calculate the data at each frequency
@@ -229,12 +233,12 @@ class MutualPolyModel(object):
             logger.info("Fitting mutual term model")
 
         orders = np.arange(self.poly_order)
-        self.models = []        
+        self.models = []
         # For each mode, perform the polynomial fit. Note that this is a
         # fairly ill-conditioned process, so only low-order should be used.
-        for mode_o in xrange(num_modes_o):
+        for mode_o in xrange(self.num_modes_o):
             model_row = []
-            for mode_s in xrange(num_modes_s):
+            for mode_s in xrange(self.num_modes_s):
                 matrix = s_range[:, None]**orders[None, :]
                 matrix = np.vstack((matrix.real, matrix.imag))
 
@@ -252,12 +256,11 @@ class MutualPolyModel(object):
                     logger.debug("Matrix data:\n%s"
                                  "\nrhs for L %s\nrhs for S %s" %
                                  (str(matrix), str(rhs_L), str(rhs_S)))
-                    logger.info("L coefficients: %s\n S coefficients: %s" % (
-                                              str(L_coeffs), str(S_coeffs)))
+                    logger.info("L coefficients: %s\n S coefficients: %s" %
+                                (str(L_coeffs), str(S_coeffs)))
 
                 model_row.append((L_coeffs, S_coeffs))
             self.models.append(model_row)
-
 
     def LS(self, s, mode_o, mode_s):
         s /= self.scale_factor
@@ -267,14 +270,19 @@ class MutualPolyModel(object):
 
     def block_impedance(self, s):
         "Calculate the impedance block matrix at the specified frequency"
-        Z = self.operator.impedance(s, self.part_o, self.part_s)[self.part_o, self.part_s][:]
-        return self.current_o.T.dot(Z.dot(self.current_s))
+        matrix = np.empty((self.num_modes_o, self.num_modes_s), np.complex128)
+        for mode_o in xrange(self.num_modes_o):
+            for mode_s in xrange(self.num_modes_s):
+                L, S = self.LS(s, mode_o, mode_s)
+                matrix[mode_o, mode_s] = s*L + S/s
+        return matrix
 
     def LS_direct(self, s):
         """Calculate the impedance block matrices L and S at the specified
         frequency, directly by calculating and weighting the impedance matrix
         """
-        Z = self.operator.impedance(s, self.part_o, self.part_s)[self.part_o, self.part_s]
+        Z = self.operator.impedance(s, self.part_o, self.part_s)[self.part_o,
+                                                                 self.part_s]
         return (self.current_o.T.dot(Z.L.dot(self.current_s)),
                 self.current_o.T.dot(Z.S.dot(self.current_s)))
 
@@ -285,7 +293,7 @@ class SelfModel(object):
         self.num_modes = len(mode_s)
         self.models = []
         for mode_num, s in enumerate(mode_s):
-            self.models.append(ScalarModel(part, s, mode_j[:, mode_num], 
+            self.models.append(ScalarModel(part, s, mode_j[:, mode_num],
                                operator, logger=logger))
 
     def block_impedance(self, s):
@@ -343,13 +351,13 @@ class ModelPolyInteraction(object):
                 elif (not operator.reciprocal) or (count_o < count_s):
                     # between different parts
                     self.models[part_o, part_s] = MutualPolyModel(part_o,
-                                                            current_o,
-                                                            part_s,
-                                                            current_s,
-                                                            operator,
-                                                            poly_order,
-                                                            s_max,
-                                                            logger)
+                                                                  current_o,
+                                                                  part_s,
+                                                                  current_s,
+                                                                  operator,
+                                                                  poly_order,
+                                                                  s_max,
+                                                                  logger)
 
     def impedance(self, s):
         """Calculate the reduced impedance matrix at a given frequency
