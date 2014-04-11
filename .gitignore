@@ -46,3 +46,4 @@ src/*module.c
 src/*f2pywrappers*
 junk/
 examples/output/
+RELEASE-VERSION

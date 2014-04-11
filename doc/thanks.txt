@@ -5,3 +5,7 @@ This code incorporates Fortran code for symmetric integration rules over triangl
 by John Burkardt, and distributed under the GNU LGPL license.
 
 http://people.sc.fsu.edu/~jburkardt/f_src/dunavant/dunavant.html
+
+
+The automated extraction of version numbers from the git repository was written by
+Douglas Creager, and is described in detail at http://dcreager.net/2010/02/10/setuptools-git-version-numbers/

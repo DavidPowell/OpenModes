@@ -35,6 +35,8 @@ else:
 if not numpy_installed or (numpy.__version__ < '1.6.2'):
     raise ValueError("Numpy 1.6.2 or greater required")
 
+from openmodes.version import get_git_version
+
 
 from numpy.distutils.core import Extension, setup
 
@@ -130,13 +132,13 @@ with open('README.md') as description_file:
 setup(name = 'OpenModes',
     description = "An eigenmode solver for open electromagnetic resonantors",
     author = "David Powell",
-    author_email = 'david.a.powell@anu.edu.au',
+    author_email = 'david.a.powell -at- anu.edu.au',
     license ='GPLv3+',
     url = 'https://github.com/DavidPowell/OpenModes',
     packages = ['openmodes'],
     package_data={'openmodes': [osp.join("geometry", "*.geo")]},
     ext_modules = [dunavant, core],
-    version = '0.1dev',
+    version = get_git_version(),
     install_requires = ['numpy >= 1.6.2', 'scipy', 'matplotlib'],
     long_description=long_description,
     platforms = "Windows, Linux",
@@ -157,6 +159,6 @@ setup(name = 'OpenModes',
     cmdclass = {'build_ext': compiler_dependent_build_ext},
 
     # Include any required library files
-    data_files = [('openmodes', redist_data)]
+    data_files = [('openmodes', redist_data+["RELEASE-VERSION"])]
     )
 
