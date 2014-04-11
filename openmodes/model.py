@@ -209,10 +209,74 @@ class MutualPolyModel(object):
         self.current_s = current_s
         self.operator = operator
 
+        self.scale_factor = s_max.imag/20
+        self.poly_order = poly_order
+
+        num_modes_o = current_o.shape[1]
+        num_modes_s = current_s.shape[1]        
+
+        # number of points is order divided by two, rounded up
+        num_s = sum(divmod(poly_order, 2))
+        s_range = np.linspace(s_max, 0, num_s, endpoint=False)/self.scale_factor
+        S_data = np.empty((num_s, num_modes_o, num_modes_s), np.complex128)
+        L_data = np.empty_like(S_data)
+
+        # calculate the data at each frequency
+        for s_count, s in enumerate(s_range):
+            L_data[s_count], S_data[s_count] = self.LS_direct(s*self.scale_factor)
+
+        if logger:
+            logger.info("Fitting mutual term model")
+
+        orders = np.arange(self.poly_order)
+        self.models = []        
+        # For each mode, perform the polynomial fit. Note that this is a
+        # fairly ill-conditioned process, so only low-order should be used.
+        for mode_o in xrange(num_modes_o):
+            model_row = []
+            for mode_s in xrange(num_modes_s):
+                matrix = s_range[:, None]**orders[None, :]
+                matrix = np.vstack((matrix.real, matrix.imag))
+
+                # When solving, specify the number of rows, so that if there
+                # is an addition row of imaginary data, it is tropped
+                rhs_S = S_data[:, mode_o, mode_s]
+                rhs_S = np.hstack((rhs_S.real, rhs_S.imag))
+                S_coeffs = la.solve(matrix[:poly_order], rhs_S[:poly_order])
+
+                rhs_L = L_data[:, mode_o, mode_s]
+                rhs_L = np.hstack((rhs_L.real, rhs_L.imag))
+                L_coeffs = la.solve(matrix[:poly_order], rhs_L[:poly_order])
+
+                if logger:
+                    logger.debug("Matrix data:\n%s"
+                                 "\nrhs for L %s\nrhs for S %s" %
+                                 (str(matrix), str(rhs_L), str(rhs_S)))
+                    logger.info("L coefficients: %s\n S coefficients: %s" % (
+                                              str(L_coeffs), str(S_coeffs)))
+
+                model_row.append((L_coeffs, S_coeffs))
+            self.models.append(model_row)
+
+
+    def LS(self, s, mode_o, mode_s):
+        s /= self.scale_factor
+        orders = np.arange(self.poly_order)
+        L_coeffs, S_coeffs = self.models[mode_o][mode_s]
+        return np.dot(L_coeffs, s**orders), np.dot(S_coeffs, s**orders)
+
     def block_impedance(self, s):
         "Calculate the impedance block matrix at the specified frequency"
         Z = self.operator.impedance(s, self.part_o, self.part_s)[self.part_o, self.part_s][:]
         return self.current_o.T.dot(Z.dot(self.current_s))
+
+    def LS_direct(self, s):
+        """Calculate the impedance block matrices L and S at the specified
+        frequency, directly by calculating and weighting the impedance matrix
+        """
+        Z = self.operator.impedance(s, self.part_o, self.part_s)[self.part_o, self.part_s]
+        return (self.current_o.T.dot(Z.L.dot(self.current_s)),
+                self.current_o.T.dot(Z.S.dot(self.current_s)))
 
 
 class SelfModel(object):
