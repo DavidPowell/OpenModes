@@ -14,4 +14,6 @@ Requires the python packages numpy, scipy and matplotlib, and the free meshing
 program gmsh. See the `documentation <http://www.pythonhosted.org/OpenModes/>`_ 
 for full installation instructions and requirements.
 
-The source is available on `GitHub <https://github.com/DavidPowell/OpenModes>`_
+The source is available on `GitHub <https://github.com/DavidPowell/OpenModes>`_,
+and binary packages are available from the `Python Package Index <https://pypi.python.org/pypi/OpenModes>`_.
+
