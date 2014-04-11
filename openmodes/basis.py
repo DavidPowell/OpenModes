@@ -579,53 +579,6 @@ class LoopStarBasis(LinearTriangleBasis):
 
         return vector_transform.tocsr(), scalar_transform.tocsr()
 
-# The code below is designed to allow basis functions to be multiplied by the
-# Gram matrix. The result will be a new basis function class. In order to avoid
-# duplicating code, a factory function has been created, which takes a basis
-# function class and modifies its transformation_matrices property to include
-# the effect of the Gram matrix. This seems to be the cleanest way to do this
-# and avoids complex solutions involving multiple inheretance, or meta-classes.
-
-
-def gram_wrapped_transformation_matrices(self):
-    "Transforms the transformation matrices by the Gram basis"
-
-    try:
-        return self.__vector_transform, self.__scalar_transform
-    except AttributeError:
-        vector_transform, scalar_transform = super(self.__class__, self).transformation_matrices
-
-        # Must construct the Gram matrix carefully, since it requires the
-        # parent class' transformation matrix, not the derived class
-        num_tri = len(self.mesh.polygons)
-        G = self.gram_matrix_faces()
-        G = vector_transform.dot(vector_transform.dot(G.reshape(3*num_tri, 3*num_tri)).T).T
-
-        # Compute the square root of the Gram matrix through an eigenvalue
-        # decomposition
-        Gw, Gv = la.eigh(G)
-        Gv /= np.sqrt(np.sum(Gv**2, axis=0))
-        sqrt_G = np.diag(1.0/np.sqrt(Gw)).dot(Gv.T)
-
-        self.__vector_transform = vector_transform.T.dot(sqrt_G.T).T
-        self.__scalar_transform = scalar_transform.T.dot(sqrt_G.T).T
-
-        return self.__vector_transform, self.__scalar_transform
-
-
-def gram_wrapped_basis_class(base_class, name):
-    """Create a basis function class which inherits from another basis class
-    and wraps its transformation operation by the square root of the Gram
-    matrix"""
-
-    return type(name, (base_class,),
-                dict(transformation_matrices=
-                     property(gram_wrapped_transformation_matrices)))
-
-
-DivRwgGramBasis = gram_wrapped_basis_class(DivRwgBasis, 'DivRwgGramBasis')
-LoopStarGramBasis = gram_wrapped_basis_class(LoopStarBasis, 'LoopStarGramBasis')
-
 cached_basis_functions = {}
 
 
