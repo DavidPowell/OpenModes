@@ -35,8 +35,7 @@ else:
 if not numpy_installed or (numpy.__version__ < '1.6.2'):
     raise ValueError("Numpy 1.6.2 or greater required")
 
-from openmodes.version import get_git_version
-
+from version import get_git_version
 
 from numpy.distutils.core import Extension, setup
 

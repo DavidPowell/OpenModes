@@ -21,9 +21,20 @@ OpenModes - An eigenmode solver for open electromagnetic resonantors
 """
 
 from openmodes.simulation import Simulation
-from openmodes.version import get_git_version
 
-__version__ = get_git_version()
+# dynamically query the project version
+from pkg_resources import get_distribution, DistributionNotFound
+import os.path
+
+try:
+    _dist = get_distribution('openmodes')
+    if not __file__.startswith(os.path.join(_dist.location, 'openmodes')):
+        # not installed, but there is another version that *is*
+        raise DistributionNotFound
+except DistributionNotFound:
+    raise DistributionNotFound('Please install this project with setup.py')
+else:
+    __version__ = _dist.version
 
 # allow the user to find the provided geometry files
 from pkg_resources import resource_filename
