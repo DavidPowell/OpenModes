@@ -161,15 +161,21 @@ class Simulation(Identified):
 
         return part
 
-    def iter_freqs(self, freqs, log_skip=10):
+    def iter_freqs(self, freqs, log_skip=10, log_label="Sweep frequency"):
         """Return an iterator over a range of frequencies
+
+        It is possible to nest multiple frequency iterators, e.g. to sweep
+        both real and imaginary parts of frequency.
 
         Parameters
         ----------
         freqs : array or list
             All the frequencies over which to iterate, in Hz
         log_skip : integer, optional
-            How many frequencies to skip between logging calls
+            How many frequencies to skip between logging calls. Set this very
+            large to avoid all logging.
+        log_label : string, optional
+            The logging output string, denoting this sweep
 
         Returns
         -------
@@ -181,8 +187,8 @@ class Simulation(Identified):
 
         num_freqs = len(freqs)
         for freq_count, freq in enumerate(freqs):
-            if freq_count % log_skip == 0:
-                self.logger.info("Sweep frequency %d/%d" %
+            if freq_count % log_skip == 0 and freq_count != 0:
+                self.logger.info(log_label+" %d/%d" %
                                  (freq_count, num_freqs))
             yield freq_count, 2j*np.pi*freq
 
