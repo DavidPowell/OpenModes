@@ -13,7 +13,7 @@ libraries. It is possible to install Anaconda even if you don't have administrat
 it is available for Windows, Linux and Mac OSX.
 
 Then install `gmsh <http://geuz.org/gmsh/>`_, and make sure that the location of the gmsh
-executable is added to the windows PATH environment variable.
+executable is added to the PATH environment variable.
 
 From the anaconda command-line, `OpenModes <http://pypi.python.org/pypi/OpenModes>`_ 
 can be installed with the command ``pip install openmodes``.
@@ -98,7 +98,7 @@ level has been set to -O1.
 Previously 32 bit windows binaries were successfully built under the mingw-64 
 x32-4.8.1-posix-dwarf-rev5 compiler. For 64 bit windows, binaries were successfully
 build using the x64-4.8.1-posix-seh-rev5 compiler. Both were installed using the
-`mingw-builds<http://sourceforge.net/projects/mingwbuilds/>`_ installer.
+`mingw-builds <http://sourceforge.net/projects/mingwbuilds/>`_ installer.
 
 In order for setup.py to find these compilers, they must be in the path. To be safe,
 ensure that no other C or fortran compilers are in the path. Python's distutils
