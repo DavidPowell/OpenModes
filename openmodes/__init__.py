@@ -28,7 +28,7 @@ import os.path
 
 try:
     _dist = get_distribution('openmodes')
-    if not __file__.startswith(os.path.join(_dist.location, 'openmodes')):
+    if not __file__.lower().startswith(os.path.join(_dist.location, 'openmodes')):
         # not installed, but there is another version that *is*
         raise DistributionNotFound
 except DistributionNotFound:
