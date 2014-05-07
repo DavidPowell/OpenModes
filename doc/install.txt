@@ -18,8 +18,10 @@ executable is added to the windows PATH environment variable.
 From the anaconda command-line, `OpenModes <http://pypi.python.org/pypi/OpenModes>`_ 
 can be installed with the command ``pip install openmodes``.
 
-Requirements
-------------
+If you want to be able to view 3d plots of currents, install `Paraview <http://www.paraview.org/>`_
+
+Detailed Requirements
+---------------------
 The following software packages are the absolute minimum to run OpenModes:
 
 - python 2.7 (3.x not currently supported)

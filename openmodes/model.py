@@ -230,7 +230,7 @@ class MutualPolyModel(object):
             L_data[s_count], S_data[s_count] = self.LS_direct(s*self.scale_factor)
 
         if logger:
-            logger.info("Fitting mutual term model")
+            logger.info("Fitting mutual term model at frequencies %s" % str(s_range*self.scale_factor))
 
         orders = np.arange(self.poly_order)
         self.models = []

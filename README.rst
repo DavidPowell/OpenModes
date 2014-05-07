@@ -17,3 +17,6 @@ for full installation instructions and requirements.
 The source is available on `GitHub <https://github.com/DavidPowell/OpenModes>`_,
 and binary packages are available from the `Python Package Index <https://pypi.python.org/pypi/OpenModes>`_.
 
+This program was written by David Powell, a research fellow with the Nonlinear
+Physics Centre at the Australian National University. Contact details are available
+on my `web page <http://wwwrsphysse.anu.edu.au/nonlinear/people/DavidPowell.shtml>`_.
