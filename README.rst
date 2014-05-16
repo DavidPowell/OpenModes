@@ -7,8 +7,10 @@ of open resonators such as meta-atoms (the building blocks of metamaterials),
 (nano) antennas, scattering particles etc.
 
 Using these modes, broadband models of these elements can be created, enabling
-excitation, coupling between them and scattering to be solved easily, and
-broadband models to be created
+excitation, coupling between them and scattering to be solved easily.
+
+The technique implemented in this code is described in a preprint manuscript which
+is available from the arXiv open access repository at http://arxiv.org/abs/1405.3759.
 
 Requires the python packages numpy, scipy and matplotlib, and the free meshing
 program gmsh. See the `documentation <http://www.pythonhosted.org/OpenModes/>`_ 
@@ -20,3 +22,4 @@ and binary packages are available from the `Python Package Index <https://pypi.p
 This program was written by David Powell, a research fellow with the Nonlinear
 Physics Centre at the Australian National University. Contact details are available
 on my `web page <http://wwwrsphysse.anu.edu.au/nonlinear/people/DavidPowell.shtml>`_.
+
