@@ -6,4 +6,10 @@ Potential applications include metamaterials, (nano) antennas and other systems
 based on scattering from resonant elements. It is based on a fully numerical model
 of the system created using the method of moments (MOM).
 
-A paper describing the method used to find the modes will be placed online soon.
+A paper describing the method used to find the modes is available as an
+`arXiv preprint <http://arxiv.org/abs/1405.3759>`_.
+
+Source and binary packages are hosted at available `here <http://pypi.python.org/pypi/OpenModes>`_,
+and the source code can be found on `GitHub <https://github.com/DavidPowell/OpenModes>`_.
+
+To get started, follow the :doc:`installation instructions <install>`, then try out the :doc:`examples <examples>`.
