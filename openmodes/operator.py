@@ -282,6 +282,15 @@ class EfieOperator(Operator):
         self.greens_function = greens_function
         self.logger = logger
 
+    def __getstate__(self):
+        "Allow operator to be pickled"
+        return self.basis_class, self.quadrature_rule, self.greens_function
+        
+    def __setstate__(self, state):
+        "Allow operator to be unpickled. Logger connection is lost"
+        self.basis_class, self.quadrature_rule, self.greens_function = state
+        self.logger = None
+
     def impedance_single_parts(self, s, part_o, part_s=None):
         """Calculate a self or mutual impedance matrix at a given complex 
         frequency
