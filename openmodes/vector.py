@@ -131,6 +131,24 @@ class VectorParts(np.ndarray):
         self.parent_part = getattr(self, 'parent_part', None)
         self.index_arrays = getattr(self, 'index_arrays', {})
 
+    def __setstate__(self, state):
+        """Allow additional attributes of this array type to be unpickled
+        
+        Note that some metadata may be lost when unpickling."""
+        nd_state, own_state = state
+        super(VectorParts, self).__setstate__(nd_state)
+        self.parent_part, self.index_arrays, self.basis_class = own_state
+        
+    def __reduce__(self):
+        """Allow additional attributes of this array type to be pickled
+        
+        Note that some metadata may be lost when unpickling."""
+        object_state = list(super(VectorParts, self).__reduce__(self))
+        vectorparts_state = (self.parent_part, self.index_arrays,
+                             self.basis_class)
+        object_state[2] = [object_state[2], vectorparts_state]
+        return tuple(object_state)
+
     # Under python 3.x, these members will not be called. However, they should
     # not cause any trouble.
     def __getslice__(self, start, stop):
