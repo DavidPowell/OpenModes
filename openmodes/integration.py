@@ -128,7 +128,7 @@ def sphere_fibonacci(num_points, cartesian=False):
         The number of points to place on the sphere
     cartesian : boolean, optional
         If True, cartesian coordinates will be returned instead of spherical
-        
+
     Returns
     -------
     phi, theta : array (if `cartesian` is False)
@@ -136,7 +136,7 @@ def sphere_fibonacci(num_points, cartesian=False):
     x, y, z : array (if `cartesian` is True)
         The cartesian coordinates of the points
 
-    Algorithm from:    
+    Algorithm from:
     R. Swinbank and R. James Purser, “Fibonacci grids: A novel approach to
     global modelling,” Q. J. R. Meteorol. Soc., vol. 132, no. 619, pp.
     1769–1793, Jul. 2006.
@@ -150,7 +150,7 @@ def sphere_fibonacci(num_points, cartesian=False):
     theta = 2*np.pi*i / phi
 
     sphi = i/n
-    cphi = np.sqrt((n + i) * (n-i))/ n
+    cphi = np.sqrt((n + i) * (n - i)) / n
 
     if cartesian:
         x = cphi * np.sin(theta)
@@ -159,5 +159,4 @@ def sphere_fibonacci(num_points, cartesian=False):
         return x, y, z
     else:
         phi = np.arctan2(sphi, cphi)
-        return theta, phi    
-   
+        return theta, phi

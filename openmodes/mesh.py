@@ -82,7 +82,7 @@ class TriangularSurfaceMesh(Identified):
     have been scaled or sheared.
 
     """
-    
+
     polygon_name = 'triangles'
 
     def __init__(self, raw_mesh, scale=None):
@@ -108,7 +108,7 @@ class TriangularSurfaceMesh(Identified):
         self.nodes = np.asfortranarray(raw_mesh['nodes'])
         if scale is not None:
             self.nodes *= scale
-            
+
         self.polygons = np.asfortranarray(raw_mesh[self.polygon_name])
         self.nodes.setflags(write=False)
         self.polygons.setflags(write=False)

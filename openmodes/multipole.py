@@ -23,6 +23,7 @@ import scipy.special
 
 from openmodes.constants import c
 
+
 def spherical_multipoles(max_l, jk, points, charge, current):
     """Calculate the multipole coefficients in a spherical basis
 
@@ -64,30 +65,28 @@ def spherical_multipoles(max_l, jk, points, charge, current):
     spherical[:, 0] = np.sqrt(np.sum(points**2, axis=1))
     spherical[:, 1] = np.arccos(points[:, 2]/spherical[:, 0])
     spherical[:, 2] = np.arctan2(points[:, 1], points[:, 0])
-    
-    
+
     # calculate the spherical Bessel functions
-    
     l_terms_e = np.empty((len(points), num_l), np.complex128)
     l_terms_m = np.empty_like(l_terms_e)
     #Y_lmc = np.empty((len(points), num_l, 2*num_l+1), np.complex128)
-    
+
     for n, r in enumerate(spherical[:, 0]):
         jl, djl = scipy.special.sph_jn(-1j*jk*r)
         l_terms_e[n] = (c*charge[n]*(r*jl + djl) + jk*np.dot(points[n], current[n])*jl)
-        #Y_lmc[n] = 
+        #Y_lmc[n] =
         #cos_theta = points[n, 2]/spherical[n, 0]
         #legendre = scipy.special.lpmn(cos_theta
-        
+
     a_e = np.zeros((num_l, num_l), np.complex128)
     a_m = np.zeros_like(a_e)
 
 
-def cartesian_multipoles(points, charge, current, s, electric_order=1, 
+def cartesian_multipoles(points, charge, current, s, electric_order=1,
                          magnetic_order=1):
     """Calculate the electric and magnetic multipole moments up to the
     specified order
-    
+
     Parameters
     ----------
     points : ndarray (num_points, 3)
@@ -110,11 +109,11 @@ def cartesian_multipoles(points, charge, current, s, electric_order=1,
         electric dipole moment
     m : ndarray
         magnetic dipole moment
-        
+
     Moments are calculated relative to zero coordinate - does not affect
     the electric dipole, but will affect the magnetic dipole moment and
     any other higher-order multipoles
-    
+
     The moments are 'primitive moments' as defined by Raab and de Lange
     """
 
@@ -126,7 +125,7 @@ def cartesian_multipoles(points, charge, current, s, electric_order=1,
         electric_moments.append(np.sum(points[:, :]*charge[:, None], axis=0)/s)
 
     # electric quadrupole moment
-    if electric_order >= 2:        
+    if electric_order >= 2:
         quad = np.empty((3, 3), np.complex128)
         for i in xrange(3):
             for j in xrange(3):

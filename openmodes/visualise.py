@@ -41,7 +41,7 @@ def plot_parts(parts, currents=None, figsize=(10, 4), view_angles = (40, 90)):
     viewangles : tuple, optional
         The viewing angle of the 3D plot in degrees, will be passed to
         matplotlib
-        
+
     Requires that matplotlib is installed
     """
 
@@ -50,25 +50,25 @@ def plot_parts(parts, currents=None, figsize=(10, 4), view_angles = (40, 90)):
 
     fig = plt.figure(figsize=figsize)
     ax = fig.add_subplot(111, projection='3d')
-    
+
     for part in parts.iter_single():
         mesh = part.mesh
-            
+
         for edge in mesh.get_edges():
             nodes = part.nodes[edge]
             ax.plot(nodes[:, 0], nodes[:, 1], nodes[:, 2], 'k')
-     
+
     ax.view_init(*view_angles)
     ax.autoscale()
     plt.show()
 
 
-def plot_mayavi(parts, scalar_function=None, vector_function=None,  
+def plot_mayavi(parts, scalar_function=None, vector_function=None,
                 vector_points=None, scalar_name="scalar", vector_name="vector",
                 compress_scalars=None, filename=None):
     """Generate a mayavi plot of the mesh of the parts, and optionally also
     show a plot of vector and scalar functions defined on its surface.
-    
+
     Parameters
     ----------
     parts : list of `Part`
@@ -91,7 +91,7 @@ def plot_mayavi(parts, scalar_function=None, vector_function=None,
     filename : string, optional
         If specified, the figure will be saved to this file, rather than
         being plotted on screen.
-        
+
     Only the real part of the scalar and vector functions will be plotted
     """
     try:
@@ -118,15 +118,16 @@ def plot_mayavi(parts, scalar_function=None, vector_function=None,
         triangle_nodes = part.mesh.polygons
         nodes = part.nodes
         tri_plot = mlab.triangular_mesh(nodes[:, 0], nodes[:, 1], nodes[:, 2],
-                                    triangle_nodes, representation='wireframe',
-                                    color=(0, 0, 0), line_width=0.5,
-                                    opacity=opacity)
+                                        triangle_nodes,
+                                        representation='wireframe',
+                                        color=(0, 0, 0), line_width=0.5,
+                                        opacity=opacity)
         if scalar_function is not None:
             if compress_scalars:
-                part_scalars=compress(scalar_function[part_num],
-                                            compress_scalars)
+                part_scalars = compress(scalar_function[part_num],
+                                        compress_scalars)
             else:
-                part_scalars=scalar_function[part_num]
+                part_scalars = scalar_function[part_num]
 
             cell_data = tri_plot.mlab_source.dataset.cell_data
             cell_data.scalars = part_scalars.real
@@ -153,9 +154,9 @@ def plot_mayavi(parts, scalar_function=None, vector_function=None,
 
 
 def write_vtk(parts, scalar_function=None, vector_function=None,
-                vector_points=None, scalar_name="scalar", vector_name="vector",
-                compress_scalars=None, filename=None, autoscale_vectors=False,
-                compress_separately=False):
+              vector_points=None, scalar_name="scalar", vector_name="vector",
+              compress_scalars=None, filename=None, autoscale_vectors=False,
+              compress_separately=False):
     """Write the mesh and solution data to a VTK file
 
     If the current vector is given, then currents and charges will be
@@ -186,7 +187,7 @@ def write_vtk(parts, scalar_function=None, vector_function=None,
     compress_separately : boolean, optional
         Apply the compression and scaling separately to each part, which will
         hide the differences between parts
-        
+
     Requires that tvtk is installed
     """
 
@@ -204,11 +205,12 @@ def write_vtk(parts, scalar_function=None, vector_function=None,
 
     if scalar_function is not None:
         if compress_scalars and compress_separately:
-            scalar_function=[compress(s, compress_scalars) for s in scalar_function]
+            scalar_function = [compress(s, compress_scalars)
+                               for s in scalar_function]
         scalar_function = np.hstack(scalar_function)
         if compress_scalars and not compress_separately:
-            scalar_function=compress(scalar_function, compress_scalars)
-        
+            scalar_function = compress(scalar_function, compress_scalars)
+
         scalar_real = tvtk.FloatArray(name=scalar_name+"_real")
         scalar_real.from_array(scalar_function.real)
         struct.cell_data.add_array(scalar_real)
@@ -219,11 +221,11 @@ def write_vtk(parts, scalar_function=None, vector_function=None,
 
     if vector_function is not None:
         if autoscale_vectors and compress_separately:
-            vector_function=[v/np.average(np.abs(v)) for v in vector_function]
+            vector_function = [v/np.average(np.abs(v)) for v in vector_function]
         vector_function = np.vstack(vector_function)
         if autoscale_vectors and not compress_separately:
-            vector_function=vector_function/np.average(np.abs(vector_function))
-        
+            vector_function = vector_function/np.average(np.abs(vector_function))
+
         vector_real = tvtk.FloatArray(name=vector_name+"_real")
         vector_real.from_array(vector_function.real)
         struct.cell_data.add_array(vector_real)
@@ -233,5 +235,3 @@ def write_vtk(parts, scalar_function=None, vector_function=None,
         struct.cell_data.add_array(vector_imag)
 
     write_data(struct, filename)
-    
-        

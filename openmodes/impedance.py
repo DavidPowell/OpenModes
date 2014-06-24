@@ -153,13 +153,13 @@ class EfieImpedanceMatrix(object):
                 which_z = np.argsort(abs(z_all.imag))[:num_modes]
             else:
                 which_z = np.dot(start_j.T, v_all).argmax(1)
-            
-            eigenimpedance = z_all[which_z]    
+
+            eigenimpedance = z_all[which_z]
             v = v_all[:, which_z]
-    
+
             if use_gram:
                 eigencurrent = v/np.sqrt(np.diag(v.T.dot(G.dot(v))))
-            else:                
+            else:
                 eigencurrent = v/np.sqrt(np.sum(v**2, axis=0))
 
         return eigenimpedance, eigencurrent
@@ -255,8 +255,10 @@ class EfieImpedanceMatrix(object):
 
             for matrix in row:
                 col_size = matrix.shape[1]
-                L_tot[row_offset:row_offset+row_size, col_offset:col_offset+col_size] = matrix.L
-                S_tot[row_offset:row_offset+row_size, col_offset:col_offset+col_size] = matrix.S
+                L_tot[row_offset:row_offset+row_size,
+                      col_offset:col_offset+col_size] = matrix.L
+                S_tot[row_offset:row_offset+row_size,
+                      col_offset:col_offset+col_size] = matrix.S
                 col_offset += col_size
             row_offset += row_size
 
@@ -387,7 +389,7 @@ class ImpedanceParts(object):
             return self.matrices[index]
         except KeyError:
             if ((len(index) == 2) and (index[0] in self.parent_part_o) and
-                (index[1] in self.parent_part_s)):
+                    (index[1] in self.parent_part_s)):
                 # a valid self or mutual term
                 parent_o, parent_s = index
             else:
@@ -465,7 +467,8 @@ class ImpedanceParts(object):
         """
         if part is None:
             if self.parent_part_o != self.parent_part_s:
-                raise ValueError("Cannot get eigenvalues of partial impedance matrix")
+                raise ValueError("Cannot get eigenvalues of partial "
+                                 "impedance matrix")
             else:
                 part = self.parent_part_o
         return self[part, part].eigenmodes(num_modes, use_gram, start_j)
