@@ -63,9 +63,10 @@ class Identified(object):
         return hasattr(other, 'id') and (self.id == other.id)
 
     def __repr__(self):
-        "Represent the object by its id, intead of its memory address"
-        return ("<" + str(self.__class__)[8:-2] +
-                " with id " + str(self.id) + ">")
+        "Represent the object by its id, in addition to its memory address"
+        return ("<%s at 0x%08x with id %s>" % (str(self.__class__)[8:-2],
+                                                id(self),
+                                                str(self.id)))
 
 
 class PicklableRef(object):

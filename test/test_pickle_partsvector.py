@@ -18,16 +18,16 @@ logging.getLogger().setLevel(100)  # logging.INFO)
 def save():
     name = "SRR"
     mesh_tol = 1e-3
-    
+
     sim = openmodes.Simulation(name=name)
     mesh = sim.load_mesh(osp.join(openmodes.geometry_dir, name+'.geo'),
                          mesh_tol=mesh_tol)
     part = sim.place_part(mesh)
     for part in sim.parts.iter_all():
-        print "part", part.id
-    
+        print "Original part", part
+
     V = sim.source_plane_wave([0, 1, 0], [0, 0, 0])
-    
+
     with open(osp.join("output", "V.pickle"), "wt") as outfile:
         pickle.dump(V, outfile, protocol=0)
 
@@ -37,11 +37,11 @@ def load():
         V = pickle.load(infile)
 
     for part in V.index_arrays.keys():
-        print "part", part
+        print "Unpickled part", part
         if part.parent_ref is None:
             print "No parent"
         else:
-            print "parent", part.parent_ref()
+            print "With parent", part.parent_ref()
 
 save()
 load()
