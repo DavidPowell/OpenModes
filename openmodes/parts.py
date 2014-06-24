@@ -17,7 +17,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------------
 
-from openmodes.helpers import Identified
+from openmodes.helpers import Identified, PicklableRef
 import numpy as np
 import weakref
 
@@ -35,7 +35,7 @@ class Part(Identified):
         self.initial_location = location
         self.transformation_matrix = np.empty((4, 4))
         self.reset()
-        self.parent = None
+        self.parent_ref = None
 
     def reset(self):
         """Reset this part to the default values of the original `Mesh`
@@ -49,10 +49,10 @@ class Part(Identified):
     def complete_transformation(self):
         """The complete transformation matrix, which takes into account
         the transformation matrix of all parents"""
-        if self.parent is None:
+        if self.parent_ref is None:
             return self.transformation_matrix
         else:
-            return self.parent.complete_transformation.dot(
+            return self.parent_ref().complete_transformation.dot(
                                                     self.transformation_matrix)
 
     def translate(self, offset_vector):
@@ -163,10 +163,10 @@ class CompositePart(Part):
 
     def add_part(self, part):
         "Add a part to this part"
-        if part.parent is not None:
+        if part.parent_ref is not None:
             raise ValueError("Part already has a different parent")
         self.parts.append(part)
-        part.parent = weakref.proxy(self)
+        part.parent_ref = PicklableRef(self)
 
     def iter_single(self):
         """Returns a generator which iterates over all single parts

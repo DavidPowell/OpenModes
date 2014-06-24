@@ -19,6 +19,7 @@
 
 import functools
 import uuid
+import weakref
 
 
 def inc_slice(s, inc):
@@ -65,3 +66,24 @@ class Identified(object):
         "Represent the object by its id, intead of its memory address"
         return ("<" + str(self.__class__)[8:-2] +
                 " with id " + str(self.id) + ">")
+
+
+class PicklableRef(object):
+    """A weak reference which can be pickled. This is achieved by
+    creating a strong reference to the object at pickling time, then restoring
+    the weak reference when unpickling. Note that unless the object being
+    referenced is also pickled and referenced after unpickling, the weak
+    reference will be dead after unpickling.
+    """
+
+    def __init__(self, obj, callback=None):
+        self.ref = weakref.ref(obj, callback)
+
+    def __call__(self):
+        return self.ref()
+
+    def __getstate__(self):
+        return {'ref': self.ref()}
+
+    def __setstate__(self, state):
+        self.ref = weakref.ref(state['ref'])
