@@ -60,3 +60,8 @@ class Identified(object):
 
     def __eq__(self, other):
         return hasattr(other, 'id') and (self.id == other.id)
+
+    def __repr__(self):
+        "Represent the object by its id, intead of its memory address"
+        return ("<" + str(self.__class__)[8:-2] +
+                " with id " + str(self.id) + ">")
