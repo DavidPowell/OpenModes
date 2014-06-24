@@ -22,7 +22,7 @@ import numpy as np
 
 import openmodes.core
 
-from openmodes.constants import epsilon_0, mu_0, pi
+from openmodes.constants import epsilon_0, mu_0, pi, c
 from openmodes.basis import (LinearTriangleBasis, LoopStarBasis,
                              get_basis_functions)
 from openmodes.impedance import (EfieImpedanceMatrix,
@@ -32,7 +32,20 @@ from openmodes.vector import VectorParts
 
 
 class FreeSpaceGreensFunction(object):
-    "Green's function in Free Space"
+    "Green's function in a homogeneous isotropic medium such as free space"
+    def __init__(self, epsilon_r=1, mu_r=1):
+        """
+        Parameters
+        ---------
+        epsilon_r, mu_r : real
+            Relative permittivity and permeability of the background medium
+
+        A lossy background medium is currently unsupported
+        """
+        self.epsilon = epsilon_r*epsilon_0
+        self.mu = mu_r*mu_0
+        self.c = c/np.sqrt(mu_r*epsilon_r)
+        self.eta = np.sqrt(self.mu/self.epsilon)
 
 
 class SingularSparse(object):
