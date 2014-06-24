@@ -28,7 +28,8 @@ import os.path
 
 try:
     _dist = get_distribution('openmodes')
-    if not __file__.lower().startswith(os.path.join(_dist.location.lower(), 'openmodes')):
+    if not __file__.lower().startswith(os.path.join(_dist.location.lower(),
+                                                    'openmodes')):
         # not installed, but there is another version that *is*
         raise DistributionNotFound
 except DistributionNotFound:
@@ -53,5 +54,4 @@ logger = logging.getLogger()
 for handler in logger.handlers:
     handler.formatter = formatter
 
-#__all__ = [openmodes.simulation.Simulation, openmodes.mesh.load_mesh]
-
+#__all__ = [openmodes.simulation.Simulation]

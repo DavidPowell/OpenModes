@@ -51,12 +51,12 @@ class MeshError(Exception):
 
 class Identified(object):
     "An object which can be uniquely identified by an id number"
-    
+
     def __init__(self):
         self.id = uuid.uuid4()
 
     def __hash__(self):
         return self.id.__hash__()
-        
+
     def __eq__(self, other):
         return hasattr(other, 'id') and (self.id == other.id)

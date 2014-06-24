@@ -269,7 +269,7 @@ class DivRwgBasis(LinearTriangleBasis):
 
         self.rwg = RWG(tri_p, tri_m, node_p, node_m)
         self.sections = (num_basis,)
-        
+
         logging.info("Constructing %d RWG basis functions over %d faces"
                      % (num_basis, len(mesh.polygons)))
 
@@ -629,7 +629,8 @@ class CombinedBasis(AbstractBasis):
         row_offset = 0
         for basis in self.basis_list:
             row_size = len(basis)
-            G_tot[row_offset:row_offset+row_size, row_offset:row_offset+row_size] = basis.gram_matrix
+            G_tot[row_offset:row_offset+row_size,
+                  row_offset:row_offset+row_size] = basis.gram_matrix
 
             row_offset += row_size
 

@@ -24,9 +24,10 @@ import numpy as np
 
 from openmodes.basis import get_basis_functions
 
+
 def build_index_arrays(parent_part, basis_class):
     """Calculate the index arrays for each part with respect to the vector
-    
+
     Parameters
     ----------
     parent_part : Part
@@ -41,11 +42,11 @@ def build_index_arrays(parent_part, basis_class):
     for part in parent_part.iter_single():
         basis = get_basis_functions(part.mesh, basis_class)
         sections.append(basis.sections)
-    
+
     num_sections = len(sections[0])
     # insert zeros at the start to be the offset of the first part
     sections.insert(0, [0 for n in xrange(num_sections)])
-    
+
     # first index is section, second is the part
     sections = np.array(sections).T
 
@@ -59,13 +60,13 @@ def build_index_arrays(parent_part, basis_class):
     for part in parent_part.iter_all(parent_first=False):
         if hasattr(part, 'parts'):
             # build up the index array from the children
-            index_arrays[part] = np.hstack(index_arrays[child] 
+            index_arrays[part] = np.hstack(index_arrays[child]
                                            for child in part.parts)
             # sort to prevent unwanted reordering
             index_arrays[part].sort()
         else:
             part_index = []
-            # this is a SinglePart, so generate its index array from the sections
+            # Is a SinglePart, so generate its index array from the sections
             for sec_num in xrange(num_sections):
                 part_index.append(np.arange(offsets[sec_num, single_part_num],
                                             offsets[sec_num, single_part_num+1]))
@@ -74,6 +75,7 @@ def build_index_arrays(parent_part, basis_class):
 
     total_length = offsets[-1, -1]
     return index_arrays, total_length
+
 
 class VectorParts(np.ndarray):
     """
@@ -98,8 +100,8 @@ class VectorParts(np.ndarray):
         dtype : dtype
             The numpy data type of the vector
         cols : integer, optional
-            If specified, then this array will have multiple columns, which will
-            not be associated with any names
+            If specified, then this array will have multiple columns, which
+            will not be associated with any names
         """
 
         # knowing the sizes of all sections, work out the location of each part
@@ -109,7 +111,7 @@ class VectorParts(np.ndarray):
         if cols is None:
             shape = (total_length,)
         else:
-            shape =  (total_length, cols)
+            shape = (total_length, cols)
 
         obj = np.ndarray.__new__(subtype, shape, dtype)
 
@@ -122,7 +124,8 @@ class VectorParts(np.ndarray):
 
     def __array_finalize__(self, obj):
         "Function is called when creating array from view as well"
-        if obj is None: return
+        if obj is None:
+            return
 
         # set default values for the custom attributes
         self.basis_class = obj.basis_class
@@ -131,15 +134,15 @@ class VectorParts(np.ndarray):
 
     def __setstate__(self, state):
         """Allow additional attributes of this array type to be unpickled
-        
+
         Note that some metadata may be lost when unpickling."""
         nd_state, own_state = state
         super(VectorParts, self).__setstate__(nd_state)
         self.parent_part, self.index_arrays, self.basis_class = own_state
-        
+
     def __reduce__(self):
         """Allow additional attributes of this array type to be pickled
-        
+
         Note that some metadata may be lost when unpickling."""
         object_state = list(super(VectorParts, self).__reduce__(self))
         vectorparts_state = (self.parent_part, self.index_arrays,
@@ -222,8 +225,8 @@ class VectorParts(np.ndarray):
             columns of `modes_vec`.
         normalise_modes : string, optional
             If `None`, no normalisation will be performed
-            If 'complex', then the sum of each vector squared will be normalised
-            to 1, without taking the magnitude of each element
+            If 'complex', then the sum of each vector squared will be
+            normalised to 1, without taking the magnitude of each element
 
         Returns
         -------
@@ -248,10 +251,10 @@ if __name__ == "__main__":
     import openmodes
     from openmodes.constants import c
     import os.path as osp
-    
+
     mesh_tol = 0.5e-3
     name = 'SRR'
-    sim = openmodes.Simulation(name='vector_test', 
+    sim = openmodes.Simulation(name='vector_test',
                                basis_class=openmodes.basis.LoopStarBasis,
                                log_display_level=20)
     mesh = sim.load_mesh(osp.join(openmodes.geometry_dir, name+'.geo'),
@@ -270,7 +273,6 @@ if __name__ == "__main__":
     #V[part] = -5
     V[part1] = 66
     V[part2] = 7
-    
+
     #a = V[part1]
     print V[part][part2]
-    
