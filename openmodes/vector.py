@@ -39,7 +39,7 @@ def build_index_arrays(parent_part, basis_class):
     # complete vector, and all the sections within it
     sections = []
     for part in parent_part.iter_single():
-        basis = get_basis_functions(part.mesh, basis_class, logger=None)
+        basis = get_basis_functions(part.mesh, basis_class)
         sections.append(basis.sections)
     
     num_sections = len(sections[0])
@@ -84,8 +84,7 @@ class VectorParts(np.ndarray):
     http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
     """
 
-    def __new__(subtype, parent_part, basis_class,
-                dtype=float, cols=None, logger=None):
+    def __new__(subtype, parent_part, basis_class, dtype=float, cols=None):
         """Construct an empty vector which can be indexed by the parts
 
         Parameters
@@ -117,7 +116,6 @@ class VectorParts(np.ndarray):
         obj.parent_part = parent_part
         obj.index_arrays = index_arrays
         obj.basis_class = basis_class
-        obj.logger = logger
 
         # Finally, we must return the newly created object:
         return obj

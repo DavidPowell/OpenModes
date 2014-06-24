@@ -40,6 +40,18 @@ else:
 from pkg_resources import resource_filename
 geometry_dir = resource_filename('openmodes', 'geometry')
 
+# Set the logging format of the root logger. By default it will not be
+# displayed. In order to display the log messages, run
+# `import logging; logging.setLevel(logging.INFO)` for basic information
+# or `import logging; logging.setLevel(logging.DEBUG)` for quite
+# detailed information.
+#
+import logging
+log_format = '%(levelname)s - %(asctime)s - %(message)s'
+formatter = logging.Formatter(log_format)
+logger = logging.getLogger()
+for handler in logger.handlers:
+    handler.formatter = formatter
 
 #__all__ = [openmodes.simulation.Simulation, openmodes.mesh.load_mesh]
 

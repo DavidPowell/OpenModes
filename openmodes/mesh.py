@@ -21,6 +21,7 @@ Routines and classes for storing a mesh, and querying it to calculate
 derived quantities
 """
 
+import logging
 import numpy as np
 from openmodes.helpers import Identified
 
@@ -84,7 +85,7 @@ class TriangularSurfaceMesh(Identified):
     
     polygon_name = 'triangles'
 
-    def __init__(self, raw_mesh, scale=None, logger=None):
+    def __init__(self, raw_mesh, scale=None):
         """
         Parameters
         ----------
@@ -117,9 +118,8 @@ class TriangularSurfaceMesh(Identified):
         except KeyError:
             self.physical_name = None
 
-        if logger is not None:
-            logger.info('Creating triangular mesh\n%d nodes\n%d triangles' %
-                        (len(self.nodes), len(self.polygons)))
+        logging.info('Creating triangular mesh\n%d nodes\n%d triangles' %
+                     (len(self.nodes), len(self.polygons)))
 
 #    def __repr__(self):
 #        return "Nodes

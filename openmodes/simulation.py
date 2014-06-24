@@ -22,8 +22,8 @@ from __future__ import division
 
 # numpy and scipy
 import numpy as np
-
 import os.path as osp
+import logging
 
 from openmodes import integration, gmsh
 from openmodes.parts import SinglePart, CompositePart
@@ -45,9 +45,7 @@ class Simulation(Identified):
 
     def __init__(self, integration_rule=5, basis_class=LoopStarBasis,
                  operator_class=EfieOperator,
-                 greens_function=FreeSpaceGreensFunction(),
-                 name=None, enable_logging=True, log_display_level=None,
-                 log_level="info"):
+                 greens_function=FreeSpaceGreensFunction(), name=None):
         """
         Parameters
         ----------
@@ -62,50 +60,12 @@ class Simulation(Identified):
             The Green's function (currently unused)
         name : string, optional
             A name for this simulation, which will be used for logging
-        enable_logging : bool, optional
-            Enable logging of simulation information to a temporary file
-        log_display_level : integer, optional
-            The level of logging messages which should be displayed to the
-            user via the stderr stream. The default value prevents any logging
-            messages from being displayed. Useful values are 20 (general info)
-            and 10 (full debugging information)
         """
 
         super(Simulation, self).__init__()
 
         if name is None:
             name = str(self.id)
-
-        if enable_logging:
-            # create a unique logger for each simulation object
-
-            import logging
-            import time
-            import tempfile
-
-            self.logger = logging.getLogger(str(self.id))
-            formatter = logging.Formatter(name+' - %(asctime)s - %(message)s')
-
-            self.logfile = tempfile.NamedTemporaryFile(mode='wt',
-                                    prefix=time.strftime("%Y-%m-%d--%H-%M-%S"),
-                                    suffix=".log", delete=False)
-            handler = logging.StreamHandler(self.logfile)
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
-
-            self.logger.setLevel(1)
-            self.logger.propagate = False
-
-            if log_display_level is not None:
-                # dump logging info to the screen as well
-                import sys
-                handler = logging.StreamHandler(sys.stderr)
-                handler.setFormatter(formatter)
-                handler.setLevel(log_display_level)
-                self.logger.addHandler(handler)
-
-        else:
-            self.logger = None
 
         self.quadrature_rule = integration.get_dunavant_rule(integration_rule)
 
@@ -114,15 +74,11 @@ class Simulation(Identified):
         self.basis_class = basis_class
         self.operator = operator_class(quadrature_rule=self.quadrature_rule,
                                        basis_class=basis_class,
-                                       greens_function=greens_function,
-                                       logger=self.logger)
+                                       greens_function=greens_function)
 
-        if self.logger:
-            self.logger.info('Creating simulation\nQuadrature order %d\n'
-                             'Basis function class %s\n'
-                             'Log file %s' % (integration_rule,
-                                              basis_class,
-                                              self.logfile.name))
+        logging.info('Creating simulation\nQuadrature order %d\n'
+                     'Basis function class %s\n'
+                     % (integration_rule, basis_class))
 
     def place_part(self, mesh=None, parent=None, location=None):
         """Add a part to the simulation domain
@@ -188,8 +144,7 @@ class Simulation(Identified):
         num_freqs = len(freqs)
         for freq_count, freq in enumerate(freqs):
             if freq_count % log_skip == 0 and freq_count != 0:
-                self.logger.info(log_label+" %d/%d" %
-                                 (freq_count, num_freqs))
+                logging.info(log_label+" %d/%d" % (freq_count, num_freqs))
             yield freq_count, 2j*np.pi*freq
 
     def impedance(self, s, parent=None):
@@ -263,9 +218,7 @@ class Simulation(Identified):
 
         part = part or self.parts
 
-        if self.logger:
-            self.logger.info("Finding singularities for part %s"
-                             % str(part.id))
+        logging.info("Finding singularities for part %s" % str(part.id))
 
         try:
             # check if a list of mode numbers was passed
@@ -296,13 +249,11 @@ class Simulation(Identified):
 
             lin_hz = lin_s[mode]/2/np.pi
             nl_hz = res['eigval']/2/np.pi
-            if self.logger:
-                self.logger.info("Converged after %d iterations\n"
-                                 "%+.4e %+.4ej (linearised solution)\n"
-                                 "%+.4e %+.4ej (nonlinear solution)"
-                                 % (res['iter_count'],
-                                    lin_hz.real, lin_hz.imag,
-                                    nl_hz.real, nl_hz.imag))
+            logging.info("Converged after %d iterations\n"
+                         "%+.4e %+.4ej (linearised solution)\n"
+                         "%+.4e %+.4ej (nonlinear solution)"
+                         % (res['iter_count'], lin_hz.real, lin_hz.imag,
+                            nl_hz.real, nl_hz.imag))
 
             mode_s[mode] = res['eigval']
             j_calc = res['eigvec']
@@ -340,8 +291,7 @@ class Simulation(Identified):
         scalar_models = []
 
         for s_n, j_n in zip(mode_s, mode_j.T):
-            scalar_models.append(ScalarModel(part, s_n, j_n, self.operator,
-                                 logger=self.logger))
+            scalar_models.append(ScalarModel(part, s_n, j_n, self.operator))
         return scalar_models
 
     def empty_vector(self, part=None, cols=None):
@@ -360,7 +310,7 @@ class Simulation(Identified):
 
         part = part or self.parts
         return VectorParts(part, self.basis_class, dtype=np.complex128,
-                           cols=cols, logger=self.logger)
+                           cols=cols)
 
     def plot_solution(self, solution, output_format, filename=None,
                       compress_scalars=None, compress_separately=False):
@@ -392,8 +342,7 @@ class Simulation(Identified):
         for part_num, part in enumerate(self.parts.iter_single()):
             parts_list.append(part)
             I = solution[part]
-            basis = get_basis_functions(part.mesh, self.basis_class,
-                                        self.logger)
+            basis = get_basis_functions(part.mesh, self.basis_class)
 
             centre, current, charge = basis.interpolate_function(I,
                                                             return_scalar=True,
@@ -457,19 +406,15 @@ class Simulation(Identified):
                 raise ValueError("Cannot modify parameters of an existing mesh")
         else:
             # assume that this is a gmsh geometry file, so mesh it first
-            if self.logger:
-                self.logger.info("Meshing geometry %s with parameters %s"
-                                 % (filename, str(parameters)))
+            logging.info("Meshing geometry %s with parameters %s"
+                          % (filename, str(parameters)))
             meshed_name = gmsh.mesh_geometry(filename, mesh_tol,
                                              parameters=parameters)
 
-        if self.logger:
-            self.logger.info("Loading mesh %s" % meshed_name)
-
+        logging.info("Loading mesh %s" % meshed_name)
         raw_mesh = gmsh.read_mesh(meshed_name)
 
-        parts = tuple(TriangularSurfaceMesh(sub_mesh, scale=scale,
-                                            logger=self.logger)
+        parts = tuple(TriangularSurfaceMesh(sub_mesh, scale=scale)
                       for sub_mesh in raw_mesh)
         if len(parts) == 1 and not force_tuple:
             return parts[0]

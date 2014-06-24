@@ -10,14 +10,15 @@ import openmodes.basis
 import os.path as osp
 import numpy as np
 import pickle
-    
+ 
+import logging
+logging.getLogger().setLevel(logging.INFO)  
 
 def save():
     name = "SRR"
     mesh_tol = 1e-3
     
-    sim = openmodes.Simulation(name=name, 
-                               log_display_level=20)
+    sim = openmodes.Simulation(name=name)
     mesh = sim.load_mesh(osp.join(openmodes.geometry_dir, name+'.geo'),
                          mesh_tol=mesh_tol)
     part = sim.place_part(mesh)

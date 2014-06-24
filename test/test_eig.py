@@ -15,6 +15,9 @@ from openmodes.basis import LoopStarBasis
 from openmodes.eig import eig_newton_linear
 from openmodes.constants import c
 
+import logging
+logging.getLogger().setLevel(logging.INFO)
+
 def test1():
     ring1 = openmodes.load_mesh(
                         osp.join(openmodes.geometry_dir, "SRR.geo"),
@@ -24,7 +27,6 @@ def test1():
     #basis_class=DivRwgBasis
     
     sim = openmodes.Simulation(basis_class=basis_class, name="test_eig")
-    sim.logger.propagate = True
     sim.place_part(ring1, location=[0e-3, 0, 0])
     
     start_freq = 1e10
@@ -66,7 +68,6 @@ def compare_fit_impedance_scale():
     #basis_class = DivRwgBasis
     
     sim = openmodes.Simulation(basis_class=basis_class)
-    sim.logger.propagate = True
     srr1 = sim.place_part(srr)
     #srr2 = sim.place_part(srr, location=[0e-3, 0e-3, 2e-3])
     #srr2.rotate([0, 0, 1], 180)

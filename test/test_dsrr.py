@@ -14,12 +14,14 @@ import openmodes
 import openmodes.basis
 from openmodes.constants import c
 from openmodes.model import ModelPolyInteraction
-    
+
+import logging
+logging.getLogger().setLevel(logging.INFO)
+
 mesh_tol = 0.3e-3
     
 sim = openmodes.Simulation(name='Test DSRR', 
-                           basis_class=openmodes.basis.LoopStarBasis,
-                           log_display_level=20)
+                           basis_class=openmodes.basis.LoopStarBasis)
 
 srr = sim.place_part()
 
@@ -50,8 +52,7 @@ parts_modes = [(srr_inner, s_inner, current_inner),
 poly_order = 2
 s_max = 2j*np.pi*5e9
 
-model = ModelPolyInteraction(sim.operator, parts_modes, poly_order, s_max,
-                             logger=sim.logger)
+model = ModelPolyInteraction(sim.operator, parts_modes, poly_order, s_max)
 
 projection_sem = [(srr_inner, current_inner),
                   (srr_outer, current_outer)]

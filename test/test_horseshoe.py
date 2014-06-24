@@ -24,14 +24,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.linalg as la
 
+import logging
+logging.getLogger().setLevel(logging.INFO)
+
 import openmodes
 import openmodes.basis
 from openmodes.constants import c
 
 def horseshoe_modes():
     sim = openmodes.Simulation(name='horseshoe_modes', 
-                               basis_class=openmodes.basis.LoopStarBasis, 
-                               log_display_level=20)
+                               basis_class=openmodes.basis.LoopStarBasis)
     shoe = sim.load_mesh(osp.join('..', 'examples', 'geometry', 
                                   'horseshoe_rect.geo'), mesh_tol=1e-3)
     
@@ -47,7 +49,6 @@ def horseshoe_modes():
 
 def horseshoe_extinction():
     sim = openmodes.Simulation(name='horseshoe_extinction',
-                               log_display_level=20,
                                basis_class=openmodes.basis.LoopStarBasis)
 
     shoe = sim.load_mesh(osp.join('..', 'examples', 'geometry', 
@@ -78,8 +79,7 @@ def horseshoe_extinction():
 
 def horseshoe_extinction_modes():
     sim = openmodes.Simulation(name='horseshoe_extinction_modes', 
-                               basis_class=openmodes.basis.LoopStarBasis,
-                               log_display_level=20)
+                               basis_class=openmodes.basis.LoopStarBasis)
     #shoe = sim.load_mesh(osp.join('..', 'examples', 'geometry', 'horseshoe_rect.geo'),
     #                     mesh_tol=3e-3)
     shoe = sim.load_mesh(r'c:\users\dap124\appdata\local\temp\tmpxqs5wg\horseshoe_rect.msh')

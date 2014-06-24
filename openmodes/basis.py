@@ -20,6 +20,7 @@
 Routines to construct the basis functions on a mesh
 """
 
+import logging
 from collections import namedtuple
 from scipy.sparse import lil_matrix
 import scipy.linalg as la
@@ -226,7 +227,7 @@ class DivRwgBasis(LinearTriangleBasis):
     they can be re-used for the same mesh placed in a different location.
     """
 
-    def __init__(self, mesh, logger=None):
+    def __init__(self, mesh):
         """Generate basis functions for a particular mesh. Note that the mesh
         will be referenced, so it should not be modified after generating the
         basis functions.
@@ -269,9 +270,8 @@ class DivRwgBasis(LinearTriangleBasis):
         self.rwg = RWG(tri_p, tri_m, node_p, node_m)
         self.sections = (num_basis,)
         
-        if logger:
-            logger.info("Constructing %d RWG basis functions over %d faces"
-                        % (num_basis, len(mesh.polygons)))
+        logging.info("Constructing %d RWG basis functions over %d faces"
+                     % (num_basis, len(mesh.polygons)))
 
     @cached_property
     def transformation_matrices(self):
@@ -414,7 +414,7 @@ class LoopStarBasis(LinearTriangleBasis):
     vol. 51, no. 8, pp. 1855–1863, Aug. 2003.
     """
 
-    def __init__(self, mesh, logger=None):
+    def __init__(self, mesh):
         super(LoopStarBasis, self).__init__(mesh)
         self.canonical_basis = LoopStarBasis
 
@@ -490,14 +490,13 @@ class LoopStarBasis(LinearTriangleBasis):
 
         self.sections = (num_loops, self.num_stars)
 
-        if logger:
-            logger.info("Constructing %d loop-star basis functions\n"
-                        "%d loops\n%d stars\n%d faces\n%d edges\n"
-                        "%d unshared_edges\n"
-                        "%d nodes on boundary\n%d boundary contours"
-                        % (len(self), num_loops, self.num_stars,
-                           len(mesh.polygons), len(edges), len(unshared_edges),
-                           len(outer_nodes), boundary_contours))
+        logging.info("Constructing %d loop-star basis functions\n"
+                     "%d loops\n%d stars\n%d faces\n%d edges\n"
+                     "%d unshared_edges\n"
+                     "%d nodes on boundary\n%d boundary contours"
+                     % (len(self), num_loops, self.num_stars,
+                        len(mesh.polygons), len(edges), len(unshared_edges),
+                        len(outer_nodes), boundary_contours))
 
     def __len__(self):
         return len(self.rwg_loop.tri_p)+len(self.rwg_star.tri_p)
@@ -582,7 +581,7 @@ class LoopStarBasis(LinearTriangleBasis):
 cached_basis_functions = {}
 
 
-def get_basis_functions(mesh, basis_class, logger=None):
+def get_basis_functions(mesh, basis_class):
     """Generate basis functions for a mesh. Performs caching, so that if an
     identical mesh has already been generated, the basis functions will
     not be unnecessarily duplicated
@@ -606,7 +605,7 @@ def get_basis_functions(mesh, basis_class, logger=None):
         #print "Basis functions retrieved from cache"
         return cached_basis_functions[unique_key]
     else:
-        result = basis_class(mesh, logger=logger)
+        result = basis_class(mesh)
         cached_basis_functions[unique_key] = result
         return result
 
@@ -614,7 +613,7 @@ def get_basis_functions(mesh, basis_class, logger=None):
 class CombinedBasis(AbstractBasis):
     "A set of basis functions which have been combined together"
 
-    def __init__(self, basis_list, logger=None):
+    def __init__(self, basis_list):
         super(CombinedBasis, self).__init__()
         self.basis_list = basis_list
         self.sections = (len(self),)
@@ -643,8 +642,8 @@ class CombinedBasis(AbstractBasis):
 class CombinedLoopStarBasis(CombinedBasis):
     "A set of loop-star basis functions which have been combined together"
 
-    def __init__(self, basis_list, logger=None):
-        super(CombinedLoopStarBasis, self).__init__(basis_list, logger)
+    def __init__(self, basis_list):
+        super(CombinedLoopStarBasis, self).__init__(basis_list)
         self.sections = (self.num_loops, len(self)-self.num_loops)
         self.canonical_basis = LoopStarBasis
 

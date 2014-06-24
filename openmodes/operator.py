@@ -257,9 +257,7 @@ class Operator(object):
             the source vector for each part
         """
 
-        vector = VectorParts(parent, self.basis_class, dtype=np.complex128,
-                             logger=self.logger)        
-
+        vector = VectorParts(parent, self.basis_class, dtype=np.complex128)
 
         for part in parent.iter_single():
             vector[part] = self.source_plane_wave_single_part(part, e_inc, jk_inc)
@@ -275,21 +273,10 @@ class EfieOperator(Operator):
     reciprocal = True
 
     def __init__(self, quadrature_rule, basis_class,
-                 greens_function=FreeSpaceGreensFunction(),
-                 logger=None):
+                 greens_function=FreeSpaceGreensFunction()):
         self.basis_class = basis_class
         self.quadrature_rule = quadrature_rule
         self.greens_function = greens_function
-        self.logger = logger
-
-    def __getstate__(self):
-        "Allow operator to be pickled"
-        return self.basis_class, self.quadrature_rule, self.greens_function
-        
-    def __setstate__(self, state):
-        "Allow operator to be unpickled. Logger connection is lost"
-        self.basis_class, self.quadrature_rule, self.greens_function = state
-        self.logger = None
 
     def impedance_single_parts(self, s, part_o, part_s=None):
         """Calculate a self or mutual impedance matrix at a given complex 
@@ -308,8 +295,8 @@ class EfieOperator(Operator):
         # if source part is not given, default to observer part
         part_s = part_s or part_o
 
-        basis_o = get_basis_functions(part_o.mesh, self.basis_class, self.logger)
-        basis_s = get_basis_functions(part_s.mesh, self.basis_class, self.logger)
+        basis_o = get_basis_functions(part_o.mesh, self.basis_class)
+        basis_s = get_basis_functions(part_s.mesh, self.basis_class)
 
         if isinstance(self.greens_function, FreeSpaceGreensFunction):
             if isinstance(basis_o, LinearTriangleBasis):
@@ -342,7 +329,7 @@ class EfieOperator(Operator):
         V : ndarray
             the source "voltage" vector
         """
-        basis = get_basis_functions(part.mesh, self.basis_class, self.logger)
+        basis = get_basis_functions(part.mesh, self.basis_class)
 
         if (isinstance(basis, LinearTriangleBasis) and
             isinstance(self.greens_function, FreeSpaceGreensFunction)):
@@ -394,7 +381,7 @@ class EfieOperator(Operator):
         direction = np.atleast_2d(direction)        
         direction /= np.sqrt(np.sum(direction**2, axis=1))
 
-        basis = get_basis_functions(part.mesh, self.basis_class, self.logger)
+        basis = get_basis_functions(part.mesh, self.basis_class)
         r, currents = basis.interpolate_function(current_vec, xi_eta, 
                                                  nodes=part.mesh.nodes,
                                                  scale_area=False)

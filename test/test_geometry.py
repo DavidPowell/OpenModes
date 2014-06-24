@@ -24,6 +24,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.linalg as la
 
+import logging
+logging.getLogger().setLevel(logging.INFO)
+
 import openmodes
 import openmodes.basis
 from openmodes.constants import c
@@ -37,8 +40,7 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
     """
     
     sim = openmodes.Simulation(name=name, 
-                               basis_class=openmodes.basis.LoopStarBasis,
-                               log_display_level=20)
+                               basis_class=openmodes.basis.LoopStarBasis)
     mesh = sim.load_mesh(osp.join(openmodes.geometry_dir, name+'.geo'),
                          mesh_tol=mesh_tol, parameters=parameters)
     part = sim.place_part(mesh)

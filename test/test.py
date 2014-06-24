@@ -32,6 +32,9 @@ from openmodes.constants import c
 from openmodes.basis import DivRwgBasis, LoopStarBasis, DivRwgGramBasis, LoopStarGramBasis, get_basis_functions
 from openmodes.eig import eig_linearised
 
+import logging
+logging.getLogger().setLevel(logging.INFO)
+
 
 def loop_star_linear_eigenmodes():
     """"Solve the linearised eigenvalue problem in a loop-star basis.
@@ -121,7 +124,6 @@ def sem_eem_asrr():
                     osp.join(openmodes.geometry_dir, "asymmetric_ring.geo"), mesh_tol=0.5e-3)
 
     sim = openmodes.Simulation(basis_class=LoopStarBasis, name="sem_eem_asrr")
-    sim.logger.propagate = True
     sim.place_part(ring1)
     sim.place_part(ring2)
 
@@ -176,7 +178,6 @@ def eem_srr():
     #basis_class = DivRwgBasis
     
     sim = openmodes.Simulation(basis_class=basis_class)
-    sim.logger.propagate = True
     srr1 = sim.place_part(srr)
     #srr2 = sim.place_part(srr, location=[0e-3, 0e-3, 2e-3])
     #srr2.rotate([0, 0, 1], 180)
@@ -277,7 +278,6 @@ def sphere_mode_orthogonality():
                               mesh_tol=0.5)
     
     sim = openmodes.Simulation()
-    sim.logger.propagate = True
     sim.place_part(sphere)
     
     num_modes = 3
@@ -307,7 +307,6 @@ def eem_sphere():
                               mesh_tol=0.5)
     
     sim = openmodes.Simulation(name='sphere extinction')
-    sim.logger.propagate = True
     sim.place_part(sphere)
 
     num_freqs = 101
@@ -419,8 +418,7 @@ def sem_eem_bcsrr():
     basis_class = LoopStarBasis
     #basis_class = DivRwgBasis
 
-    sim = openmodes.Simulation(basis_class=basis_class, name="sem_eem_bcsrr", log_stderr=True)
-    #sim.logger.propagate=True
+    sim = openmodes.Simulation(basis_class=basis_class, name="sem_eem_bcsrr")
     srr1 = sim.place_part(srr)
     #srr2 = sim.place_part(srr, location=[0e-3, 0e-3, 2e-3])
     #srr2.rotate([0, 0, 1], 180)
@@ -645,8 +643,7 @@ def srr_extinction():
     mesh_tol = 0.25e-3
     
     sim = openmodes.Simulation(basis_class=openmodes.basis.LoopStarBasis, 
-                               name='srr_extinction',
-                               log_display_level=20)
+                               name='srr_extinction')
 
     filename = osp.join(openmodes.geometry_dir, "SRR.geo")
 
@@ -759,8 +756,7 @@ def extinction_sphere():
     mesh_tol = 0.3
     
     basis_class = LoopStarBasis
-    sim = openmodes.Simulation(name='extinction_sphere', basis_class=basis_class,
-                               log_display_level=20)
+    sim = openmodes.Simulation(name='extinction_sphere', basis_class=basis_class)
     mesh = sim.load_mesh(filename, mesh_tol)
     
     sim.place_part(mesh)
@@ -797,8 +793,7 @@ def modes_sphere():
     mesh_tol = 0.3
     
     basis_class = LoopStarBasis
-    sim = openmodes.Simulation(name='modes_sphere', basis_class=basis_class,
-                               log_display_level=20)
+    sim = openmodes.Simulation(name='modes_sphere', basis_class=basis_class)
     mesh = sim.load_mesh(filename, mesh_tol)
     sim.place_part(mesh)
 
@@ -1202,7 +1197,6 @@ def test_gram():
     #basis_class=LoopStarGramBasis
     
     sim = openmodes.Simulation(basis_class=basis_class, name="plot_eem")
-    sim.logger.propagate = True
     sim.place_part(ring1, location=[0e-3, 0, 0])
     sim.place_part(ring1, location=[10e-3, 0, 0])
     sim.place_part(ring1, location=[20e-3, 0, 0])
