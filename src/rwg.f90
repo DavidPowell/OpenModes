@@ -294,7 +294,7 @@ subroutine source_integral_plane_wave(n_o, xi_eta_o, weights_o, nodes_o, &
         forall (uu=1:3) rho_o(uu, :) = r_o - nodes_o(uu, :)
 
         ! calculate the incident electric field
-        e_r = exp(-dot_product(jk_inc, r_o))*e_inc
+        e_r = exp(-sum(jk_inc*r_o))*e_inc
 
         forall (uu=1:3) I(uu) = I(uu) + dot_product(rho_o(uu, :), e_r)*w_o
     end do
