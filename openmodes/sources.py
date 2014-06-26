@@ -67,7 +67,6 @@ class PlaneWaveSource(object):
             point
         """
         jk = self.k_hat*s/self.c
-        print jk
 
         # TODO: check sign of jk!!!
         # dimensions are expanded so that r can have an arbitrary number
