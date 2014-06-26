@@ -102,6 +102,45 @@ def inner_product_triangle_face(nodes):
     return res
 
 
+# TODO: Should this be cached?
+def integration_points(mesh, nodes, xi_eta):
+    """Find all the integration points for the basis functions in cartesian
+    coordinates
+
+    Parameters
+    ---------
+    mesh : TriangularSurfaceMesh
+        The mesh on which to find all the points
+    xi_eta: ndarray(num_points, 2)
+        The barycentric coordinates within each triangle
+
+    Returns
+    -------
+    r : ndarray[num_tri, num_points, 3]
+        The cartesian coordinates within every triangle
+    rho : ndarray[num_tri, 3, num_points]
+        The vector value of the rooftop function for each of the 3 basis
+        functions defined on each triangle
+    """
+
+    r = np.empty((len(mesh.polygons), len(xi_eta), 3), mesh.nodes.dtype)
+    rho = np.empty((len(mesh.polygons), 3, len(xi_eta), 3), mesh.nodes.dtype)
+
+    for tri_count, node_nums in enumerate(mesh.polygons):
+        for point_count, (xi, eta) in enumerate(xi_eta):
+            zeta = 1.0 - eta - xi
+
+            r[tri_count, point_count] = (xi*nodes[node_nums][0] +
+                                         eta*nodes[node_nums][1] +
+                                         zeta*nodes[node_nums][2])
+
+            for node_count in xrange(3):
+                # Vector rho within the observer triangle
+                rho[tri_count, node_count, point_count] = r[tri_count, point_count] - nodes[node_nums][node_count]
+
+    return r, rho
+
+
 class AbstractBasis(Identified):
     "An abstract class for arbitrary basis functions"
 
@@ -164,6 +203,40 @@ class LinearTriangleBasis(AbstractBasis):
             return r, vector_func, scalar_func
         else:
             return r, vector_func
+
+    def weight_function(self, func, xi_eta, w, nodes):
+        """Weight a function (e.g. a source field) by integrating it over this
+        set of basis functions
+
+        Parameters
+        ----------
+        func : function(r)
+            A function of the coordinates which returns the field value at
+            each coordinate point. Must be able to accept r as a 3d array
+        xi_eta : array[num_points, 2]    r : ndarray[num_tri, num_points, 3]
+        The cartesian coordinates within every triangle
+
+            The Barycentric coordinates for integration
+        w : array[num_points]
+            The weights for integration
+        nodes : array[num_modes, 3]
+            The location of the triangle nodes for the part of interest
+
+        Returns
+        -------
+        tested_func : ndarray[num_basis]
+            The function tested over each basis function
+        """
+
+        # This implementation uses vector operations, making it relatively
+        # fast, but somewhat memory inefficient
+        r, rho = integration_points(self.mesh, nodes, xi_eta)
+        func_points = func(r)  # dim[num_tri, num_points, 3]
+        func_rho = np.sum(func_points[:, None, :, :]*rho, axis=3)
+        # func_rho has dim[num_tri, 3, num_points]
+        func_tri = np.dot(func_rho, w)  # dim[num_tri, 3]
+        vector_transform, _ = self.transformation_matrices
+        return vector_transform.dot(func_tri.flatten())
 
     def gram_matrix_faces(self):
         "Return the gram matrix defined between faces"
