@@ -59,7 +59,7 @@ class Simulation(Identified):
         greens_function : object, optional
             The Green's function (currently unused)
         name : string, optional
-            A name for this simulation, which will be used for logging
+            A name for this simulation
         """
 
         super(Simulation, self).__init__()
@@ -76,9 +76,9 @@ class Simulation(Identified):
                                        basis_class=basis_class,
                                        greens_function=greens_function)
 
-        logging.info('Creating simulation\nQuadrature order %d\n'
+        logging.info('Creating simulation %s\nQuadrature order %d\n'
                      'Basis function class %s\n'
-                     % (integration_rule, basis_class))
+                     % (name, integration_rule, basis_class))
 
     def place_part(self, mesh=None, parent=None, location=None):
         """Add a part to the simulation domain
@@ -180,6 +180,9 @@ class Simulation(Identified):
             incident field polarisation in free space
         jk_inc: ndarray
             incident wave vector in free space
+        parent : Part, optional
+            If specified, then only this part and its sub-parts will be
+            calculated
 
         Returns
         -------
@@ -394,7 +397,7 @@ class Simulation(Identified):
         Returns
         -------
         parts : tuple
-            A tuple of `SimulationParts`, one for each separate geometric
+            A tuple of mesh objects, one for each separate geometric
             entity found in the gmsh file
 
         Currently only `TriangularSurfaceMesh` objects are created
