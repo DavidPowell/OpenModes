@@ -183,8 +183,9 @@ class Simulation(Identified):
 
         Returns
         -------
-        V : list of ndarray
-            the source vector for each part
+        V : VectorParts
+            The source vector, which can be indexed by `Part` objects to find
+            the field on each part.
         """
 
         parent = parent or self.parts
@@ -403,11 +404,11 @@ class Simulation(Identified):
             # assume that this is a binary mesh already generate by gmsh
             meshed_name = filename
             if parameters != {}:
-                raise ValueError("Cannot modify parameters of an existing mesh")
+                raise ValueError("Cannot modify parameters of existing mesh")
         else:
             # assume that this is a gmsh geometry file, so mesh it first
             logging.info("Meshing geometry %s with parameters %s"
-                          % (filename, str(parameters)))
+                         % (filename, str(parameters)))
             meshed_name = gmsh.mesh_geometry(filename, mesh_tol,
                                              parameters=parameters)
 
