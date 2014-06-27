@@ -27,7 +27,7 @@ import scipy.linalg as la
 import numpy as np
 
 from openmodes.mesh import nodes_not_in_edge, shared_nodes
-from openmodes.helpers import cached_property, inc_slice, Identified
+from openmodes.helpers import cached_property, inc_slice, Identified, memoize
 
 # A named tuple for holding the positive and negative triangles and nodes
 # which are used by both RWG and loop-star basis functions
@@ -102,7 +102,7 @@ def inner_product_triangle_face(nodes):
     return res
 
 
-# TODO: Should this be cached?
+@memoize
 def integration_points(mesh, nodes, xi_eta):
     """Find all the integration points for the basis functions in cartesian
     coordinates
