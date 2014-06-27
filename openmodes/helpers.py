@@ -20,6 +20,8 @@
 import functools
 import uuid
 import weakref
+import numpy as np
+import numbers
 
 
 def inc_slice(s, inc):
@@ -88,3 +90,33 @@ class PicklableRef(object):
 
     def __setstate__(self, state):
         self.ref = weakref.ref(state['ref'])
+
+
+def memoize(obj):
+    """A simple decorator to memoize function calls. Pays particular attention
+    to numpy arrays and objects which are subclasses of Identified. It is
+    assumed that in such cases, the object does not change if its `id` is the
+    same"""
+    cache = obj.cache = {}
+
+    def get_key(item):
+        if isinstance(item, (basestring, numbers.Number)):
+            return item
+        elif isinstance(item, Identified):
+            return str(item.id)
+        elif isinstance(item, np.ndarray):
+            return item.tostring()
+        else:
+            return str(item)
+
+    @functools.wraps(obj)
+    def memoizer(*args, **kwargs):
+        key_arg = tuple(get_key(arg) for arg in args)
+        key_kwarg = tuple((kw, get_key(arg)) for (kw, arg)
+                          in kwargs.iteritems())
+        key = (key_arg, key_kwarg)
+
+        if key not in cache:
+            cache[key] = obj(*args, **kwargs)
+        return cache[key]
+    return memoizer
