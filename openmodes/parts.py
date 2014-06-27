@@ -19,7 +19,6 @@
 
 from openmodes.helpers import Identified, PicklableRef
 import numpy as np
-import weakref
 
 # a constant, indicating that this material is a perfect electric conductor
 PecMaterial = "Perfect electric conductor"
@@ -101,20 +100,6 @@ class Part(Identified):
                            [0, 0, 0, 1.0]])
 
         self.transformation_matrix[:] = matrix.dot(self.transformation_matrix)
-
-    def scale(self, scale_factor):
-        raise NotImplementedError
-        # non-affine transform, will cause problems
-
-        # TODO: work out how scale factor affects pre-calculated 1/R terms
-        # and scale them accordingly (or record them if possible for scaling
-        # at some future point)
-
-        # also, not clear what would happen to dipole moment
-
-    def shear(self):
-        raise NotImplementedError
-        # non-affine transform, will cause MAJOR problems
 
 
 class SinglePart(Part):
