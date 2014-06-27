@@ -194,6 +194,45 @@ class Simulation(Identified):
         parent = parent or self.parts
         return self.operator.source_plane_wave(e_inc, jk_inc, parent)
 
+    def source_vector(self, source_field, s, parent=None):
+        """Evaluate the source vectors due to an incident field, returning
+        separate vectors for each part.
+
+        Relevant objects describing incident fields can be constructed from
+        the classes found in `openmodes.sources`
+
+        Parameters
+        ----------
+        source_field: source object
+            The object specifying the source field for arbitrary frequencies
+        s: complex
+            The frequency at which to evaluate the source
+        parent : Part, optional
+            If specified, then only this part and its sub-parts will be
+            calculated
+
+        Returns
+        -------
+        V : VectorParts
+            The source vector, which can be indexed by `Part` objects to find
+            the field on each part.
+        """
+
+        parent = parent or self.parts
+
+        xi_eta, w = self.quadrature_rule
+        V = self.empty_vector(parent)
+
+        for part in parent.iter_single():
+            E_field = lambda r: source_field.electric_field(s, r)
+            #H_field = lambda r: source_field.magnetic_field(s, r)
+
+            basis = get_basis_functions(part.mesh, self.basis_class)
+
+            V[part] = basis.weight_function(E_field, xi_eta, w[0], part.nodes)
+
+        return V
+
     def singularities(self, s_start, modes, part=None, use_gram=True):
         """Find the singularities of a part or of the whole system
 
