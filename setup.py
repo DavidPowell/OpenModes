@@ -106,14 +106,14 @@ class compiler_dependent_build_ext(build_ext):
                 modification = ccompiler_dependent_options[ccompiler]
                 for key, val in modification.iteritems():
                     getattr(extension, key).extend(val)
-            except KeyError:
+            except (KeyError, AttributeError):
                 pass
 
             try:
                 modification = fcompiler_dependent_options[fcompiler]
                 for key, val in modification.iteritems():
                     getattr(extension, key).extend(val)
-            except KeyError:
+            except (KeyError, AttributeError):
                 pass
 
         build_ext.build_extensions(self)
