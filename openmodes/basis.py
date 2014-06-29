@@ -130,9 +130,9 @@ def integration_points(mesh, nodes, xi_eta):
         for point_count, (xi, eta) in enumerate(xi_eta):
             zeta = 1.0 - eta - xi
 
-            r[tri_count, point_count] = (xi*nodes[node_nums][0] +
-                                         eta*nodes[node_nums][1] +
-                                         zeta*nodes[node_nums][2])
+            r[tri_count, point_count] = (xi*nodes[node_nums[0]] +
+                                         eta*nodes[node_nums[1]] +
+                                         zeta*nodes[node_nums[2]])
 
             for node_count in xrange(3):
                 # Vector rho within the observer triangle
