@@ -67,8 +67,8 @@ class Identified(object):
     def __repr__(self):
         "Represent the object by its id, in addition to its memory address"
         return ("<%s at 0x%08x with id %s>" % (str(self.__class__)[8:-2],
-                                                id(self),
-                                                str(self.id)))
+                                               id(self),
+                                               str(self.id)))
 
 
 class PicklableRef(object):
