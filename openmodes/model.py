@@ -112,6 +112,33 @@ class ScalarModelLeastSq(object):
         return self.mode_j*np.dot(self.mode_j, V[:])/self.scalar_impedance(s)
 
 
+class ScalarModelResidues(object):
+    """A scalar model of a mode of a structure, based on a residue expansion
+    of the pole and its corresponding complex conjugate pole."""
+
+    def __init__(self, part, mode_s, mode_j, operator):
+        "Construct the scalar model"
+        self.mode_s = mode_s
+        self.mode_j = mode_j
+
+        Z_func = lambda s: s*operator.impedance(s, part, part)[part, part][:]
+        self.z_der = delta_eig(mode_s, mode_j, Z_func)
+        self.coefficients = [self.z_der, self.z_der.conjugate()]
+        logging.info("Creating residue expansion scalar model\n"
+                     "dlambda/ds = %+.4e %+.4e\n"
+                     % (self.z_der.real, self.z_der.imag))
+
+    def scalar_impedance(self, s):
+        "The scalar impedance of this mode"
+        y = self.z_der*(s - self.mode_s)
+        y_conj = self.z_der.conjugate()*(s - self.mode_s.conjugate())
+        return(1.0/(s/y + s/y_conj))
+
+    def solve(self, s, V):
+        "Solve the model for the current at arbitrary frequency"
+        return self.mode_j*np.dot(self.mode_j, V[:])/self.scalar_impedance(s)
+
+
 def fit_LS(s_0, L_0, S_0):
     """
     Fit a polynomial model to the values of the scalar impedance components
