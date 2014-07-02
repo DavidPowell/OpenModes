@@ -1,7 +1,0 @@
-openmodes
-=========
-
-.. toctree::
-   :maxdepth: 4
-
-   openmodes

@@ -40,6 +40,8 @@ for notebook in notebooks:
     name_root = splitext(notebook)[0]
     os.rename(name_root+".rst", name_root+".txt")
 
+os.chdir("..")   
+    
 subprocess.call(["sphinx-apidoc", "-o", ".", "-s", "txt", "-f", join("..", "openmodes")])
 
 
