@@ -80,10 +80,10 @@ def fit_four_term(s_0, z_der):
     return nnls(M, rhs)[0]
 
 
-class ScalarModel(object):
+class ScalarModelLeastSq(object):
     """A scalar model of a mode of a structure, assuming that the eigencurrents
     are frequency independent. Fits a 4th order model to the eigenfrequency
-    and the derivative of the eigenimpedancec at resonance, as well as the
+    and the derivative of the eigenimpedance at resonance, as well as the
     condition of open-circuit impedance at zero frequency."""
 
     def __init__(self, part, mode_s, mode_j, operator):
@@ -284,11 +284,11 @@ class MutualPolyModel(object):
 
 class SelfModel(object):
     "A model for the self-impedance of a part with multiple modes"
-    def __init__(self, part, mode_s, mode_j, operator):
+    def __init__(self, part, mode_s, mode_j, operator, model_class):
         self.num_modes = len(mode_s)
         self.models = []
         for mode_num, s in enumerate(mode_s):
-            self.models.append(ScalarModel(part, s, mode_j[:, mode_num],
+            self.models.append(model_class(part, s, mode_j[:, mode_num],
                                operator))
 
     def block_impedance(self, s):
@@ -306,7 +306,8 @@ class ModelPolyInteraction(object):
     are modelled by weighting L and S with the modes, and fitting with a
     polynomial.
     """
-    def __init__(self, operator, parts_modes, poly_order, s_max):
+    def __init__(self, operator, parts_modes, poly_order, s_max,
+                 self_model_class=ScalarModelLeastSq):
         """
         Construct a model for a set of parts
 
@@ -320,6 +321,8 @@ class ModelPolyInteraction(object):
             The order of polynomial to use for mutual terms
         s_max: complex
             The highest frequency to calculate expansion for
+        self_model_class: class, optional
+            Which model to use for the self term for each mode
         """
 
         self.operator = operator
@@ -341,7 +344,8 @@ class ModelPolyInteraction(object):
                     # within the same part
                     self.models[part_o, part_s] = SelfModel(part_o, mode_s_o,
                                                             current_o,
-                                                            operator)
+                                                            operator,
+                                                            self_model_class)
                 elif (not operator.reciprocal) or (count_o < count_s):
                     # between different parts
                     self.models[part_o, part_s] = MutualPolyModel(part_o,

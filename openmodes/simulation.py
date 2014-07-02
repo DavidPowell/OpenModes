@@ -31,7 +31,7 @@ from openmodes.basis import LoopStarBasis, get_basis_functions
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
 from openmodes.eig import eig_linearised, eig_newton
 from openmodes.visualise import plot_mayavi, write_vtk
-from openmodes.model import ScalarModel, ScalarModelLS
+from openmodes.model import ScalarModelLeastSq
 from openmodes.mesh import TriangularSurfaceMesh
 from openmodes.helpers import Identified
 from openmodes.vector import VectorParts
@@ -310,7 +310,8 @@ class Simulation(Identified):
 
         return mode_s, mode_j
 
-    def construct_models(self, mode_s, mode_j, part=None):
+    def construct_models(self, mode_s, mode_j, part=None,
+                         model_class=ScalarModelLeastSq):
         """Construct a scalar models from the modes of a part
 
         Parameters
@@ -322,6 +323,8 @@ class Simulation(Identified):
         part : Part, optional
             The part for which to construct the model. If unspecified, a scalar
             model will be created for the full system of all parts
+        model_class : class, optional
+            The class describing the type of model to construct
 
         Returns
         -------
@@ -334,7 +337,7 @@ class Simulation(Identified):
         scalar_models = []
 
         for s_n, j_n in zip(mode_s, mode_j.T):
-            scalar_models.append(ScalarModel(part, s_n, j_n, self.operator))
+            scalar_models.append(model_class(part, s_n, j_n, self.operator))
         return scalar_models
 
     def empty_vector(self, part=None, cols=None):
