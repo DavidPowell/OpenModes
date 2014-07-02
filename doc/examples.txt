@@ -1,5 +1,5 @@
-Using OpenModes
-===============
+Examples
+========
 
 The best way to understand OpenModes is to run the examples which
 are included. The included examples are created using the IPython notebook
@@ -8,7 +8,7 @@ be downloaded from the github repository_.
 
 If you have installed OpenModes successfully, then you can go to a
 command prompt window, and change to the directory where the example
-file is located. Typing `ipython notebook` should
+file is located. Typing ``ipython notebook`` should
 start the ipython notebook server, and automatically bring up a list
 of example notebooks, which enable you to interact with the examples
 presented here.

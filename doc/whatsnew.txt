@@ -1,0 +1,9 @@
+What's new in OpenModes
+=======================
+
+**Release 0.0.1**
+
+May, 2014
+
+The initial release, which was used to produce results for the arXiv paper
+and manuscript submitted for review.

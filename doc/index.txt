@@ -12,18 +12,13 @@ Contents:
    :maxdepth: 3
 
    intro
-   
+   whatsnew
    install
-
    examples
-   
-   technical
-
+   using 
    modules
-   
    thanks
    
-
 
 Indices and tables
 ==================
