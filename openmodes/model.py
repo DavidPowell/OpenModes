@@ -130,13 +130,19 @@ class ScalarModelResidues(object):
 
     def scalar_impedance(self, s):
         "The scalar impedance of this mode"
-        y = self.z_der*(s - self.mode_s)
-        y_conj = self.z_der.conjugate()*(s - self.mode_s.conjugate())
-        return(1.0/(s/y + s/y_conj))
+        z = self.z_der*(s - self.mode_s)
+        z_conj = self.z_der.conjugate()*(s - self.mode_s.conjugate())
+        return(1.0/(s/z + s/z_conj))
 
     def solve(self, s, V):
         "Solve the model for the current at arbitrary frequency"
-        return self.mode_j*np.dot(self.mode_j, V[:])/self.scalar_impedance(s)
+        z = self.z_der*(s - self.mode_s)
+        z_conj = self.z_der.conjugate()*(s - self.mode_s.conjugate())
+
+        return (self.mode_j*np.dot(self.mode_j, V[:])/z +
+                self.mode_j.conj()*np.dot(self.mode_j.conj(), V[:])/z_conj)*s
+
+        #return self.mode_j*np.dot(self.mode_j, V[:])/self.scalar_impedance(s)
 
 
 def fit_LS(s_0, L_0, S_0):
