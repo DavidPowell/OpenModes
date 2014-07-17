@@ -22,6 +22,7 @@ Integration routines and quadrature rules over triangles
 
 import numpy as np
 import numpy.linalg as la
+import scipy.special
 
 
 from openmodes.helpers import Identified
@@ -63,6 +64,23 @@ class DunavantRule(Identified):
 
 # This makes a useful default e.g. for interpolation
 triangle_centres = DunavantRule(1)
+
+
+class GaussLegendreRule(Identified):
+    """1D Gauss Legendre Quadrature Rule
+
+    Defined over the range (0, 1)
+    """
+    def __init__(self, order):
+        "Weights and abscissae of Gauss-Legendre quadrature of order N"
+        super(GaussLegendreRule, self).__init__()
+        a = scipy.special.sh_legendre(order).weights
+
+        self.weights = a[:, 1].real
+        self.x = a[:, 0].real
+
+    def __len__(self):
+        return len(self.x)
 
 
 def cartesian_to_barycentric(r, nodes):
