@@ -25,7 +25,8 @@ import numpy as np
 import os.path as osp
 import logging
 
-from openmodes import integration, gmsh
+from openmodes import gmsh
+from openmodes.integration import DunavantRule
 from openmodes.parts import SinglePart, CompositePart
 from openmodes.basis import LoopStarBasis, get_basis_functions
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
@@ -43,7 +44,8 @@ class Simulation(Identified):
     used to solve the scattering problem.
     """
 
-    def __init__(self, integration_rule=5, basis_class=LoopStarBasis,
+    def __init__(self, integration_rule=DunavantRule(5),
+                 basis_class=LoopStarBasis,
                  operator_class=EfieOperator,
                  greens_function=FreeSpaceGreensFunction(), name=None):
         """
@@ -67,18 +69,18 @@ class Simulation(Identified):
         if name is None:
             name = str(self.id)
 
-        self.quadrature_rule = integration.get_dunavant_rule(integration_rule)
+        self.integration_rule = integration_rule
 
         self.parts = CompositePart()
 
         self.basis_class = basis_class
-        self.operator = operator_class(quadrature_rule=self.quadrature_rule,
+        self.operator = operator_class(integration_rule=integration_rule,
                                        basis_class=basis_class,
                                        greens_function=greens_function)
 
         logging.info('Creating simulation %s\nQuadrature order %d\n'
                      'Basis function class %s\n'
-                     % (name, integration_rule, basis_class))
+                     % (name, integration_rule.order, basis_class))
 
     def place_part(self, mesh=None, parent=None, location=None):
         """Add a part to the simulation domain
@@ -220,7 +222,6 @@ class Simulation(Identified):
 
         parent = parent or self.parts
 
-        xi_eta, w = self.quadrature_rule
         V = self.empty_vector(parent)
 
         for part in parent.iter_single():
@@ -229,7 +230,8 @@ class Simulation(Identified):
 
             basis = get_basis_functions(part.mesh, self.basis_class)
 
-            V[part] = basis.weight_function(E_field, xi_eta, w[0], part.nodes)
+            V[part] = basis.weight_function(E_field, self.integration_rule,
+                                            part.nodes)
 
         return V
 

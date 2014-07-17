@@ -24,32 +24,45 @@ import numpy as np
 import numpy.linalg as la
 
 
-def get_dunavant_rule(tri_rule):
-    """Calculate the symmetric quadrature rule over a triangle as given in
+from openmodes.helpers import Identified
+
+
+class DunavantRule(Identified):
+    """The symmetric quadrature rule over a triangle as given in
     D. A. Dunavant, Int. J. Numer. Methods Eng. 21, 1129 (1985).
 
-    Parameters
-    ----------
-    n : integer
-        The order of the rule (maximum 20)
-
-    Returns
-    -------
-    xi_eta : array
+    xi_eta: array
         The barycentric coordinates (xi, eta) of the quadrature points
-    weights : array
+    weights: array
         The weights, normalised to sum to 1/2
     """
 
-    from openmodes import dunavant
+    def __init__(self, order):
+        """Calculate the coefficients of the integration rule
 
-    dunavant_order = dunavant.dunavant_order_num(tri_rule)
-    xi_eta_eval, weights = dunavant.dunavant_rule(tri_rule, dunavant_order)
-    xi_eta_eval = np.asfortranarray(xi_eta_eval.T)
-    # scale the weights to 0.5
-    weights = np.asfortranarray((weights[:, None]*0.5/sum(weights)).T)
+        Parameters
+        ----------
+        order : integer
+            The order of the rule (maximum 20)
+        """
+        super(DunavantRule, self).__init__()
 
-    return xi_eta_eval, weights
+        from openmodes import dunavant
+
+        self.order = order
+        self.num_points = dunavant.dunavant_order_num(order)
+        xi_eta, weights = dunavant.dunavant_rule(order, self.num_points)
+
+        self.xi_eta = np.asfortranarray(xi_eta.T)
+        # scale the weights to 0.5
+        self.weights = np.asfortranarray((weights*0.5/sum(weights)).T)
+
+    def __len__(self):
+        return self.num_points
+
+
+# This makes a useful default e.g. for interpolation
+triangle_centres = DunavantRule(1)
 
 
 def cartesian_to_barycentric(r, nodes):

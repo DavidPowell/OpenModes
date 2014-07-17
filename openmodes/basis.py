@@ -28,6 +28,7 @@ import numpy as np
 
 from openmodes.mesh import nodes_not_in_edge, shared_nodes
 from openmodes.helpers import cached_property, inc_slice, Identified, memoize
+from openmodes.integration import triangle_centres
 
 # A named tuple for holding the positive and negative triangles and nodes
 # which are used by both RWG and loop-star basis functions
@@ -36,8 +37,8 @@ RWG = namedtuple('RWG', ('tri_p', 'tri_m', 'node_p', 'node_m'))
 # TODO: routines to integrate over a triangle, with no scaling by area
 
 
-def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True,
-                              nodes=None):
+def interpolate_triangle_mesh(mesh, tri_func, num_tri, integration_rule,
+                              flatten=True, nodes=None):
     """Interpolate a function on a triangular mesh with linear basis functions
     on each face
 
@@ -49,14 +50,14 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, xi_eta, flatten=True,
 
     if nodes is None:
         nodes = mesh.nodes
-    points_per_tri = len(xi_eta)
+    points_per_tri = len(integration_rule)
 
     r = np.empty((num_tri, points_per_tri, 3), mesh.nodes.dtype)
     vector_func = np.zeros((num_tri, points_per_tri, 3), tri_func.dtype)
     scalar_func = np.zeros((num_tri, points_per_tri), tri_func.dtype)
 
     for tri_count, node_nums in enumerate(mesh.polygons):
-        for point_count, (xi, eta) in enumerate(xi_eta):
+        for point_count, (xi, eta) in enumerate(integration_rule.xi_eta):
             # Barycentric coordinates of the observer
             zeta = 1.0 - eta - xi
 
@@ -103,7 +104,7 @@ def inner_product_triangle_face(nodes):
 
 
 @memoize
-def integration_points(mesh, nodes, xi_eta):
+def integration_points(mesh, nodes, integration_rule):
     """Find all the integration points for the basis functions in cartesian
     coordinates
 
@@ -111,7 +112,7 @@ def integration_points(mesh, nodes, xi_eta):
     ---------
     mesh : TriangularSurfaceMesh
         The mesh on which to find all the points
-    xi_eta: ndarray(num_points, 2)
+    integration_rule: DunavantRule
         The barycentric coordinates within each triangle
 
     Returns
@@ -123,11 +124,13 @@ def integration_points(mesh, nodes, xi_eta):
         functions defined on each triangle
     """
 
-    r = np.empty((len(mesh.polygons), len(xi_eta), 3), mesh.nodes.dtype)
-    rho = np.empty((len(mesh.polygons), 3, len(xi_eta), 3), mesh.nodes.dtype)
+    r = np.empty((len(mesh.polygons), len(integration_rule), 3),
+                 mesh.nodes.dtype)
+    rho = np.empty((len(mesh.polygons), 3, len(integration_rule), 3),
+                   mesh.nodes.dtype)
 
     for tri_count, node_nums in enumerate(mesh.polygons):
-        for point_count, (xi, eta) in enumerate(xi_eta):
+        for point_count, (xi, eta) in enumerate(integration_rule.xi_eta):
             zeta = 1.0 - eta - xi
 
             r[tri_count, point_count] = (xi*nodes[node_nums[0]] +
@@ -155,7 +158,8 @@ class LinearTriangleBasis(AbstractBasis):
         super(LinearTriangleBasis, self).__init__()
         self.mesh = mesh
 
-    def interpolate_function(self, linear_func, xi_eta=[[1.0/3.0, 1.0/3.0]],
+    def interpolate_function(self, linear_func,
+                             integration_rule=triangle_centres,
                              flatten=True, return_scalar=False, nodes=None,
                              scale_area=True):
         """Interpolate a function defined in RWG or loop-star basis over the
@@ -165,9 +169,10 @@ class LinearTriangleBasis(AbstractBasis):
         ----------
         linear_func : ndarray
             The function defined over linear basis functions
-        xi_eta : ndarray, optional
-            The barycentric coordinates to interpolate on each triangle. If not
-            specified, one point at the centre of each triangle will be used.
+        integration_rule : DunavantRule, optional
+            The integration rule giving the barycentric coordinates to
+            interpolate on each triangle. If not specified, one point at the
+            centre of each triangle will be used.
         flatten : bool, optional
             If false, data for each triangle will be identified by a specific
             index of the array, otherwise all points are identical
@@ -196,15 +201,15 @@ class LinearTriangleBasis(AbstractBasis):
             tri_func /= 2*self.mesh.polygon_areas[:, None]
 
         r, vector_func, scalar_func = interpolate_triangle_mesh(self.mesh,
-                                            tri_func, num_tri, xi_eta, flatten,
-                                            nodes)
+                                            tri_func, num_tri,
+                                            integration_rule, flatten, nodes)
 
         if return_scalar:
             return r, vector_func, scalar_func
         else:
             return r, vector_func
 
-    def weight_function(self, func, xi_eta, w, nodes):
+    def weight_function(self, func, integration_rule, nodes):
         """Weight a function (e.g. a source field) by integrating it over this
         set of basis functions
 
@@ -213,12 +218,9 @@ class LinearTriangleBasis(AbstractBasis):
         func : function(r)
             A function of the coordinates which returns the field value at
             each coordinate point. Must be able to accept r as a 3d array
-        xi_eta : array[num_points, 2]    r : ndarray[num_tri, num_points, 3]
-        The cartesian coordinates within every triangle
-
-            The Barycentric coordinates for integration
-        w : array[num_points]
-            The weights for integration
+        integration_rule : DunavantRule
+            An object with the barycentric coordinates and weights for
+            integration over a triangle
         nodes : array[num_modes, 3]
             The location of the triangle nodes for the part of interest
 
@@ -230,11 +232,11 @@ class LinearTriangleBasis(AbstractBasis):
 
         # This implementation uses vector operations, making it relatively
         # fast, but somewhat memory inefficient
-        r, rho = integration_points(self.mesh, nodes, xi_eta)
+        r, rho = integration_points(self.mesh, nodes, integration_rule)
         func_points = func(r)  # dim[num_tri, num_points, 3]
         func_rho = np.sum(func_points[:, None, :, :]*rho, axis=3)
         # func_rho has dim[num_tri, 3, num_points]
-        func_tri = np.dot(func_rho, w)  # dim[num_tri, 3]
+        func_tri = np.dot(func_rho, integration_rule.weights)  # dim[num_tri, 3]
         vector_transform, _ = self.transformation_matrices
         return vector_transform.dot(func_tri.flatten())
 

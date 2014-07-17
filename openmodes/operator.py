@@ -102,7 +102,7 @@ class SingularSparse(object):
 cached_singular_terms = {}
 
 
-def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
+def singular_impedance_rwg_efie_homogeneous(basis, integration_rule):
     """Precalculate the singular impedance terms for an object
 
     Parameters
@@ -117,13 +117,11 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
         The sparse array of singular impedance terms
 
     """
-    unique_id = ("EFIE", "RWG", basis.id, quadrature_rule.__repr__())
+    unique_id = ("EFIE", "RWG", basis.id, integration_rule.id)
     if unique_id in cached_singular_terms:
         #print "singular terms retrieved from cache"
         return cached_singular_terms[unique_id]
     else:
-        xi_eta_eval, weights = quadrature_rule
-
         sharing_nodes = basis.mesh.triangles_sharing_nodes()
 
         # Precalculate the singular integration rules for faces, which depend
@@ -154,7 +152,9 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
                     # at least one node is shared
                     # calculate neighbour integrals semi-numerically
                     res = openmodes.core.face_integrals_hanninen(
-                                        nodes[polygons[q]], xi_eta_eval, weights, nodes_p)
+                                        nodes[polygons[q]],
+                                        integration_rule.xi_eta,
+                                        integration_rule.weights, nodes_p)
                     assert(np.all(np.isfinite(res[0])) and np.all(np.isfinite(res[1])))
                     singular_terms[p, q] = res
 
@@ -162,11 +162,10 @@ def singular_impedance_rwg_efie_homogeneous(basis, quadrature_rule):
         return cached_singular_terms[unique_id]
 
 
-def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
+def impedance_rwg_efie_free_space(s, integration_rule, basis_o, nodes_o,
                                   basis_s, nodes_s, self_impedance):
     """EFIE derived Impedance matrix for RWG or loop-star basis functions"""
 
-    xi_eta_eval, weights = quadrature_rule
     transform_L_o, transform_S_o = basis_o.transformation_matrices
     num_faces_o = len(basis_o.mesh.polygons)
 
@@ -174,7 +173,7 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
         # calculate self impedance
 
         singular_terms = singular_impedance_rwg_efie_homogeneous(basis_o,
-                                                             quadrature_rule)
+                                                             integration_rule)
         if (np.any(np.isnan(singular_terms[0])) or
                 np.any(np.isnan(singular_terms[1]))):
             raise ValueError("NaN returned in singular impedance terms")
@@ -182,7 +181,8 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
         num_faces_s = num_faces_o
         A_faces, phi_faces = openmodes.core.z_efie_faces_self(nodes_o,
                                          basis_o.mesh.polygons, s,
-                                         xi_eta_eval, weights, *singular_terms)
+                                         integration_rule.xi_eta,
+                                         integration_rule.weights, *singular_terms)
 
         transform_L_s = transform_L_o
         transform_S_s = transform_S_o
@@ -194,7 +194,9 @@ def impedance_rwg_efie_free_space(s, quadrature_rule, basis_o, nodes_o,
 
         A_faces, phi_faces = openmodes.core.z_efie_faces_mutual(nodes_o,
                                 basis_o.mesh.polygons, nodes_s,
-                                basis_s.mesh.polygons, s, xi_eta_eval, weights)
+                                basis_s.mesh.polygons, s, 
+                                integration_rule.xi_eta,
+                                integration_rule.weights)
 
         transform_L_s, transform_S_s = basis_s.transformation_matrices
 
@@ -285,10 +287,10 @@ class EfieOperator(Operator):
     """
     reciprocal = True
 
-    def __init__(self, quadrature_rule, basis_class,
+    def __init__(self, integration_rule, basis_class,
                  greens_function=FreeSpaceGreensFunction()):
         self.basis_class = basis_class
-        self.quadrature_rule = quadrature_rule
+        self.integration_rule = integration_rule
         self.greens_function = greens_function
 
     def impedance_single_parts(self, s, part_o, part_s=None):
@@ -313,7 +315,7 @@ class EfieOperator(Operator):
 
         if isinstance(self.greens_function, FreeSpaceGreensFunction):
             if isinstance(basis_o, LinearTriangleBasis):
-                L, S = impedance_rwg_efie_free_space(s, self.quadrature_rule,
+                L, S = impedance_rwg_efie_free_space(s, self.integration_rule,
                                                      basis_o, part_o.nodes,
                                                      basis_s, part_s.nodes,
                                                      part_o == part_s)
@@ -349,11 +351,11 @@ class EfieOperator(Operator):
         if (isinstance(basis, LinearTriangleBasis) and
                 isinstance(self.greens_function, FreeSpaceGreensFunction)):
 
-            xi_eta_eval, weights = self.quadrature_rule
-
             incident_faces = openmodes.core.v_efie_faces_plane_wave(part.nodes,
-                                        basis.mesh.polygons, xi_eta_eval,
-                                        weights, e_inc, jk_inc)
+                                        basis.mesh.polygons, 
+                                        self.integration_rule.xi_eta,
+                                        self.integration_rule.weights,
+                                        e_inc, jk_inc)
 
             transform_L, _ = basis.transformation_matrices
             return transform_L.dot(incident_faces.flatten())
@@ -361,8 +363,7 @@ class EfieOperator(Operator):
             raise NotImplementedError("%s, %s" % (str(type(basis)),
                                               str(type(self.greens_function))))
 
-    def far_field_radiation(self, s, part, current_vec, direction, xi_eta,
-                            weights):
+    def far_field_radiation(self, s, part, current_vec, direction):
         """Calculate the far-field radiation in a given direction. Note that
         all calculations will be referenced to the global origin. This means
         that the contributions of different parts can be added together if
@@ -398,6 +399,7 @@ class EfieOperator(Operator):
         direction /= np.sqrt(np.sum(direction**2, axis=1))
 
         basis = get_basis_functions(part.mesh, self.basis_class)
-        r, currents = basis.interpolate_function(current_vec, xi_eta,
+        r, currents = basis.interpolate_function(current_vec,
+                                                 self.integration_rule,
                                                  nodes=part.mesh.nodes,
                                                  scale_area=False)
