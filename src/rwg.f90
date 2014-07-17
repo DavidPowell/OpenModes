@@ -18,7 +18,6 @@
 module core_for
 
     use constants
-    !use iso_c_binding
     implicit none
 
     real(DP), parameter :: c = 299792458.0_DP
@@ -27,22 +26,6 @@ module core_for
     !real(DP), parameter :: pi = 3.1415926535897931_DP
 
     interface
-!        pure function e_source(r)
-!            use constants
-!            implicit none
-!            real(WP), dimension(3), intent(in) :: r
-!            complex(WP), dimension(3) :: e_source
-!        end function
-
-!        subroutine arcioni_singular(nodes, I_A, I_phi)
-!            ! Calculate singular MOM integrals as per Arcioni, IEEE MTT 45 p436
-!            use constants
-!            implicit none
-!        
-!            real(WP), dimension(3, 3), intent(in) :: nodes
-!            real(WP), intent(out) :: I_phi
-!            real(WP), dimension(3, 3), intent(out) :: I_A  
-!        end subroutine
 
         pure function scr_index(row, col, indices, indptr)
             ! Convert compressed sparse row notation into an index within an array
@@ -636,66 +619,6 @@ subroutine Z_EFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
 
 end subroutine Z_EFIE_faces_mutual
 
-
-
-subroutine voltage_plane_wave(num_nodes, num_triangles, num_basis, num_integration, nodes, triangle_nodes, &
-                                basis_tri_p, basis_tri_m, basis_node_p, basis_node_m, &
-                                xi_eta_eval, weights, e_inc, jk_inc, V)
-    ! Calculate the voltage term, assuming a plane-wave incidence
-    !
-    ! Note that this assumes a free-space background
-
-
-    use core_for
-    implicit none
-
-    integer, intent(in) :: num_nodes, num_triangles, num_basis, num_integration
-    ! f2py intent(hide) :: num_nodes, num_triangles, num_basis, num_integration
-
-    real(WP), intent(in), dimension(0:num_nodes-1, 0:2) :: nodes
-    integer, intent(in), dimension(0:num_triangles-1, 0:2) :: triangle_nodes
-    integer, intent(in), dimension(0:num_basis-1) :: basis_tri_p
-    integer, intent(in), dimension(0:num_basis-1) :: basis_tri_m
-    integer, intent(in), dimension(0:num_basis-1) :: basis_node_p
-    integer, intent(in), dimension(0:num_basis-1) :: basis_node_m
-
-    real(WP), intent(in), dimension(0:num_integration-1, 0:1) :: xi_eta_eval
-    real(WP), intent(in), dimension(0:num_integration-1) :: weights
-
-    complex(WP), intent(in), dimension(3) :: jk_inc
-    complex(WP), intent(in), dimension(3) :: e_inc
-
-    complex(WP), intent(out), dimension(0:num_basis-1) :: V
-
-    real(WP), dimension(0:2, 0:2) :: nodes_p!, nodes_q
-    complex(WP), dimension(0:2, 0:num_triangles-1) :: V_face
-
-    integer :: p, p_p, p_m, ip_p, ip_m, m
-
-    ! calculate all the integrations for each face pair
-    !$OMP PARALLEL DO SCHEDULE(DYNAMIC) DEFAULT(SHARED) &
-    !$OMP PRIVATE (p, nodes_p)
-    do p = 0,num_triangles-1 ! p is the index of the observer face:
-        nodes_p = nodes(triangle_nodes(p, :), :)
-        ! perform testing of the incident field
-        call source_integral_plane_wave(num_integration, xi_eta_eval, weights, nodes_p, jk_inc, e_inc, V_face(:, p))
-    end do
-    !$OMP END PARALLEL DO
-
-    ! now build up the source vector in terms of the basis vectors
-    do m=0,num_basis-1 ! m is the index of the observer edge
-        p_p = basis_tri_p(m)
-        p_m = basis_tri_m(m) ! observer triangles
-
-        ip_p = basis_node_p(m)
-        ip_m = basis_node_m(m) ! observer unshared nodes
-
-        V(m) = (V_face(ip_p, p_p)-V_face(ip_m, p_m))
-
-    end do
-
-end subroutine
-
 subroutine V_EFIE_faces_plane_wave(num_nodes, num_triangles, num_integration, nodes, triangle_nodes, &                                
                                 xi_eta_eval, weights, e_inc, jk_inc, V_faces)
     ! Calculate the voltage term, assuming a plane-wave incidence
@@ -858,52 +781,3 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
     I_A = I_A/area_s_2
 
 end subroutine face_integrals_hanninen
-
-subroutine triangle_face_to_rwg(num_triangles, num_basis, basis_tri_p, basis_tri_m, basis_node_p, basis_node_m, &
-                        vector_face, scalar_face, vector_rwg, scalar_rwg)
-    ! take quantities which are defined as interaction between faces and convert them to rwg basis
-
-    use core_for
-    
-    integer, intent(in) :: num_triangles, num_basis
-    ! f2py intent(hide) :: num_triangles, num_basis
-    
-    integer, intent(in), dimension(0:num_basis-1) :: basis_tri_p
-    integer, intent(in), dimension(0:num_basis-1) :: basis_tri_m
-    integer, intent(in), dimension(0:num_basis-1) :: basis_node_p
-    integer, intent(in), dimension(0:num_basis-1) :: basis_node_m    
-
-    complex(WP), intent(in), dimension(0:num_triangles-1, 0:num_triangles-1, 0:2, 0:2) :: vector_face
-    complex(WP), intent(in), dimension(0:num_triangles-1, 0:num_triangles-1) :: scalar_face
-    
-    complex(WP), intent(out), dimension(0:num_basis-1, 0:num_basis-1) :: vector_rwg, scalar_rwg
-
- 
-    integer m, n, p_p, p_m, q_p, q_m, ip_p, ip_m, iq_p, iq_m
-
-    do m=0,num_basis-1 ! m is the index of the observer edge
-        p_p = basis_tri_p(m)
-        p_m = basis_tri_m(m) ! observer triangles
-
-        ip_p = basis_node_p(m)
-        ip_m = basis_node_m(m) ! observer unshared nodes
-        
-        do n = 0,num_basis-1 ! n is the index of the source
-            q_p = basis_tri_p(n)
-            q_m = basis_tri_m(n) ! source triangles
-            
-            iq_p = basis_node_p(n)
-            iq_m = basis_node_m(n) ! source unshared nodes
-
-            vector_rwg(m, n) = ( &
-                  vector_face(p_p, q_p, ip_p, iq_p) - vector_face(p_p, q_m, ip_p, iq_m) &
-                - vector_face(p_m, q_p, ip_m, iq_p) + vector_face(p_m, q_m, ip_m, iq_m))
-                
-            scalar_rwg(m, n) = ( &
-                - scalar_face(p_m, q_p) + scalar_face(p_m, q_m) &
-                + scalar_face(p_p, q_p) - scalar_face(p_p, q_m))
-
-        end do
-    end do
-
-end subroutine triangle_face_to_rwg
