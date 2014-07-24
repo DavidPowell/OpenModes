@@ -653,37 +653,6 @@ class LoopStarBasis(LinearTriangleBasis):
 
         return vector_transform.tocsr(), scalar_transform.tocsr()
 
-cached_basis_functions = {}
-
-
-def get_basis_functions(mesh, basis_class):
-    """Generate basis functions for a mesh. Performs caching, so that if an
-    identical mesh has already been generated, the basis functions will
-    not be unnecessarily duplicated
-
-    Parameters
-    ----------
-    mesh : object
-        The mesh to generate the basis functions for
-
-    basis_class : class
-        Which class of basis function should be created
-    """
-
-    # The following parameters are needed to determine if basis functions are
-    # unique. Potentially this could be expanded to include non-affine mesh
-    # transformations, or other parameters passed to the basis function
-    # constructor
-    unique_key = (mesh.id, basis_class)
-
-    if unique_key in cached_basis_functions:
-        #print "Basis functions retrieved from cache"
-        return cached_basis_functions[unique_key]
-    else:
-        result = basis_class(mesh)
-        cached_basis_functions[unique_key] = result
-        return result
-
 
 class BasisContainer(object):
     """A container to hold the basis functions for a simulation, constructing
