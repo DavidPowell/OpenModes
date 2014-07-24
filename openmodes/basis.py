@@ -685,6 +685,38 @@ def get_basis_functions(mesh, basis_class):
         return result
 
 
+class BasisContainer(object):
+    """A container to hold the basis functions for a simulation, constructing
+    them on the fly as they are required"""
+
+    def __init__(self, basis_class, default_args=tuple()):
+        """Set the class of the basis functions, and the default arguments to
+        pass when constructing them"""
+        self.basis_class = basis_class
+        self.args = dict()
+        self.default_args = default_args
+        self.cached_basis = {}
+
+    def set_args(self, part, args):
+        "Override the default basis function arguments for a particular part"
+        self.args[part] = tuple(args)
+        pass
+
+    def __getitem__(self, part):
+        """Return the basis functions for a particular part, constructing them
+        if they do not already exist"""
+        args = self.args.get(part, self.default_args)
+        unique_key = (part.mesh.id, self.basis_class, args)
+
+        try:
+            return self.cached_basis[unique_key]
+        except KeyError:
+            logging.debug("Constructing basis functions", unique_key)
+            result = self.basis_class(part.mesh, *args)
+            self.cached_basis[unique_key] = result
+            return result
+
+
 class CombinedBasis(AbstractBasis):
     "A set of basis functions which have been combined together"
 
