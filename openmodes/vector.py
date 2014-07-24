@@ -22,25 +22,23 @@ from __future__ import division
 
 import numpy as np
 
-from openmodes.basis import get_basis_functions
 
-
-def build_index_arrays(parent_part, basis_class):
+def build_index_arrays(parent_part, basis_container):
     """Calculate the index arrays for each part with respect to the vector
 
     Parameters
     ----------
     parent_part : Part
         The part which includes the whole range of this vector
-    basis_class : type
-        The class corresponding to the type of basis functions used
+    basis_container : BasisContainer
+        The container with all the basis functions
     """
 
     # First go through all the SingleParts, and work out the size of the
     # complete vector, and all the sections within it
     sections = []
     for part in parent_part.iter_single():
-        basis = get_basis_functions(part.mesh, basis_class)
+        basis = basis_container[part]
         sections.append(basis.sections)
 
     num_sections = len(sections[0])
@@ -86,17 +84,15 @@ class VectorParts(np.ndarray):
     http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
     """
 
-    def __new__(subtype, parent_part, basis_class, dtype=float, cols=None):
+    def __new__(subtype, parent_part, basis_container, dtype=float, cols=None):
         """Construct an empty vector which can be indexed by the parts
 
         Parameters
         ----------
         parent_part : Part
             The part which contains everything in the vector
-        basis_class : type
-            The class of basis functions that this vector corresponds to. This
-            should be the canonical class of the single parts, not a class of
-            a composite basis function type
+        basis_class : BasisContainer
+            The container with basis functions for each sub-part
         dtype : dtype
             The numpy data type of the vector
         cols : integer, optional
@@ -106,7 +102,8 @@ class VectorParts(np.ndarray):
 
         # knowing the sizes of all sections, work out the location of each part
         # within the data
-        index_arrays, total_length = build_index_arrays(parent_part, basis_class)
+        index_arrays, total_length = build_index_arrays(parent_part,
+                                                        basis_container)
 
         if cols is None:
             shape = (total_length,)
@@ -117,7 +114,7 @@ class VectorParts(np.ndarray):
 
         obj.parent_part = parent_part
         obj.index_arrays = index_arrays
-        obj.basis_class = basis_class
+        obj.basis_container = basis_container
 
         # Finally, we must return the newly created object:
         return obj
@@ -128,7 +125,7 @@ class VectorParts(np.ndarray):
             return
 
         # set default values for the custom attributes
-        self.basis_class = obj.basis_class
+        self.basis_container = obj.basis_container
         self.parent_part = getattr(self, 'parent_part', None)
         self.index_arrays = getattr(self, 'index_arrays', {})
 
@@ -138,7 +135,7 @@ class VectorParts(np.ndarray):
         Note that some metadata may be lost when unpickling."""
         nd_state, own_state = state
         super(VectorParts, self).__setstate__(nd_state)
-        self.parent_part, self.index_arrays, self.basis_class = own_state
+        self.parent_part, self.index_arrays, self.basis_container = own_state
 
     def __reduce__(self):
         """Allow additional attributes of this array type to be pickled
@@ -146,7 +143,7 @@ class VectorParts(np.ndarray):
         Note that some metadata may be lost when unpickling."""
         object_state = list(super(VectorParts, self).__reduce__(self))
         vectorparts_state = (self.parent_part, self.index_arrays,
-                             self.basis_class)
+                             self.basis_container)
         object_state[2] = [object_state[2], vectorparts_state]
         return tuple(object_state)
 
@@ -193,7 +190,7 @@ class VectorParts(np.ndarray):
             elif part is not None:
                 # A certain part was selected. Update the index arrays accordingly
                 result.parent_part = part
-                index_arrays, total_length = build_index_arrays(part, self.basis_class)
+                index_arrays, total_length = build_index_arrays(part, self.basis_container)
                 result.index_arrays = index_arrays
         return result
 

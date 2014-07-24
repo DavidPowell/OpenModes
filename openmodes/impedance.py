@@ -85,7 +85,7 @@ class EfieImpedanceMatrix(object):
             # e.g. if this is the result of a projection onto modes
             vector = np.empty_like(V)
         else:
-            vector = VectorParts(self.part_s, self.basis_s.canonical_basis,
+            vector = VectorParts(self.part_s, self.operator.basis_container,
                                  dtype=np.complex128)
 
         vector[:] = la.lu_solve(lu, V)

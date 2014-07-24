@@ -28,7 +28,7 @@ import logging
 from openmodes import gmsh
 from openmodes.integration import DunavantRule
 from openmodes.parts import SinglePart, CompositePart
-from openmodes.basis import LoopStarBasis, get_basis_functions
+from openmodes.basis import LoopStarBasis, BasisContainer
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
 from openmodes.eig import eig_linearised, eig_newton
 from openmodes.visualise import plot_mayavi, write_vtk
@@ -47,7 +47,8 @@ class Simulation(Identified):
     def __init__(self, integration_rule=DunavantRule(5),
                  basis_class=LoopStarBasis,
                  operator_class=EfieOperator,
-                 greens_function=FreeSpaceGreensFunction(), name=None):
+                 greens_function=FreeSpaceGreensFunction(), name=None,
+                 basis_args=tuple()):
         """
         Parameters
         ----------
@@ -74,8 +75,9 @@ class Simulation(Identified):
         self.parts = CompositePart()
 
         self.basis_class = basis_class
+        self.basis_container = BasisContainer(basis_class, basis_args)
         self.operator = operator_class(integration_rule=integration_rule,
-                                       basis_class=basis_class,
+                                       basis_container=self.basis_container,
                                        greens_function=greens_function)
 
         logging.info('Creating simulation %s\nQuadrature order %d\n'
@@ -228,7 +230,7 @@ class Simulation(Identified):
             E_field = lambda r: source_field.electric_field(s, r)
             #H_field = lambda r: source_field.magnetic_field(s, r)
 
-            basis = get_basis_functions(part.mesh, self.basis_class)
+            basis = self.basis_container[part]
 
             V[part] = basis.weight_function(E_field, self.integration_rule,
                                             part.nodes)
@@ -357,7 +359,7 @@ class Simulation(Identified):
         """
 
         part = part or self.parts
-        return VectorParts(part, self.basis_class, dtype=np.complex128,
+        return VectorParts(part, self.basis_container, dtype=np.complex128,
                            cols=cols)
 
     def plot_solution(self, solution, output_format, filename=None,
@@ -390,7 +392,7 @@ class Simulation(Identified):
         for part_num, part in enumerate(self.parts.iter_single()):
             parts_list.append(part)
             I = solution[part]
-            basis = get_basis_functions(part.mesh, self.basis_class)
+            basis = self.basis_container[part]
 
             centre, current, charge = basis.interpolate_function(I,
                                                             return_scalar=True,

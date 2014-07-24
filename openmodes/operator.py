@@ -23,8 +23,7 @@ import numpy as np
 import openmodes.core
 
 from openmodes.constants import epsilon_0, mu_0, pi, c
-from openmodes.basis import (LinearTriangleBasis, LoopStarBasis,
-                             get_basis_functions)
+from openmodes.basis import LinearTriangleBasis, LoopStarBasis
 from openmodes.impedance import (EfieImpedanceMatrix,
                                  EfieImpedanceMatrixLoopStar,
                                  ImpedanceParts)
@@ -272,7 +271,7 @@ class Operator(object):
             the source vector for each part
         """
 
-        vector = VectorParts(parent, self.basis_class, dtype=np.complex128)
+        vector = VectorParts(parent, self.basis_container, dtype=np.complex128)
 
         for part in parent.iter_single():
             vector[part] = self.source_plane_wave_single_part(part, e_inc, jk_inc)
@@ -287,9 +286,9 @@ class EfieOperator(Operator):
     """
     reciprocal = True
 
-    def __init__(self, integration_rule, basis_class,
+    def __init__(self, integration_rule, basis_container,
                  greens_function=FreeSpaceGreensFunction()):
-        self.basis_class = basis_class
+        self.basis_container = basis_container
         self.integration_rule = integration_rule
         self.greens_function = greens_function
 
@@ -310,8 +309,8 @@ class EfieOperator(Operator):
         # if source part is not given, default to observer part
         part_s = part_s or part_o
 
-        basis_o = get_basis_functions(part_o.mesh, self.basis_class)
-        basis_s = get_basis_functions(part_s.mesh, self.basis_class)
+        basis_o = self.basis_container[part_o]
+        basis_s = self.basis_container[part_s]
 
         if isinstance(self.greens_function, FreeSpaceGreensFunction):
             if isinstance(basis_o, LinearTriangleBasis):
@@ -324,7 +323,7 @@ class EfieOperator(Operator):
         else:
             raise NotImplementedError
 
-        if issubclass(self.basis_class, LoopStarBasis):
+        if issubclass(self.basis_container.basis_class, LoopStarBasis):
             return EfieImpedanceMatrixLoopStar(s, L, S, basis_o, basis_s, self,
                                                part_o, part_s)
         else:
@@ -346,7 +345,7 @@ class EfieOperator(Operator):
         V : ndarray
             the source "voltage" vector
         """
-        basis = get_basis_functions(part.mesh, self.basis_class)
+        basis = self.basis_container[part]
 
         if (isinstance(basis, LinearTriangleBasis) and
                 isinstance(self.greens_function, FreeSpaceGreensFunction)):
@@ -398,7 +397,7 @@ class EfieOperator(Operator):
         direction = np.atleast_2d(direction)
         direction /= np.sqrt(np.sum(direction**2, axis=1))
 
-        basis = get_basis_functions(part.mesh, self.basis_class)
+        basis = self.basis_container[part]
         r, currents = basis.interpolate_function(current_vec,
                                                  self.integration_rule,
                                                  nodes=part.mesh.nodes,
