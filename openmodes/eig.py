@@ -48,42 +48,38 @@ def eig_linearised(Z, modes):
         Columns of this matrix contain the corresponding modal currents
     """
 
-    #if not isinstance(Z, EfieImpedanceMatrixLoopStar):
-    #    raise ValueError(
-    #        "Loop-star basis functions required for linearised eigenvalues")
-
     modes = np.asarray(modes)
 
-    star_range = Z.star_range_o
+    # check whether the operator has a null-space to be eliminated
+    has_nullspace = (hasattr(Z.basis_o, 'num_loops')
+                     and Z.basis_o.num_loops != 0)
 
-    if Z.basis_o.num_loops == 0:
-        L_red = Z.L
-    else:
+    if has_nullspace:
+        star_range = Z.star_range_o
+
         loop_range = Z.loop_range_o
 
         L_conv = la.solve(Z.L[loop_range, loop_range],
                           Z.L[loop_range, star_range])
-        L_red = Z.L[star_range, star_range] - np.dot(Z.L[star_range, loop_range], L_conv)
+        L_red = (Z.L[star_range, star_range] -
+                 np.dot(Z.L[star_range, loop_range], L_conv))
+    else:
+        star_range = slice(None)
+        L_red = Z.L
 
     # find eigenvalues, and star part of eigenvectors, for LS combined modes
     w, v_s = la.eig(Z.S[star_range, star_range], -L_red)
 
-    if Z.basis_o.num_loops == 0:
-        vr = v_s
-    else:
+    if has_nullspace:
         v_l = -np.dot(L_conv, v_s)
         vr = np.vstack((v_l, v_s))
+    else:
+        vr = v_s
 
-#    import matplotlib.pyplot as plt
-#    plt.loglog(w.real, w.imag, 'x')
-
-    w_freq = np.sqrt(w)  # /2/np.pi
+    w_freq = np.sqrt(w)
     # make sure real part is negative
     w_freq = np.where(w_freq.real > 0, -w_freq, w_freq)
 
-    #plt.loglog(w_freq.real, w_freq.imag, 'x')
-
-    #w_selected = np.ma.masked_array(w_freq, w_freq.real < w_freq.imag)
     w_selected = np.ma.masked_array(w_freq, abs(w_freq.real) > abs(w_freq.imag))
     which_modes = np.argsort(abs(w_selected.imag))[modes]
 
