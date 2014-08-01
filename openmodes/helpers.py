@@ -22,6 +22,7 @@ import uuid
 import weakref
 import numpy as np
 import numbers
+from collections import defaultdict
 
 
 def inc_slice(s, inc):
@@ -120,3 +121,55 @@ def memoize(obj):
             cache[key] = obj(*args, **kwargs)
         return cache[key]
     return memoizer
+
+
+def equivalence(relations):
+    """Determine the equivalence classes between objects
+
+    Following numerical recipes section 8.6
+
+    Parameters
+    ----------
+    relations: list
+        Each element of the list is a tuple containing the identities of two
+        equivalent items. Each item can be any hashable type
+
+    Returns
+    -------
+    class_items: list of set
+        Each set
+    """
+
+    # first put each item in its own equivalence class
+    classes = {}
+    for j, k in relations:
+        classes[j] = j
+        classes[k] = k
+
+    for relation in relations:
+        j, k = relation
+
+        # track the anscestor of each
+        while classes[j] != j:
+            j = classes[j]
+
+        while classes[k] != k:
+            k = classes[k]
+
+        # if not already related, then relate items
+        if j != k:
+            classes[j] = k
+
+    # The final sweep
+    for j in classes.iterkeys():
+        while classes[j] != classes[classes[j]]:
+            classes[j] = classes[classes[j]]
+
+    # Now reverse the storage arrangement, so that all items of the same
+    # class are grouped together into a set
+    classes_reverse = defaultdict(set)
+    for item, item_class in classes.iteritems():
+        classes_reverse[item_class].add(item)
+
+    # the class names are arbitrary, so just return the list of sets
+    return classes_reverse.values()
