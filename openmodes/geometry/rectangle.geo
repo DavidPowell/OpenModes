@@ -1,4 +1,4 @@
-// a flat dipole resonator
+// a flat rectangle
 
 If (width == 0.0)
     width = 1e-3;
