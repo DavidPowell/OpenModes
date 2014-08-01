@@ -27,7 +27,8 @@ import scipy.linalg as la
 import numpy as np
 
 from openmodes.mesh import nodes_not_in_edge, shared_nodes
-from openmodes.helpers import cached_property, inc_slice, Identified, memoize
+from openmodes.helpers import (cached_property, inc_slice, Identified, memoize,
+                               equivalence, MeshError)
 from openmodes.integration import triangle_centres
 
 # A named tuple for holding the positive and negative triangles and nodes
@@ -522,12 +523,7 @@ class LoopStarBasis(LinearTriangleBasis):
 
         triangles_sharing_nodes = mesh.triangles_sharing_nodes()
 
-        #n_vertices = len(self.inner_nodes)+len(outer_nodes)
-        #print "vertices", n_vertices
-        #print "faces", len(triangles)
-        #print "edges", len(all_edges)
         boundary_contours = 2-num_nodes+len(edges)-len(mesh.polygons)
-        #print "separated contours", boundary_contours
 
         # Note that this would create one basis function for each inner
         # node which may exceed the number of RWG degrees of freedom. In
@@ -535,10 +531,6 @@ class LoopStarBasis(LinearTriangleBasis):
         # the conversion
 
         num_loops = len(inner_nodes) + boundary_contours - 1
-
-        if num_loops > len(inner_nodes):
-            # TODO: need to deal with holes in 2D (and 3D?) structures
-            raise NotImplementedError
 
         loop_tri_p = []
         loop_tri_m = []
@@ -556,6 +548,27 @@ class LoopStarBasis(LinearTriangleBasis):
                 loop_triangles = list(triangles_sharing_nodes[node_number])
 
                 this_loop = construct_loop(loop_triangles, mesh.polygons)
+                loop_tri_p.append(this_loop[0])
+                loop_tri_m.append(this_loop[1])
+                loop_node_p.append(this_loop[2])
+                loop_node_m.append(this_loop[3])
+
+        if num_loops > len(inner_nodes):
+            # The structure has internal holes, so additional loops are needed
+            node_sets = equivalence(unshared_edges)
+
+            if len(node_sets) < num_loops-len(inner_nodes):
+                raise MeshError("Unable to find a full set of loops")
+
+            # For each additional loop needed, find the set of triangles which
+            # loop around one of the edges
+            for loop_number in xrange(num_loops-len(inner_nodes)):
+                needed_nodes = node_sets[loop_number]
+                loop_triangles = set()
+                for node_number in needed_nodes:
+                    loop_triangles.update(triangles_sharing_nodes[node_number])
+
+                this_loop = construct_loop(list(loop_triangles), mesh.polygons)
                 loop_tri_p.append(this_loop[0])
                 loop_tri_m.append(this_loop[1])
                 loop_node_p.append(this_loop[2])
