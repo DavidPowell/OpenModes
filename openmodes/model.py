@@ -125,7 +125,7 @@ class ScalarModelResidues(object):
         self.z_der = delta_eig(mode_s, mode_j, Z_func)
         self.coefficients = [self.z_der, self.z_der.conjugate()]
         logging.info("Creating residue expansion scalar model\n"
-                     "dlambda/ds = %+.4e %+.4e\n"
+                     "dlambda/ds = %+.4e %+.4e"
                      % (self.z_der.real, self.z_der.imag))
 
     def scalar_impedance(self, s):
