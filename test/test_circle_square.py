@@ -32,10 +32,10 @@ from openmodes.constants import c
 from openmodes.model import ScalarModelLeastSq
 
 #name = 'circle'
-#parameters = {'outer_radius': 10e-3}
+#parameters = {'outer_radius': 20e-3, 'mesh_tol': 4e-3}
 
 name = 'rectangle'
-parameters = {'width': 12e-3, 'height': 15e-3}
+parameters = {'width': 12e-3, 'height': 25e-3, 'mesh_tol': 1e-3}
 
 num_freqs = 101
 freqs = np.linspace(1e8, 15e9, num_freqs)
@@ -47,7 +47,7 @@ model_class = ScalarModelLeastSq
 sim = openmodes.Simulation(name=name,
                            basis_class=openmodes.basis.LoopStarBasis)
 mesh = sim.load_mesh(osp.join(openmodes.geometry_dir, name+'.geo'),
-                     mesh_tol=mesh_tol, parameters=parameters)
+                     parameters=parameters)
 part = sim.place_part(mesh)
 
 s_start = 2j*np.pi*0.5*(freqs[0]+freqs[-1])

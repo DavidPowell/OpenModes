@@ -8,16 +8,18 @@ If (height == 0.0)
     height = 10e-3;
 EndIf
 
-lc = 5e-3;
+If (mesh_tol == 0.0)
+    mesh_tol = 3e-3;
+EndIf
 
 p = newp-1;
 
 // Define the dipole
 // define all points on the face
-Point(p+1) = {-0.5*width, -0.5*height, 0, lc};
-Point(p+2) = { 0.5*width, -0.5*height, 0, lc};
-Point(p+3) = { 0.5*width,  0.5*height, 0, lc};
-Point(p+4) = {-0.5*width,  0.5*height, 0, lc};
+Point(p+1) = {-0.5*width, -0.5*height, 0, mesh_tol};
+Point(p+2) = { 0.5*width, -0.5*height, 0, mesh_tol};
+Point(p+3) = { 0.5*width,  0.5*height, 0, mesh_tol};
+Point(p+4) = {-0.5*width,  0.5*height, 0, mesh_tol};
 
 l = newl-1;
 
