@@ -13,19 +13,21 @@ If (gap_width == 0.0)
     gap_width = 1e-3;
 EndIf
 
-lc_srr = 2e-3;
+If (mesh_tol == 0.0)
+    mesh_tol = 2e-3;
+EndIf
 
 srr_p = newp-1;
 
 // Define the SRR
 // define all points on the face
-Point(srr_p+1) = {0, 0, 0, lc_srr};
-Point(srr_p+2) = {-Sqrt(inner_radius^2-(0.5*gap_width)^2), -0.5*gap_width, 0, lc_srr};
-Point(srr_p+3) = {inner_radius, 0, 0, lc_srr};
-Point(srr_p+4) = {-Sqrt(inner_radius^2-(0.5*gap_width)^2), 0.5*gap_width, 0, lc_srr};
-Point(srr_p+5) = {-Sqrt(outer_radius^2-(0.5*gap_width)^2), 0.5*gap_width, 0, lc_srr};
-Point(srr_p+6) = {outer_radius, 0, 0, lc_srr};
-Point(srr_p+7) = {-Sqrt(outer_radius^2-(0.5*gap_width)^2), -0.5*gap_width, 0, lc_srr};
+Point(srr_p+1) = {0, 0, 0, mesh_tol};
+Point(srr_p+2) = {-Sqrt(inner_radius^2-(0.5*gap_width)^2), -0.5*gap_width, 0, mesh_tol};
+Point(srr_p+3) = {inner_radius, 0, 0, mesh_tol};
+Point(srr_p+4) = {-Sqrt(inner_radius^2-(0.5*gap_width)^2), 0.5*gap_width, 0, mesh_tol};
+Point(srr_p+5) = {-Sqrt(outer_radius^2-(0.5*gap_width)^2), 0.5*gap_width, 0, mesh_tol};
+Point(srr_p+6) = {outer_radius, 0, 0, mesh_tol};
+Point(srr_p+7) = {-Sqrt(outer_radius^2-(0.5*gap_width)^2), -0.5*gap_width, 0, mesh_tol};
 
 srr_l = newl-1;
 
