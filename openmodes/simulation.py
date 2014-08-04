@@ -80,7 +80,7 @@ class Simulation(Identified):
                                        greens_function=greens_function)
 
         logging.info('Creating simulation %s\nQuadrature order %d\n'
-                     'Basis function class %s\n'
+                     'Basis function class %s'
                      % (name, integration_rule.order, basis_class))
 
     def place_part(self, mesh=None, parent=None, location=None):
@@ -362,7 +362,8 @@ class Simulation(Identified):
             write_vtk(parts_list, charges, currents, filename=filename,
                       compress_scalars=compress_scalars,
                       autoscale_vectors=True,
-                      compress_separately=compress_separately)
+                      compress_separately=compress_separately,
+                      scalar_name="charge", vector_name="current")
         else:
             raise ValueError("Unknown output format")
 
