@@ -101,47 +101,6 @@ def inner_product_triangle_face(nodes):
     return res
 
 
-@memoize
-def integration_points(mesh, nodes, integration_rule):
-    """Find all the integration points for the basis functions in cartesian
-    coordinates
-
-    Parameters
-    ---------
-    mesh : TriangularSurfaceMesh
-        The mesh on which to find all the points
-    integration_rule: DunavantRule
-        The barycentric coordinates within each triangle
-
-    Returns
-    -------
-    r : ndarray[num_tri, num_points, 3]
-        The cartesian coordinates within every triangle
-    rho : ndarray[num_tri, 3, num_points]
-        The vector value of the rooftop function for each of the 3 basis
-        functions defined on each triangle
-    """
-
-    r = np.empty((len(mesh.polygons), len(integration_rule), 3),
-                 mesh.nodes.dtype)
-    rho = np.empty((len(mesh.polygons), 3, len(integration_rule), 3),
-                   mesh.nodes.dtype)
-
-    for tri_count, node_nums in enumerate(mesh.polygons):
-        for point_count, (xi, eta) in enumerate(integration_rule.xi_eta):
-            zeta = 1.0 - eta - xi
-
-            r[tri_count, point_count] = (xi*nodes[node_nums[0]] +
-                                         eta*nodes[node_nums[1]] +
-                                         zeta*nodes[node_nums[2]])
-
-            for node_count in xrange(3):
-                # Vector rho within the observer triangle
-                rho[tri_count, node_count, point_count] = r[tri_count, point_count] - nodes[node_nums][node_count]
-
-    return r, rho
-
-
 class AbstractBasis(Identified):
     "An abstract class for arbitrary basis functions"
 
@@ -207,6 +166,46 @@ class LinearTriangleBasis(AbstractBasis):
         else:
             return r, vector_func
 
+    @memoize
+    def integration_points(self, nodes, integration_rule):
+        """Find all the integration points for the basis functions in cartesian
+        coordinates
+
+        Parameters
+        ---------
+        mesh : TriangularSurfaceMesh
+            The mesh on which to find all the points
+        integration_rule: DunavantRule
+            The barycentric coordinates within each triangle
+
+        Returns
+        -------
+        r : ndarray[num_tri, num_points, 3]
+            The cartesian coordinates within every triangle
+        rho : ndarray[num_tri, 3, num_points]
+            The vector value of the rooftop function for each of the 3 basis
+            functions defined on each triangle
+        """
+
+        r = np.empty((len(self.mesh.polygons), len(integration_rule), 3),
+                     self.mesh.nodes.dtype)
+        rho = np.empty((len(self.mesh.polygons), 3, len(integration_rule), 3),
+                       self.mesh.nodes.dtype)
+
+        for tri_count, node_nums in enumerate(self.mesh.polygons):
+            for point_count, (xi, eta) in enumerate(integration_rule.xi_eta):
+                zeta = 1.0 - eta - xi
+
+                r[tri_count, point_count] = (xi*nodes[node_nums[0]] +
+                                             eta*nodes[node_nums[1]] +
+                                             zeta*nodes[node_nums[2]])
+
+                for node_count in xrange(3):
+                    # Vector rho within the observer triangle
+                    rho[tri_count, node_count, point_count] = r[tri_count, point_count] - nodes[node_nums][node_count]
+
+        return r, rho
+
     def weight_function(self, func, integration_rule, nodes):
         """Weight a function (e.g. a source field) by integrating it over this
         set of basis functions
@@ -230,7 +229,7 @@ class LinearTriangleBasis(AbstractBasis):
 
         # This implementation uses vector operations, making it relatively
         # fast, but somewhat memory inefficient
-        r, rho = integration_points(self.mesh, nodes, integration_rule)
+        r, rho = self.integration_points(nodes, integration_rule)
         func_points = func(r)  # dim[num_tri, num_points, 3]
         func_rho = np.sum(func_points[:, None, :, :]*rho, axis=3)
         # func_rho has dim[num_tri, 3, num_points]
