@@ -23,7 +23,6 @@ Routines to construct the basis functions on a mesh
 import logging
 from collections import namedtuple
 from scipy.sparse import lil_matrix
-import scipy.linalg as la
 import numpy as np
 
 from openmodes.mesh import nodes_not_in_edge, shared_nodes
@@ -34,8 +33,6 @@ from openmodes.integration import triangle_centres
 # A named tuple for holding the positive and negative triangles and nodes
 # which are used by both RWG and loop-star basis functions
 RWG = namedtuple('RWG', ('tri_p', 'tri_m', 'node_p', 'node_m'))
-
-# TODO: routines to integrate over a triangle, with no scaling by area
 
 
 def interpolate_triangle_mesh(mesh, tri_func, num_tri, integration_rule,
@@ -270,28 +267,6 @@ class LinearTriangleBasis(AbstractBasis):
         # convert from faces to the appropriate basis functions
         vector_transform, _ = self.transformation_matrices
         return vector_transform.dot(vector_transform.dot(G.reshape(3*num_tri, 3*num_tri)).T).T
-
-    @property
-    def gram_factored(self):
-        """A an eigenvalue decomposed version of the Gram matrix
-
-        Returns
-        -------
-        sqrt_val : ndarray
-            The square root of each eigenvalue
-        vec : ndarray
-            Each column is a correctly normalised eigenvector such that the
-            transpose of this matrix is equal to its inverse.
-        """
-        try:
-            return self.stored_factored_gram
-        except AttributeError:
-            G = self.gram_matrix
-            Gw, Gv = la.eigh(G)
-            Gv /= np.sqrt(np.sum(Gv**2, axis=0))
-
-            self.stored_factored_gram = (np.sqrt(Gw), Gv)
-            return self.stored_factored_gram
 
 
 class DivRwgBasis(LinearTriangleBasis):
