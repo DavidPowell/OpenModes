@@ -17,19 +17,21 @@ If (track == 0.0)
     track = 3e-3;
 EndIf
 
-lc = 5e-3;
+If (mesh_tol == 0.0)
+    mesh_tol = 5e-3;
+EndIf
 
 p = newp-1;
 
 // define all points on the bottom face
-Point(p+1) = {-0.5*width, -0.5*length, 0, lc};
-Point(p+2) = {-0.5*width,  0.5*length, 0, lc};
-Point(p+3) = { 0.5*width,  0.5*length, 0, lc};
-Point(p+4) = { 0.5*width, -0.5*length, 0, lc};
-Point(p+5) = { 0.5*width-track, -0.5*length, 0, lc};
-Point(p+6) = { 0.5*width-track, 0.5*length-track, 0, lc};
-Point(p+7) = { -0.5*width+track, 0.5*length-track, 0, lc};
-Point(p+8) = { -0.5*width+track, -0.5*length, 0, lc};
+Point(p+1) = {-0.5*width, -0.5*length, 0, mesh_tol};
+Point(p+2) = {-0.5*width,  0.5*length, 0, mesh_tol};
+Point(p+3) = { 0.5*width,  0.5*length, 0, mesh_tol};
+Point(p+4) = { 0.5*width, -0.5*length, 0, mesh_tol};
+Point(p+5) = { 0.5*width-track, -0.5*length, 0, mesh_tol};
+Point(p+6) = { 0.5*width-track, 0.5*length-track, 0, mesh_tol};
+Point(p+7) = { -0.5*width+track, 0.5*length-track, 0, mesh_tol};
+Point(p+8) = { -0.5*width+track, -0.5*length, 0, mesh_tol};
 
 l = newl-1;
 
@@ -47,6 +49,9 @@ Line Loop(l+9) = {l+1, l+2, l+3, l+4, l+5, l+6, l+7, l+8};
 
 s = news;
 
-Plane Surface(s) = {l+9};
-
+// gmsh extrusian has problems with surface normals, which are fixed
+// by using the following sequence of commands
+Plane Surface(s) = {-(l+9)};
 out[] = Extrude{0,0,height}{ Surface{s}; };
+Reverse Surface{s};
+
