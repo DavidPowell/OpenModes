@@ -23,7 +23,7 @@ derived quantities
 
 import logging
 import numpy as np
-from openmodes.helpers import Identified
+from openmodes.helpers import Identified, cached_property
 
 
 def nodes_not_in_edge(nodes, edge):
@@ -214,6 +214,20 @@ class TriangularSurfaceMesh(Identified):
             areas[count] = 0.5*np.sqrt(sum(np.cross(vec1, vec2)**2))
 
         return areas
+
+    @cached_property
+    def surface_normals(self):
+        """The surface normal of each triangle in the mesh"""
+        normals = np.empty((len(self.polygons), 3), np.float64)
+
+        # calculate all the edges in the mesh
+        for count, t_nodes in enumerate(self.polygons):
+            vec1 = self.nodes[t_nodes[1]]-self.nodes[t_nodes[0]]
+            vec2 = self.nodes[t_nodes[2]]-self.nodes[t_nodes[0]]
+            normal = np.cross(vec1, vec2)
+            normals[count] = normal/np.sqrt(np.dot(normal, normal))
+
+        return normals
 
     @property
     def edge_lens(self):
