@@ -1,6 +1,20 @@
 What's new in OpenModes
 =======================
 
+**Release 0.0.2**
+
+August, 2014
+
+Major changes which are visible to the user:
+
+- The incident field weighting can now be performed in pure python code, instead
+  of fortran subroutines. This makes it easier to model sources other than plane waves.
+- The use of logging is simplified, to allow simulation progress to be monitored.
+- Fixed several cases where data structures could not be pickled. This means that 
+  structures can be cached or transmitted across the network for parallel computing.
+- Additional pre-made geometries are included
+- Planar structures with internal holes are now handled correctly
+
 **Release 0.0.1**
 
 May, 2014
