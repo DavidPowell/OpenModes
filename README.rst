@@ -9,8 +9,9 @@ of open resonators such as meta-atoms (the building blocks of metamaterials),
 Using these modes, broadband models of these elements can be created, enabling
 excitation, coupling between them and scattering to be solved easily.
 
-The technique implemented in this code is described in a preprint manuscript which
-is available from the arXiv open access repository at http://arxiv.org/abs/1405.3759.
+The technique implemented in this code is described in a `published
+paper <http://dx.doi.org/10.1103/PhysRevB.90.075108>`_, also available as
+an `arXiv preprint <http://arxiv.org/abs/1405.3759>`_.
 
 Requires the python packages numpy, scipy and matplotlib, and the free meshing
 program gmsh. See the `documentation <http://www.pythonhosted.org/OpenModes/>`_ 

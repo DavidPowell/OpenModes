@@ -28,6 +28,12 @@ detail how to reproduce any problem you are having.
 Citing
 ------
 It is expected that the major users of this software would be researchers in an
-academic environment. It is requested that any academic publication describing
-work which uses this software should cite the paper describing this method.
-Currently this is a preprint available at http://arxiv.org/abs/1405.3759.
+academic environment. Any academic publication which uses this software is
+requested to cite the paper describing the methods used:
+
+`D. A. Powell, "Resonant dynamics of arbitrarily shaped meta-atoms,"
+Phys. Rev. B, vol. 90, no. 7, p. 075108, Aug. 2014
+<http://dx.doi.org/10.1103/PhysRevB.90.075108>`_.
+
+A preprint of this paper is also available on the `arxiv open access
+repository <http://arxiv.org/abs/1405.3759>`_.
