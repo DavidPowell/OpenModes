@@ -6,15 +6,17 @@ If (radius == 0.0)
 EndIf
 
 // base element size on radius
-lc = radius*0.2;
+If (mesh_tol == 0.0)
+    mesh_tol = radius*0.2;
+EndIf
 
-Point(1) = {0.0,0.0,0.0,lc};
-Point(2) = {radius,0.0,0.0,lc};
-Point(3) = {0,radius,0.0,lc};
-Point(4) = {-radius,0,0.0,lc};
-Point(5) = {0,-radius,0.0,lc};
-Point(6) = {0,0,-radius,lc};
-Point(7) = {0,0,radius,lc};
+Point(1) = {0.0,0.0,0.0,mesh_tol};
+Point(2) = {radius,0.0,0.0,mesh_tol};
+Point(3) = {0,radius,0.0,mesh_tol};
+Point(4) = {-radius,0,0.0,mesh_tol};
+Point(5) = {0,-radius,0.0,mesh_tol};
+Point(6) = {0,0,-radius,mesh_tol};
+Point(7) = {0,0,radius,mesh_tol};
 
 Circle(1) = {2,1,3};
 Circle(2) = {3,1,4};
