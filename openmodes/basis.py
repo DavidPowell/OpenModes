@@ -206,7 +206,7 @@ class LinearTriangleBasis(AbstractBasis):
 
         return r, rho
 
-    def weight_function(self, func, integration_rule, nodes):
+    def weight_function(self, func, integration_rule, nodes, n_cross=False):
         """Weight a function (e.g. a source field) by integrating it over this
         set of basis functions
 
@@ -220,6 +220,9 @@ class LinearTriangleBasis(AbstractBasis):
             integration over a triangle
         nodes : array[num_modes, 3]
             The location of the triangle nodes for the part of interest
+        n_cross : boolean, optional
+            If True, take the cross product of the surface normal with the
+            vector function
 
         Returns
         -------
@@ -231,6 +234,9 @@ class LinearTriangleBasis(AbstractBasis):
         # fast, but somewhat memory inefficient
         r, rho = self.integration_points(nodes, integration_rule)
         func_points = func(r)  # dim[num_tri, num_points, 3]
+        if n_cross:
+            func_points = np.cross(self.mesh.surface_normals[:, None, :],
+                                   func_points)
         func_rho = np.sum(func_points[:, None, :, :]*rho, axis=3)
         # func_rho has dim[num_tri, 3, num_points]
         func_tri = np.dot(func_rho, integration_rule.weights)  # dim[num_tri, 3]

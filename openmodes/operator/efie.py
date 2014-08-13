@@ -200,6 +200,8 @@ class EfieOperator(Operator):
     used, such that the testing functions are the same as the basis functions.
     """
     reciprocal = True
+    source_field = "electric_field"
+    source_cross = False
 
     def __init__(self, integration_rule, basis_container,
                  greens_function=FreeSpaceGreensFunction()):

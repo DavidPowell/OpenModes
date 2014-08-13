@@ -225,14 +225,16 @@ class Simulation(Identified):
 
         V = self.empty_vector(parent)
 
+        field_function = getattr(source_field, self.operator.source_field)
+
         for part in parent.iter_single():
-            E_field = lambda r: source_field.electric_field(s, r)
-            #H_field = lambda r: source_field.magnetic_field(s, r)
+            field = lambda r: field_function(s, r)
 
             basis = self.basis_container[part]
 
-            V[part] = basis.weight_function(E_field, self.integration_rule,
-                                            part.nodes)
+            V[part] = basis.weight_function(field, self.integration_rule,
+                                            part.nodes,
+                                            self.operator.source_cross)
 
         return V
 

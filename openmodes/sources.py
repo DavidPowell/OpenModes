@@ -72,3 +72,25 @@ class PlaneWaveSource(object):
         # dimensions are expanded so that r can have an arbitrary number
         # of dimensions
         return self.e_inc*np.exp(np.dot(r, -jk))[..., None]
+
+    def magnetic_field(self, s, r):
+        """Calculate the magnetic field distribution at a given frequency
+
+        Parameters
+        ----------
+        s : complex
+            Complex frequency at which to evaluate fields
+        r : ndarray, real
+            The locations at which to calculate the field. This array can have
+            an arbitrary number of dimensions. The last dimension must of size
+            3, corresponding to the three cartesian coordinates
+
+        Returns
+        -------
+        E : ndarray, complex
+            An array with the same dimensions as r, giving the field at each
+            point
+        """
+        jk = self.k_hat*s/self.c
+
+        return self.h_inc*np.exp(np.dot(r, -jk))[..., None]
