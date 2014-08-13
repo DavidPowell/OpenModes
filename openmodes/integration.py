@@ -125,31 +125,6 @@ def triangle_electric_dipole(vertices, xi_eta, weights):
     return np.sum(weights[0, :, None]*r, axis=0)
 
 
-#def sphere_sample(order):
-#    """Generate a rule for sampling points over the surface of a sphere
-#    
-#    These rules are more about sampling than integration
-#    
-#    Taken from:
-#    http://mathworld.wolfram.com/SpherePointPicking.html
-#    with a changed angle convention
-#
-#    Parameters
-#    ----------
-#    order : integer
-#        The order of the sampling in each dimension
-#        
-#    Returns
-#    -------
-#    theta : array of length order
-#        polar angle theta
-#    phi : array of length order
-#        azimuthal angle phi
-#    """
-#    
-#    theta = 2*pi*np.linspace(0, 2*np.pi, 
-   
-   
 def sphere_fibonacci(num_points, cartesian=False):
     """Compute points on the surface of a sphere based on the Fibonacci spiral
 
