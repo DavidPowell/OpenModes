@@ -698,3 +698,175 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
     I_A = I_A/area_s_2
 
 end subroutine face_integrals_hanninen
+
+
+subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
+        weights_o, nodes_o_in, jk_0, normal, I_Z)
+    ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
+    ! NB: includes the 1/4A**2 prefactor
+    !
+    ! xi_eta_s/o - list of coordinate pairs in source/observer triangle
+    ! weights_s/o - the integration weights of the source and observer
+    ! nodes_s/o - the nodes of the source and observer triangles
+    ! jk_0 - *complex* free space wavenumber, j*k_0
+    ! nodes - the position of the triangle nodes
+
+    use core_for
+    use vectors
+    implicit none
+
+    integer, intent(in) :: n_s, n_o
+    real(WP), dimension(3, 3), intent(in) :: nodes_s_in, nodes_o_in
+    complex(WP), intent(in) :: jk_0
+
+    real(WP), intent(in), dimension(0:n_s-1, 2) :: xi_eta_s
+    real(WP), intent(in), dimension(0:n_s-1) :: weights_s
+
+    real(WP), intent(in), dimension(0:n_o-1, 2) :: xi_eta_o
+    real(WP), intent(in), dimension(0:n_o-1) :: weights_o
+
+    real(WP), intent(in), dimension(3) :: normal
+
+    complex(WP), intent(out), dimension(3, 3) :: I_z
+
+    real(WP) :: xi_s, eta_s, zeta_s, xi_o, eta_o, zeta_o, R, w_s, w_o
+    real(WP), dimension(3) :: r_s, r_o
+    real(WP), dimension(3, 3) :: rho_s, rho_o
+    complex(WP) :: g
+    integer :: count_s, count_o, uu, vv
+    real(WP), dimension(3, 3) :: nodes_s, nodes_o
+
+    real(WP), dimension(3, 0:n_s-1) :: r_s_table
+    real(WP), dimension(3, 3, 0:n_s-1) :: rho_s_table
+
+    ! explictly copying the output arrays gives some small speedup,
+    ! possibly by avoiding access to the shared target array
+    complex(WP), dimension(3, 3) :: I_Z_int
+
+    
+    ! transpose for speed
+    nodes_s = transpose(nodes_s_in)
+    nodes_o = transpose(nodes_o_in)
+
+    I_Z_int = 0.0
+
+    ! The loop over the source is repeated many times. Therefore pre-calculate the source
+    ! quantities to optimise speed (gives minor benefit)
+
+    do count_s = 0,n_s-1
+
+        !w_s = weights_s(count_s)
+        xi_s = xi_eta_s(count_s, 1)
+        eta_s = xi_eta_s(count_s, 2)
+
+        zeta_s = 1.0 - eta_s - xi_s
+        r_s = xi_s*nodes_s(:, 1) + eta_s*nodes_s(:, 2) + zeta_s*nodes_s(:, 3)
+        r_s_table(:, count_s) = r_s
+
+        forall (uu=1:3) rho_s_table(:, uu, count_s) = r_s - nodes_s(:, uu)
+
+    end do
+
+    do count_o = 0,n_o-1
+
+        w_o = weights_o(count_o)
+
+        ! Barycentric coordinates of the observer
+        xi_o = xi_eta_o(count_o, 1)
+        eta_o = xi_eta_o(count_o, 2)
+        zeta_o = 1.0 - eta_o - xi_o
+
+        ! Cartesian coordinates of the observer
+        r_o = xi_o*nodes_o(:, 1) + eta_o*nodes_o(:, 2) + zeta_o*nodes_o(:, 3)
+
+        ! Vector rho within the observer triangle
+        forall (uu=1:3) rho_o(:, uu) = r_o - nodes_o(:, uu)
+
+        do count_s = 0,n_s-1
+    
+            w_s = weights_s(count_s)
+
+            r_s = r_s_table(:, count_s)
+            rho_s = rho_s_table(:, :, count_s)
+              
+            R = sqrt(sum((r_s - r_o)**2))
+            g = (1.0 + jk_0*R)*exp(-jk_0*R)/R**3
+     
+            I_Z_int = I_Z_int + g*w_s*w_o
+
+            forall (uu=1:3, vv=1:3) I_Z(uu, vv) = I_Z(uu, vv) + w_o*w_s*g*( &
+                dot_product(rho_o(:, uu), cross_product(normal, cross_product(r_o - r_s, rho_s(:, vv)))))
+        end do
+    end do
+
+    I_Z = I_Z_int
+
+end subroutine face_integral_MFIE
+
+
+
+subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, nodes, triangle_nodes, &
+                                s, xi_eta_eval, weights, normals, Z_face)
+    ! Calculate the face to face interaction terms used to build the impedance matrix
+    !
+    ! As per Rao, Wilton, Glisson, IEEE Trans AP-30, 409 (1982)
+    ! Uses impedance extraction techqnique of Hanninen, precalculated
+    !
+    ! nodes - position of all the triangle nodes
+    ! basis_tri_p/m - the positive and negative triangles for each basis function
+    ! basis_node_p/m - the free nodes for each basis function
+    ! omega - evaulation frequency in rad/s
+    ! s - complex frequency
+    ! xi_eta_eval, weights - quadrature rule over the triangle (weights normalised to 0.5)
+    ! A_precalc, phi_precalc - precalculated 1/R singular terms
+
+    use core_for
+    implicit none
+
+    integer, intent(in) :: num_nodes, num_triangles, num_integration
+    ! f2py intent(hide) :: num_nodes, num_triangles, num_integration
+
+    real(WP), intent(in), dimension(0:num_nodes-1, 0:2) :: nodes
+    integer, intent(in), dimension(0:num_triangles-1, 0:2) :: triangle_nodes
+
+    complex(WP), intent(in) :: s
+
+    real(WP), intent(in), dimension(0:num_integration-1, 0:1) :: xi_eta_eval
+    real(WP), intent(in), dimension(0:num_integration-1) :: weights
+    real(WP), intent(in), dimension(0:num_triangles-1, 0:2) :: normals
+
+    complex(WP), intent(out), dimension(0:num_triangles-1, 0:2, 0:num_triangles-1, 0:2) :: Z_face
+    
+    complex(WP) :: jk_0 
+    
+    real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
+    complex(WP), dimension(3, 3) :: I_Z
+
+    integer :: p, q
+
+    jk_0 = s/c
+
+    ! calculate all the integrations for each face pair
+    do p = 0,num_triangles-1 ! p is the index of the observer face:
+        nodes_p = nodes(triangle_nodes(p, :), :)
+        do q = 0,num_triangles-1 ! q is the index of the source face
+
+            nodes_q = nodes(triangle_nodes(q, :), :)
+            if (p == q) then
+                ! diagonal self terms will be handled externally
+                I_Z = 0.0
+            else
+                ! just perform regular integration
+                ! As per RWG, triangle area must be cancelled in the integration
+                ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
+                call face_integral_MFIE(num_integration, xi_eta_eval, weights, nodes_q, &
+                                    num_integration, xi_eta_eval, weights, nodes_p, jk_0, normals(p, :), I_Z)
+            end if
+
+            ! there is no symmetry for MFIE
+            Z_face(p, :, q, :) = I_Z
+
+        end do
+    end do
+
+end subroutine Z_MFIE_faces_self
