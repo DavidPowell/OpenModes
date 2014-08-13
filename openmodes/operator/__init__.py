@@ -21,4 +21,5 @@ Operator classes
 """
 
 from .efie import EfieOperator
+from .mfie import MfieOperator
 from .operator import FreeSpaceGreensFunction
