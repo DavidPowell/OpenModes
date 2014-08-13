@@ -310,7 +310,7 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
         total_rows = sum(M[0].shape[0] for M in matrices)
         total_cols = sum(M.shape[1] for M in matrices[0])
         L_tot = np.empty((total_rows, total_cols), np.complex128)
-        S_tot = np.empty_like(L_tot)
+        S_tot = np.zeros_like(L_tot)
 
         basis = get_combined_basis(basis_list=[row[0].basis_o
                                                for row in matrices])
