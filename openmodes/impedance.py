@@ -336,7 +336,7 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
                 # Some of these arrays may have one dimension of size zero if
                 # there are no loops, but this is handled automatically.
                 L_tot[loop_range_o, loop_range_s] = m.L[m.loop_range_o, m.loop_range_s]
-                L_tot[loop_range_o, star_range_s] = m.L[m.loop_range_o, m.star_range_s]                    
+                L_tot[loop_range_o, star_range_s] = m.L[m.loop_range_o, m.star_range_s]
                 L_tot[star_range_o, loop_range_s] = m.L[m.star_range_o, m.loop_range_s]
                 L_tot[star_range_o, star_range_s] = m.L[m.star_range_o, m.star_range_s]
 

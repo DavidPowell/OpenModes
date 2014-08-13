@@ -189,4 +189,3 @@ class CompositePart(Part):
     def __contains__(self, key):
         """Check if the given part is stored within this tree of parts"""
         return self == key or any(key in part for part in self.parts)
-
