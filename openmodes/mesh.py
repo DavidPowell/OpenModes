@@ -137,12 +137,10 @@ class TriangularSurfaceMesh(Identified):
 
         Returns
         -------
-        edges : list of frozenset
-            each edge is a frozenset containing the incides of the nodes
+        edges : array[num_edges, 2] of int
+            each edge contains the incides of the nodes
         triangles_shared_by_edges : list of lists
             the triangles that share each edge, indexed by the edges
-        edges_of_triangles : list of lists
-            the edges of each triangle
         """
 
         all_edges = set()
@@ -165,15 +163,12 @@ class TriangularSurfaceMesh(Identified):
                     triangles_shared_by_edges[edge] = [count]
 
         edges_array = np.empty((len(all_edges), 2), np.int)
-        #edges_list = []
         sharing_list = []
         for edge_count, edge in enumerate(all_edges):
             edges_array[edge_count] = tuple(edge)
-            #edges_list.append(edge)
             sharing_list.append(triangles_shared_by_edges[edge])
 
         if get_shared_triangles:
-            #return all_edges, triangles_shared_by_edges
             return edges_array, sharing_list
         else:
             return edges_array
