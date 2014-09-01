@@ -28,6 +28,7 @@ import os.path as osp
 import struct
 import numpy as np
 from collections import defaultdict
+import re
 
 from openmodes.helpers import MeshError
 
@@ -201,9 +202,12 @@ def read_physical_names(file_handle):
     physical_names = {}
     num_physical_names = int(file_handle.readline())
 
+    names_regex = re.compile(r'(\d*)\s(\d*)\s"([^"]*)"')
+
     for _ in xrange(num_physical_names):
-        dimension, num, name = file_handle.readline().split()
-        physical_names[int(num)] = name.strip('"')
+        names_match = names_regex.match(file_handle.readline())
+        dimension, num, name = names_match.groups()
+        physical_names[int(num)] = name
 
     return physical_names
 
@@ -287,9 +291,11 @@ def read_mesh(filename, returned_elements = ("edges", "triangles")):
                 this_part[elem_name] = new_nodes[
                                         np.array(obj_elements[returned_type])]
 
-        # add the physical names
-        if physical_names is not None:
+        # add the physical name if it exists
+        try:
             this_part["physical_name"] = physical_names[obj_nums]
+        except (TypeError, KeyError):
+            pass
 
         return_vals.append(this_part)
 
