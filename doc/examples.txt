@@ -2,13 +2,14 @@ Examples
 ========
 
 The best way to understand OpenModes is to run the examples which
-are included. The included examples are created using the IPython notebook
-viewer. The original IPython notebook files for these examples can 
-be downloaded from the github repository_.
+are included. The included examples are created from the IPython notebook
+files. 
+
+*The example files are available for downloaded* from github as a `zip file`_.
 
 If you have installed OpenModes successfully, then you can go to a
-command prompt window, and change to the directory where the example
-file is located. Typing ``ipython notebook`` should
+command prompt window, and change to the directory where you have extracted
+the example files. Typing ``ipython notebook`` should
 start the ipython notebook server, and automatically bring up a list
 of example notebooks, which enable you to interact with the examples
 presented here.
@@ -19,4 +20,4 @@ presented here.
 
    examples/*
 
-.. _repository: https://github.com/DavidPowell/OpenModes/tree/master/examples
+.. _`zip file`: https://github.com/DavidPowell/OpenModes/releases/download/0.0.2/examples.zip
