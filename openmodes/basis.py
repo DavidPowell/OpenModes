@@ -497,14 +497,12 @@ class LoopStarBasis(LinearTriangleBasis):
 
         triangles_sharing_nodes = mesh.triangles_sharing_nodes()
 
-        boundary_contours = 2-num_nodes+len(edges)-len(mesh.polygons)
-
         # Note that this would create one basis function for each inner
         # node which may exceed the number of RWG degrees of freedom. In
         # this case arbitrary loops at the end of the list are dropped in
         # the conversion
 
-        num_loops = len(inner_nodes) + boundary_contours - 1
+        num_loops = len(edges) - len(unshared_edges) - self.num_stars
 
         loop_tri_p = []
         loop_tri_m = []
@@ -555,10 +553,10 @@ class LoopStarBasis(LinearTriangleBasis):
         logging.info("Constructing %d loop-star basis functions\n"
                      "%d loops\n%d stars\n%d faces\n%d edges\n"
                      "%d unshared_edges\n"
-                     "%d nodes on boundary\n%d boundary contours"
+                     "%d nodes on boundary"
                      % (len(self), num_loops, self.num_stars,
                         len(mesh.polygons), len(edges), len(unshared_edges),
-                        len(outer_nodes), boundary_contours))
+                        len(outer_nodes)))
 
     def __len__(self):
         return len(self.rwg_loop.tri_p)+len(self.rwg_star.tri_p)
