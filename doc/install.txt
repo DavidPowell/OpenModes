@@ -18,7 +18,9 @@ executable is added to the PATH environment variable.
 From the anaconda command-line, `OpenModes <http://pypi.python.org/pypi/OpenModes>`_ 
 can be installed with the command ``pip install openmodes``.
 
-If you want to be able to view 3d plots of currents, install `Paraview <http://www.paraview.org/>`_
+To be able to view 3D plots of currents (including in the examples), install the python package
+`mayavi` via ``conda install mayavi``. This will enable you to write VTK files,
+which can be viewed with programs such as `Paraview <http://www.paraview.org/>`_
 
 Detailed Requirements
 ---------------------
