@@ -20,6 +20,8 @@
 """
 Routines for using `gmsh` to mesh a geometry, and load the resulting mesh into
 a format which OpenModes recognises.
+
+Gmsh 2.8.4 is required, as it introduced the `setnumber` command line parameter
 """
 
 import subprocess
