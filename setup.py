@@ -35,8 +35,6 @@ else:
 if not numpy_installed or (numpy.__version__ < '1.6.2'):
     raise ValueError("Numpy 1.6.2 or greater required")
 
-from version import get_git_version
-
 from numpy.distutils.core import Extension, setup
 
 # Ideally would like to perform static linking under mingw32 to avoid
@@ -129,6 +127,9 @@ if osp.exists(redist_path):
 with open('README.rst') as description_file:
     long_description = description_file.read()
 
+# run the script to find the version
+execfile(osp.join("openmodes", "version.py"))
+
 setup(name='OpenModes',
       description="An eigenmode solver for open electromagnetic resonantors",
       author="David Powell",
@@ -138,7 +139,7 @@ setup(name='OpenModes',
       packages=['openmodes'],
       package_data={'openmodes': [osp.join("geometry", "*.geo")]},
       ext_modules=[dunavant, core],
-      version=get_git_version(),
+      version=__version__,
       install_requires=['numpy >= 1.6.2', 'scipy', 'matplotlib'],
       long_description=long_description,
       platforms="Windows, Linux",

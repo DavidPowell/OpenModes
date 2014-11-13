@@ -1,3 +1,2 @@
 include README.rst
 include ez_setup.py
-include RELEASE-VERSION

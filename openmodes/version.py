@@ -16,29 +16,33 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------------
+
+"""This file contains the version number of OpenModes. It will be called by
+setup.py before installing, generating source package etc.
+
+If the source is controlled by git, then git will be used to get the latest
+tag and any subsequent updates.
+
+Otherwise, a hard-coded value will be used - this must be UPDATED MANUALLY
+before tagging each release
+
+Based on public domain code from Douglas Creager
 """
-OpenModes - An eigenmode solver for open electromagnetic resonantors
-"""
 
-from openmodes.simulation import Simulation
-from openmodes.version import __version__
+from subprocess import Popen, PIPE
+
+# THIS MUST BE UPDATED MANUALLY FOR NON-GIT
+RELEASE_VERSION = "0.0.2"
 
 
-# allow the user to find the provided geometry files
-from pkg_resources import resource_filename
-geometry_dir = resource_filename('openmodes', 'geometry')
+def version_git():
+    try:
+        p = Popen(['git', 'describe', '--abbrev=%d' % 4], stdout=PIPE,
+                  stderr=PIPE)
+        p.stderr.close()
+        line = p.stdout.readlines()[0]
+        return line.strip()
+    except:
+        return None
 
-# Set the logging format of the root logger. By default it will not be
-# displayed. In order to display the log messages, run
-# `import logging; logging.setLevel(logging.INFO)` for basic information
-# or `import logging; logging.setLevel(logging.DEBUG)` for quite
-# detailed information.
-#
-import logging
-log_format = '%(levelname)s - %(asctime)s - %(message)s'
-formatter = logging.Formatter(log_format)
-logger = logging.getLogger()
-for handler in logger.handlers:
-    handler.formatter = formatter
-
-#__all__ = [openmodes.simulation.Simulation]
+__version__ = version_git() or RELEASE_VERSION
