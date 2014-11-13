@@ -2,17 +2,23 @@ Examples
 ========
 
 The best way to understand OpenModes is to run the examples which
-are included. The included examples are created from the IPython notebook
-files. 
+are included. 
 
-*The example files are available for downloaded* from github as a `zip file`_.
+1. Download the `example scripts`_ and extract them to a folder
 
-If you have installed OpenModes successfully, then you can go to a
-command prompt window, and change to the directory where you have extracted
-the example files. Typing ``ipython notebook`` should
-start the ipython notebook server, and automatically bring up a list
-of example notebooks, which enable you to interact with the examples
-presented here.
+2. Open your command windows or terminal (e.g. use the Anaconda command prompt),
+   and change to the folder with the example scripts
+   
+3. Run the IPython notebook server, by typing ``ipython notebook`` at the command prompt.
+
+   This should open a window in your web browser. Select one of the examples, and start playing!
+
+OpenModes is written in python, and the syntax should look familiar to anyone
+who has used matlab. To understand python for scientific uses, please read
+this `tutorial`_.
+
+The documentation includes static versions of the examples converted into web
+pages. You can view the output of the examples at these pages:
 
 .. toctree::
    :maxdepth: 2
@@ -20,4 +26,5 @@ presented here.
 
    examples/*
 
-.. _`zip file`: https://github.com/DavidPowell/OpenModes/releases/download/0.0.2/examples.zip
+.. _`example scripts`: https://github.com/DavidPowell/OpenModes/releases/download/0.0.2/examples.zip
+.. _tutorial: https://scipy-lectures.github.io/
