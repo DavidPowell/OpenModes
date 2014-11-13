@@ -1,6 +1,14 @@
 What's new in OpenModes
 =======================
 
+**Release 0.0.3**
+
+November, 2014
+
+- Fixed bugs which prevented installing from source package. Installation under
+  Linux should now work correctly.
+- Documentation improvements
+
 **Release 0.0.2**
 
 August, 2014
