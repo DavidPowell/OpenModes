@@ -29,6 +29,10 @@ import shutil
 # remove all previously converted examples
 shutil.rmtree("examples")
 os.mkdir("examples")
+
+# custom templates cannot have arbitrary paths, so copy it
+shutil.copy("custom_rst.tpl", "examples")
+
 os.chdir("examples")
 
 example_dir = join("..", "..", "examples")
@@ -36,7 +40,8 @@ notebooks =[f for f in os.listdir(example_dir) if f.endswith(".ipynb")]
 #notebooks = ['example1.ipynb', 'example2.ipynb', 'example3.ipynb']
 
 for notebook in notebooks:
-    subprocess.call(["ipython", "nbconvert", "--to", "rst", join(example_dir, notebook)])
+    subprocess.call(["ipython", "nbconvert", "--template", "custom_rst.tpl",
+                     "--to", "rst", join(example_dir, notebook)])
     name_root = splitext(notebook)[0]
     os.rename(name_root+".rst", name_root+".txt")
 
