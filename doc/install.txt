@@ -2,26 +2,35 @@ Installation Instructions
 =========================
 
 OpenModes is written in the `Python <http://www.python.org/>`_ language, and
-utilises the program gmsh to mesh the structure geometries.
+utilises the program `gmsh`_ to mesh the structure geometries.
 
 Quick Install Instructions
 --------------------------
 
-The simplest way to get started is to download the 64 bit version of `Anaconda 
-<http://docs.continuum.io/anaconda/install.html>`_, which includes python and all the required python 
-libraries. It is possible to install Anaconda even if you don't have administrator access, and
-it is available for Windows, Linux and Mac OSX.
+1. Download the **64 bit** version of the `Anaconda`_ 
+   python distribution, which includes all the required python 
+   libraries.
+  
+   You can install Anaconda without administrator access, and
+   it is available for Windows, Linux and Mac OSX.
 
-Then install `gmsh <http://geuz.org/gmsh/>`_, and make sure that the location of the gmsh
-executable is added to the PATH environment variable.
+2. Install `gmsh`_ **version 2.8.4 or later**, and make sure that the location of the gmsh
+   executable is added to the PATH environment variable.
 
-From the anaconda command-line, `OpenModes <http://pypi.python.org/pypi/OpenModes>`_ 
-can be installed with the command ``pip install openmodes``.
+3. From the anaconda command-line, `OpenModes <http://pypi.python.org/pypi/OpenModes>`_ 
+   can be installed with the command 
 
-To be able to view 3D plots of currents (including in the examples), install the python package
-`mayavi` via ``conda install mayavi``. This will enable you to write VTK files,
-which can be viewed with programs such as `Paraview <http://www.paraview.org/>`_
+   ``pip install openmodes``.
 
+4. To view 3D plots of currents (including in the examples), install the python package
+   `mayavi`_ via 
+
+   ``conda install mayavi``.
+
+   This will enable you to write VTK files, which can be viewed with programs such as `Paraview`_
+
+If installation was successful, the next step is to try the :doc:`examples`.
+   
 Detailed Requirements
 ---------------------
 The following software packages are the absolute minimum to run OpenModes:
@@ -29,14 +38,14 @@ The following software packages are the absolute minimum to run OpenModes:
 - python 2.7 (3.x not currently supported)
 - numpy (1.6.2 or later)
 - scipy
-- gmsh (2.8.4 or later)
+- `gmsh`_ (2.8.4 or later)
 - matplotlib (to plot the results)
 
 Strongly recommended packages
 
 - IPython (the notebook is used by many of the examples)
-- Mayavi (to export 3D plots to vtk file format, or to directly view the results)
-- ViSit or ParaView (3D plotting software to view vtk files)
+- `Mayavi`_ (to export 3D plots to vtk file format, or to directly view the results)
+- ViSit or `ParaView`_ (3D plotting software to view vtk files)
 
 Other packages which may be useful
 
@@ -50,7 +59,7 @@ For windows users, there are several choices of scientific python distribution
 which may be suitable
 
 - WinPython
-- Anaconda
+- `Anaconda`_
 - Enthought Python Distribution
 - Enthought Canopy
 
@@ -73,8 +82,11 @@ OpenModes itself can then be installed using the command
 
 ``sudo pip install OpenModes``
 
-If you don't have root access to your Linux machine, then the Anaconda distribution
-can be used, as explained above.
+If you don't have root access to your Linux machine, then use the command
+
+``pip install --user OpenModes``
+
+Alternatively, the `Anaconda`_ distribution can be used just as under Windows
 
 Mac OSX
 -------
@@ -105,7 +117,7 @@ build using the x64-4.8.1-posix-seh-rev5 compiler. Both were installed using the
 In order for setup.py to find these compilers, they must be in the path. To be safe,
 ensure that no other C or fortran compilers are in the path. Python's distutils
 must be instructed to use the mingw32 compiler (for both 32 or 64 bit), using the
---compiler flag, or by editing the file ``Lib/site-packages/distutils/distutils.cfg``
+``--compiler flag``, or by editing the file ``Lib/site-packages/distutils/distutils.cfg``
 under your python installation.
 
 In addition, for 64 bit versions, it is necessary to replace the line
@@ -126,3 +138,8 @@ In order to build the documentation, the following packages are required
 - pandoc
 
 At a system command prompt, enter the ``doc`` directory and type ``make html``.
+
+.. _Anaconda: http://docs.continuum.io/anaconda/install.html
+.. _gmsh: http://geuz.org/gmsh/
+.. _mayavi: http://docs.enthought.com/mayavi/mayavi/
+.. _Paraview: http://www.paraview.org/
