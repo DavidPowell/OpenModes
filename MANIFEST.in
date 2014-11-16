@@ -1,2 +1,3 @@
 include README.rst
 include ez_setup.py
+include .f2py_f2cmap
