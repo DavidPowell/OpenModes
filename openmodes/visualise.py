@@ -24,12 +24,72 @@ import numpy as np
 from openmodes.mesh import combine_mesh
 
 
-def compress(func, factor):
+def compress(func, factor, max_val=None):
     "Compress a function to smooth out extreme values"
-    return np.tanh(func*factor/max(abs(func)))
+    max_val = max_val or max(abs(func))
+    return np.tanh(abs(func)*factor/max_val)*np.exp(1j*np.angle(func))
 
 
-def plot_parts(parts, currents=None, figsize=(10, 4), view_angles = (40, 90)):
+def preprocess(parts, solution=None, basis_container=None,
+               compress_scalars=None, compress_separately=False):
+    """Pre-process the parts and solution before plotting, including scaling
+
+    Parameters
+    ----------
+    parts: Part
+        The tree containing all parts in the simulation
+    solution: PartsArray, optional
+        The solution to plot on each element
+    basis_container: optional
+        The container for the basis functions
+    compress_scalar : float, optional
+        If specified, this compression factor will be applied to reduce the
+        dynamic range of the scalar data
+    autoscale_vectors : boolean, optional
+        Automatically scale the vectors so that the maximum value is 1.0
+    compress_separately : boolean, optional
+        Apply the compression and scaling separately to each part, which will
+        hide the differences between parts
+    """
+
+    # if solution is not needed, just turn the parts tree into a list
+    if solution is None:
+        return list(parts.iter_single())
+
+    parts_list = []
+    charges = []
+    currents = []
+    centres = []
+    max_charge = 0.0
+
+    for part_num, part in enumerate(parts.iter_single()):
+        parts_list.append(part)
+
+        I = solution[part]
+        basis = basis_container[part]
+
+        centre, current, charge = basis.interpolate_function(I,
+                                                        return_scalar=True,
+                                                        nodes=part.nodes)
+
+        if compress_scalars:
+            if compress_separately:
+                charge = compress(charge, compress_scalars)
+            else:
+                max_charge = max(max_charge, max(abs(charge)))
+
+        charges.append(charge)
+        currents.append(current)
+        centres.append(centre)
+
+    if compress_scalars and not compress_separately:
+        for charge in charges:
+            charge = compress(charge, compress_scalars, max_charge)
+
+    return parts_list, charges, currents, centres
+
+
+def plot_parts(parts, figsize=(10, 4), view_angles = (40, 90)):
     """Create a simple 3D plot to show the location of loaded parts in space
 
     Parameters
@@ -155,7 +215,7 @@ def plot_mayavi(parts, scalar_function=None, vector_function=None,
 
 def write_vtk(parts, scalar_function=None, vector_function=None,
               vector_points=None, scalar_name="scalar", vector_name="vector",
-              compress_scalars=None, filename=None, autoscale_vectors=False,
+              filename=None, autoscale_vectors=False,
               compress_separately=False):
     """Write the mesh and solution data to a VTK file
 
@@ -204,12 +264,7 @@ def write_vtk(parts, scalar_function=None, vector_function=None,
     struct = tvtk.PolyData(points=mesh.nodes, polys=polygons)
 
     if scalar_function is not None:
-        if compress_scalars and compress_separately:
-            scalar_function = [compress(s, compress_scalars)
-                               for s in scalar_function]
         scalar_function = np.hstack(scalar_function)
-        if compress_scalars and not compress_separately:
-            scalar_function = compress(scalar_function, compress_scalars)
 
         scalar_real = tvtk.FloatArray(name=scalar_name+"_real")
         scalar_real.from_array(scalar_function.real)

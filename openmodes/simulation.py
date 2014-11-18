@@ -30,7 +30,7 @@ from openmodes.integration import DunavantRule
 from openmodes.parts import SinglePart, CompositePart
 from openmodes.basis import LoopStarBasis, BasisContainer
 from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
-from openmodes.visualise import plot_mayavi, write_vtk
+from openmodes.visualise import plot_mayavi, write_vtk, preprocess
 from openmodes.model import ScalarModelLeastSq
 from openmodes.mesh import TriangularSurfaceMesh
 from openmodes.helpers import Identified
@@ -336,22 +336,9 @@ class Simulation(Identified):
             between parts.
         """
 
-        parts_list = []
-        charges = []
-        currents = []
-        centres = []
-
-        for part_num, part in enumerate(self.parts.iter_single()):
-            parts_list.append(part)
-            I = solution[part]
-            basis = self.basis_container[part]
-
-            centre, current, charge = basis.interpolate_function(I,
-                                                            return_scalar=True,
-                                                            nodes=part.nodes)
-            charges.append(charge)
-            currents.append(current)
-            centres.append(centre)
+        parts_list, charges, currents, centres = preprocess(
+                self.parts, solution, self.basis_container,
+                compress_scalars, compress_separately)
 
         output_format = output_format.lower()
         if output_format == 'mayavi':
@@ -360,7 +347,6 @@ class Simulation(Identified):
 
         elif output_format == 'vtk':
             write_vtk(parts_list, charges, currents, filename=filename,
-                      compress_scalars=compress_scalars,
                       autoscale_vectors=True,
                       compress_separately=compress_separately,
                       scalar_name="charge", vector_name="current")
