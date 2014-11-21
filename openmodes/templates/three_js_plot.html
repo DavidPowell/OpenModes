@@ -1,0 +1,32 @@
+<div id="container_{{ geometry_name }}">
+    <button class="reset_button" type="button">Reset view</button>
+    <input class="wireframe_checkbox" type="checkbox">Wireframe</input>
+    <span>Format</span>
+    <select id="format_{{ geometry_name}}">
+        <option value="real">Real</option>
+        <option value="imag">Imag</option>
+        <option value="abs">Magnitude</option>
+        <option value="phase">Phase</option>
+    </select>
+</div>
+
+<script type="text/javascript">
+
+(function(){
+    var three_container = document.getElementById("container_{{ geometry_name}}");
+
+    if (typeof openmodes_javascript_injected === 'undefined') {
+        // required javascript has not been injected, so just give an error message
+        var para = document.createElement("P");
+        var t = document.createTextNode("ERROR: Please intialise OpenModes javascript output first!");
+        para.appendChild(t);
+        three_container.appendChild(para);
+        return;
+    }
+
+    {{ geometry_javascript.getvalue() }}
+
+    openmodes_three_plot(three_container, {{ geometry_name }}, {{ canvas_width }}, {{ canvas_height }},
+                        {{ initial_wireframe|lower }}, "format_{{ geometry_name}}");
+})();
+</script>

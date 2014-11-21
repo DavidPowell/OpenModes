@@ -43,7 +43,8 @@ The following software packages are the absolute minimum to run OpenModes:
 
 Strongly recommended packages
 
-- IPython (the notebook is used by many of the examples)
+- IPython (the notebook is used by many of the examples, and it allows inline 3D plots)
+- jinja2 (for 3D plots in the notebook)
 - `Mayavi`_ (to export 3D plots to vtk file format, or to directly view the results)
 - ViSit or `ParaView`_ (3D plotting software to view vtk files)
 

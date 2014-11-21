@@ -23,10 +23,13 @@ OpenModes - An eigenmode solver for open electromagnetic resonantors
 from openmodes.simulation import Simulation
 from openmodes.version import __version__
 
-
 # allow the user to find the provided geometry files
 from pkg_resources import resource_filename
 geometry_dir = resource_filename('openmodes', 'geometry')
+
+# setup jinja template location
+from jinja2 import Environment, PackageLoader
+template_env = Environment(loader=PackageLoader('openmodes', 'templates'))
 
 # Set the logging format of the root logger. By default it will not be
 # displayed. In order to display the log messages, run
