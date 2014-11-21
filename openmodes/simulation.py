@@ -314,16 +314,20 @@ class Simulation(Identified):
         return VectorParts(part, self.basis_container, dtype=np.complex128,
                            cols=cols)
 
-    def plot_solution(self, solution, output_format, filename=None,
-                      compress_scalars=None, compress_separately=False):
+    def plot_3d(self, solution=None, part=None, output_format='webgl',
+                filename=None, compress_scalars=None,
+                compress_separately=False, **kwargs):
         """Plot a solution on several parts
 
         Parameters
         ----------
-        solution : array
-            The solution to plot, typically a vector of current
-        output_format : string
-            The format of the output. Currently 'mayavi' or 'vtk'
+        solution : array, optional
+            The solution to plot, typically a vector of current. If not
+            specified, then only the geometry will be plotted
+        part : Part, optional
+            If specified, then only a particular part will be plotted
+        output_format : string, optional
+            The format of the output. Currently 'mayavi', 'vtk' or 'webgl'
         filename : string, optional
             If saving to a file, the name of the file to save to
         compress_scalars : real, optional
@@ -336,9 +340,16 @@ class Simulation(Identified):
             between parts.
         """
 
-        parts_list, charges, currents, centres = preprocess(
-                self.parts, solution, self.basis_container,
-                compress_scalars, compress_separately)
+        part = part or self.parts
+
+        if solution is None:
+            # don't plot a solution, just plot a part
+            parts_list = list(part.iter_single())
+            charges = currents = centres = None
+        else:
+            parts_list, charges, currents, centres = preprocess(
+                    part, solution, self.basis_container,
+                    compress_scalars, compress_separately)
 
         output_format = output_format.lower()
         if output_format == 'mayavi':
@@ -350,6 +361,11 @@ class Simulation(Identified):
                       autoscale_vectors=True,
                       compress_separately=compress_separately,
                       scalar_name="charge", vector_name="current")
+
+        elif output_format == 'webgl':
+            from openmodes.ipython import plot_3d
+            return plot_3d(parts_list, charges, currents, centres,
+                           **kwargs)
         else:
             raise ValueError("Unknown output format")
 
