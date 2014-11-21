@@ -52,10 +52,6 @@ def preprocess(parts, solution=None, basis_container=None,
         hide the differences between parts
     """
 
-    # if solution is not needed, just turn the parts tree into a list
-    if solution is None:
-        return list(parts.iter_single())
-
     parts_list = []
     charges = []
     currents = []
@@ -83,8 +79,8 @@ def preprocess(parts, solution=None, basis_container=None,
         centres.append(centre)
 
     if compress_scalars and not compress_separately:
-        for charge in charges:
-            charge = compress(charge, compress_scalars, max_charge)
+        for charge_count, charge in enumerate(charges):
+            charges[charge_count] = compress(charge, compress_scalars, max_charge)
 
     return parts_list, charges, currents, centres
 
