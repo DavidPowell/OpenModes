@@ -20,7 +20,7 @@ function openmodes_three_plot(three_container, json_geo, width, height, initial_
         geometry.vertices.push(new THREE.Vector3(json_geo.nodes[i][0], json_geo.nodes[i][1], json_geo.nodes[i][2]));
     }
 
-    if ((typeof json_geo.charge === 'undefined')) {
+    if (typeof json_geo.charge === 'undefined') {
         // charge or current data missing, so only display geometry
         for (i = 0; i < json_geo.triangles.length; i++) {
             geometry.faces.push(new THREE.Face3(json_geo.triangles[i][0], json_geo.triangles[i][1], json_geo.triangles[i][2]));

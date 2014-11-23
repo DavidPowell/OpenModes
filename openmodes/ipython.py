@@ -90,7 +90,7 @@ def plot_3d(parts_list, charges, currents, centres, width=700, height=500,
 
     # combine the meshes
     # scale all nodes so that the maximum size is known
-    full_mesh.nodes = full_mesh.nodes/full_mesh.max_distance*100
+    full_mesh.nodes = full_mesh.nodes/full_mesh.fast_size()*100
 
     # generate a javascript representation of the object
     geometry_name = "geometry_"+str(uuid.uuid4()).replace('-', '')

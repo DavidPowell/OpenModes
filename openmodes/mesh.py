@@ -196,6 +196,11 @@ class TriangularSurfaceMesh(Identified):
         return np.sqrt(np.sum((self.nodes[:, None, :] -
                        self.nodes[None, :, :])**2, axis=2)).max()
 
+    def fast_size(self):
+        """A fast estimate of the size of the mesh, based on the maximum
+        distance along any of the three cartesian axes"""
+        return max(np.max(self.nodes, axis=0)-np.min(self.nodes, axis=0))
+
     @property
     def polygon_areas(self):
         """The area of each triangle in the mesh"""
