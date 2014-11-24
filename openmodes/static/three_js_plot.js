@@ -74,27 +74,34 @@ function openmodes_three_plot(three_container, json_geo, width, height, initial_
         document.getElementById(format_select_id).addEventListener("change", function() { setFormat(this.value); });
     }
     geometry.computeFaceNormals();
-    
-    // move the geometry to center at (0, 0, 0)
-    geometry.computeBoundingSphere();
-    var center = geometry.boundingSphere.center;
-    var mat = new THREE.Matrix4();
-    mat.makeTranslation(-center.x, -center.y, -center.z);
-    geometry.applyMatrix(mat);
+
+    // find centre of geometry, point camera and controls at this
     geometry.computeBoundingSphere()
+    var center = geometry.boundingSphere.center;
 
     var mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
     var camera_fov = 20; // camera field of view, in degrees
     var camera = new THREE.PerspectiveCamera(camera_fov, canvas.width / canvas.height, 0.1, 10000);
-    camera.position.z = 400;
+    camera.position.copy(center)
+    camera.position.z += 400;
+    camera.lookAt(center);   
 
     var controls = new THREE.OrbitControls( camera, canvas );
     controls.noKeys = true;
-
+    controls.target0.copy(center);
+    controls.reset();
+    
+    var axisHelper = new THREE.AxisHelper( 20 );
+    scene.add( axisHelper );
+    
     // create a series of equally spaced points for lighting sources
     tet = new THREE.TetrahedronGeometry(100);
+    var mat = new THREE.Matrix4();
+    mat.makeTranslation(center.x, center.y, center.z);
+    tet.applyMatrix(mat);
+
     var pointLight, pointLightHelper;
     for (i = 0; i < tet.vertices.length; i++) {
         pointLight = new THREE.PointLight(0xffffff, 0.5, 700);
