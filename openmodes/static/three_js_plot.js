@@ -124,18 +124,13 @@ function openmodes_three_plot(three_container, json_geo, width, height, initial_
     wf.addEventListener("change", function () { material.wireframe = wf.checked; });
 
     function animate() {
-        var success = true;
-        try {
-            renderer.render(scene, camera);
-            controls.update();
-        } catch(err) {
-            console.log(err);
-            console.log("Stopping animation loop")
-            success = false;
+        if ( camera instanceof THREE.Camera === false ) {
+            console.log("Animation loop failed: stopping");
+            return;
         }
-        if (success) {
-            requestAnimationFrame(animate);
-        }
+        renderer.render(scene, camera);
+        controls.update();
+        requestAnimationFrame(animate);
     }
     animate();
 }
