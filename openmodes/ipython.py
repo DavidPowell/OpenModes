@@ -49,7 +49,8 @@ def init_3d():
     """)
 
     three_js_libraries = ("three.min.js", "OrbitControls.js",
-                          "Lut.js", "Detector.js")
+                          "Lut.js", "Detector.js", "CanvasRenderer.js",
+                          "Projector.js")
 
     # Include required parts of three.js inline
     for library in three_js_libraries:
