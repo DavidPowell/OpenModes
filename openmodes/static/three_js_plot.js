@@ -124,7 +124,7 @@ function openmodes_three_plot(three_container, json_geo, width, height, initial_
     wf.addEventListener("change", function () { material.wireframe = wf.checked; });
 
     function animate() {
-        if ( camera instanceof THREE.Camera === false ) {
+        if ( camera instanceof THREE.Camera === false || ! document.body.contains(three_container)) {
             console.log("Animation loop failed: stopping");
             return;
         }
