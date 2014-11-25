@@ -72,10 +72,20 @@ def plot_3d(parts_list, charges, currents, centres, width=700, height=500,
 
     Parameters
     ----------
-    matrices : list of list of EfieImpedanceMatrix
-        The impedance matrices to be combined
-    s : complex
-        The frequency at which the impedance was evaluated
+    parts_list : list of Part
+        All the parts to plot
+    charges : list of ndarray
+        The charge distribution on each part
+    currents : list of ndarray
+        The current distribution on each part
+    centres : list of ndarray
+        The centre of each triangle, where the current vector is located
+    width : integer, optional
+        The width of the plot
+    height : integer, optional
+        The height of the plot
+    wireframe : bool, optional
+        Whether the plot should initially show a wireframe view        
 
     Returns
     -------
@@ -102,7 +112,7 @@ def plot_3d(parts_list, charges, currents, centres, width=700, height=500,
 
     # include the charge information if it is present
     if charges is not None:
-        charges = np.array(charges).flatten()
+        charges = np.hstack(charges)
         geometry_tree['charge'] = {'real': charges.real.tolist(),
                                    'imag': charges.imag.tolist(),
                                    'abs':  abs(charges).tolist(),
