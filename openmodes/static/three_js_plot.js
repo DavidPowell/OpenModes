@@ -1,6 +1,6 @@
-function openmodes_three_plot(three_container, json_geo, width, height, initial_wireframe, format_select_id) {
+function openmodes_three_plot(three_container, json_geo, width, height, initial_wireframe, format_select_id, skip_webgl) {
     var renderer;
-    if ( Detector.webgl )
+    if ( !skip_webgl && Detector.webgl )
         renderer = new THREE.WebGLRenderer( {antialias:true} );
     else
         renderer = new THREE.CanvasRenderer(); 

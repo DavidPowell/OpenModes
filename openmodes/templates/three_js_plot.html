@@ -27,6 +27,6 @@
     {{ geometry_javascript.getvalue() }}
 
     openmodes_three_plot(three_container, {{ geometry_name }}, {{ canvas_width }}, {{ canvas_height }},
-                        {{ initial_wireframe|lower }}, "format_{{ geometry_name}}");
+                        {{ initial_wireframe|lower }}, "format_{{ geometry_name}}", {{ skip_webgl|lower }} );
 })();
 </script>

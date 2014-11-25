@@ -68,7 +68,7 @@ def init_3d():
 
 
 def plot_3d(parts_list, charges, currents, centres, width=700, height=500,
-            wireframe=False):
+            wireframe=False, skip_webgl=False):
     """Create a 3D plot in the IPython notebook
 
     Parameters
@@ -86,7 +86,10 @@ def plot_3d(parts_list, charges, currents, centres, width=700, height=500,
     height : integer, optional
         The height of the plot
     wireframe : bool, optional
-        Whether the plot should initially show a wireframe view        
+        Whether the plot should initially show a wireframe view
+    skip_webgl : bool, optional
+        Do not attempt to use webgl rendering, always use slower canvas
+        rendering
 
     Returns
     -------
@@ -128,6 +131,7 @@ def plot_3d(parts_list, charges, currents, centres, width=700, height=500,
                                          'geometry_name': geometry_name,
                                          'canvas_width': width,
                                          'canvas_height': height,
-                                         'initial_wireframe': wireframe})
+                                         'initial_wireframe': wireframe,
+                                         'skip_webgl': skip_webgl})
 
     return HTML(html_generated)
