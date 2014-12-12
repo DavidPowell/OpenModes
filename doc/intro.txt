@@ -13,4 +13,4 @@ The method used to find the modes is described in a `paper
 Source and binary packages are hosted at available `here <http://pypi.python.org/pypi/OpenModes>`_,
 and the source code can be found on `GitHub <https://github.com/DavidPowell/OpenModes>`_.
 
-To get started, follow the :doc:`installation instructions <install>`, then try out the :doc:`examples <examples>`.
+To get started, follow the :doc:`getting started instructions <gettingstarted>`.

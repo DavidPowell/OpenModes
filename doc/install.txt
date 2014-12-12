@@ -22,14 +22,21 @@ Quick Install Instructions
 
    ``pip install openmodes``.
 
-4. To view 3D plots of currents (including in the examples), install the python package
+4. (Optional) To view 3D plots of currents in an external program, install the python package
    `mayavi`_ via 
 
    ``conda install mayavi``.
 
    This will enable you to write VTK files, which can be viewed with programs such as `Paraview`_
 
-If installation was successful, the next step is to try the :doc:`examples`.
+If installation was successful, the next step is to try the examples, see the :doc:`getting started <gettingstarted>` section.
+
+Upgrading to a Newer Version
+----------------------------
+
+You can upgrade your installed version from the command-line, using the command
+
+    ``pip install --upgrade --no-deps openmodes``
    
 Detailed Requirements
 ---------------------
