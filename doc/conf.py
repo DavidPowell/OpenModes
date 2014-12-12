@@ -19,8 +19,6 @@ import os
 import subprocess
 import shutil
 
-subprocess.call(["sphinx-apidoc", "-o", ".", "-s", "txt", "-f", join("..", "openmodes")])
-
 # finished generated, so go back up a level
 os.chdir("..")
 
@@ -41,9 +39,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
-    'numpydoc'
 ]
 
 # Add any paths that contain templates here, relative to this directory.

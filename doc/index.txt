@@ -17,7 +17,6 @@ Contents:
    install
    examples
    using 
-   modules
    thanks
    
 
