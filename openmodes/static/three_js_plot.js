@@ -1,4 +1,5 @@
-function openmodes_three_plot(three_container, json_geo, width, height, initial_wireframe, format_select_id, skip_webgl) {
+function openmodes_three_plot(three_container, json_geo, width, height, initial_wireframe,
+                              format_select, arrow_length, skip_webgl) {
     var renderer;
     if ( !skip_webgl && Detector.webgl )
         renderer = new THREE.WebGLRenderer( {antialias:true} );
@@ -9,6 +10,8 @@ function openmodes_three_plot(three_container, json_geo, width, height, initial_
 
     var canvas = renderer.domElement;
     three_container.appendChild(canvas);
+    canvas.style.cursor = "move";
+    
     var scene = new THREE.Scene(),  
         material = new THREE.MeshLambertMaterial( { color: 0xffffff, side: THREE.DoubleSide,
                                                     wireframe: initial_wireframe, vertexColors: THREE.FaceColors  } ),
@@ -27,7 +30,8 @@ function openmodes_three_plot(three_container, json_geo, width, height, initial_
         }
 
         // hide controls for format of data
-        document.getElementById(format_select_id).style.visibility="hidden";
+        format_select.parentNode.style.visibility="hidden";
+        arrow_length.parentNode.style.visibility="hidden";
 
     } else {
         lut = {};
@@ -65,13 +69,58 @@ function openmodes_three_plot(three_container, json_geo, width, height, initial_
             }
         }
 
-        // the function to set the format
-        var setFormat = function(format) {
+        
+            
+        
+        // the current information is present
+        if (typeof json_geo.current !== 'undefined') {
+            // current data should be added
+
+            // these variables should only be created if current exists - particularly meshes
+            var arrowGeometry, //arrowMesh,
+                unitY = new THREE.Vector3(0, 1, 0),
+                arrowMeshes = new Array(json_geo.current.real.length), arrowDir,
+                currentMax = 0;
+            var arrowMaterial = new THREE.MeshLambertMaterial( { color: 0xffffff } );
+
+            for (i = 0; i < json_geo.current.real.length; i++) {
+                arrowGeometry = new THREE.CylinderGeometry(0, 1, 1);
+                arrowMeshes[i] = new THREE.Mesh( arrowGeometry, arrowMaterial );
+                arrowMeshes[i].position.set(json_geo.centres[i][0], json_geo.centres[i][1], json_geo.centres[i][2]);
+                arrowDir = new THREE.Vector3(json_geo.current.real[i][1], json_geo.current.real[i][2], json_geo.current.real[i][3]);
+                arrowMeshes[i].quaternion.setFromUnitVectors(unitY, arrowDir);
+                scene.add( arrowMeshes[i] );
+                
+                // find the maximum current value
+                currentMax = Math.max(currentMax, Math.sqrt(json_geo.current.real[i][0]*json_geo.current.real[i][0] + json_geo.current.real[i][1]*json_geo.current.real[i][1]));
+            }
+        }
+        
+        // the function to set the format of the charge and current display
+        var updateFormat = function() {
+            format = format_select.value;
             geometry.faces = faces[format];
             geometry.colorsNeedUpdate = true;
+            var length_i, arrowLengthScale = arrow_length.value/currentMax, arrowWidthScale = arrowLengthScale*0.25;
+            
+            var current_function = json_geo.current[format];
+            if (typeof current_function === 'undefined') {
+                for (i = 0; i < json_geo.current.real.length; i++)
+                    arrowMeshes[i].visible = false;
+            } else {
+                for (i = 0; i < json_geo.current.real.length; i++) {
+                    length_i = current_function[i][0];
+                    arrowDir = new THREE.Vector3(current_function[i][1], current_function[i][2], current_function[i][3]);
+                    arrowMeshes[i].quaternion.setFromUnitVectors(unitY, arrowDir);
+                    arrowMeshes[i].useQuaternion = true;
+                    arrowMeshes[i].scale.set(length_i*arrowWidthScale, length_i*arrowLengthScale, length_i*arrowWidthScale);
+                    arrowMeshes[i].visible = true;
+                 }
+            }
         };
-        setFormat("real");   
-        document.getElementById(format_select_id).addEventListener("change", function() { setFormat(this.value); });
+        updateFormat();
+        format_select.addEventListener("change", updateFormat);
+        arrow_length.addEventListener("change", updateFormat);
     }
     geometry.computeFaceNormals();
 

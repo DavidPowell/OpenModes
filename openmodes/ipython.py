@@ -104,7 +104,8 @@ def plot_3d(parts_list, charges, currents, centres, width=700, height=500,
 
     # combine the meshes
     # scale all nodes so that the maximum size is known
-    full_mesh.nodes = full_mesh.nodes/full_mesh.fast_size()*100
+    mesh_scale = 100/full_mesh.fast_size()
+    full_mesh.nodes = full_mesh.nodes*mesh_scale
 
     # generate a javascript representation of the object
     geometry_name = "geometry_"+str(uuid.uuid4()).replace('-', '')
@@ -121,6 +122,21 @@ def plot_3d(parts_list, charges, currents, centres, width=700, height=500,
                                    'imag': charges.imag.tolist(),
                                    'abs':  abs(charges).tolist(),
                                    'phase': np.angle(charges, deg=True).tolist()}
+
+    # Include the current information if it is present. Vectors will be of
+    # the form (length, x, y, z), where the 3 cartesian components are scaled
+    # to be a normal vector
+    if currents is not None:
+        currents = np.vstack(currents)
+        lengths_real = np.sqrt(np.sum(currents.real**2, axis=1))
+        lengths_imag = np.sqrt(np.sum(currents.imag**2, axis=1))
+        currents.real /= lengths_real[:, None]
+        currents.imag /= lengths_imag[:, None]
+
+        current_real = np.hstack((lengths_real[:, None], currents.real)).tolist()
+        current_imag = np.hstack((lengths_imag[:, None], currents.imag)).tolist()
+        geometry_tree['current'] = {'real': current_real, 'imag': current_imag}
+        geometry_tree['centres'] = (np.vstack(centres)*mesh_scale).tolist()
 
     json.dump(geometry_tree, geometry_javascript)
 

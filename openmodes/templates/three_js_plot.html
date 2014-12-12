@@ -1,13 +1,17 @@
-<div id="container_{{ geometry_name }}">
-    <button class="reset_button" type="button">Reset view</button>
-    <input class="wireframe_checkbox" type="checkbox">Wireframe</input>
-    <span>Format</span>
-    <select id="format_{{ geometry_name}}">
-        <option value="real">Real</option>
-        <option value="imag">Imag</option>
-        <option value="abs">Magnitude</option>
-        <option value="phase">Phase</option>
-    </select>
+<div id="container_{{ geometry_name }}" style="width:{{ canvas_width }}px">
+    <button class="reset_button" type="button" style="margin:10px">Reset view</button>
+    <input class="wireframe_checkbox" type="checkbox" style="margin:10px">Wireframe</input>
+    <span style="margin:10px">Format
+        <select id="format_{{ geometry_name}}" style="width:100px">
+            <option value="real">Real</option>
+            <option value="imag">Imag</option>
+            <option value="abs">Magnitude</option>
+            <option value="phase">Phase</option>
+        </select>
+    </span>
+    <span style="margin:10px;display:inline-block">Arrow Length
+        <input id="arrow_length_{{geometry_name}}" type="range" min="5" max="500" value="100"/>
+    </span>
 </div>
 
 <script type="text/javascript">
@@ -27,6 +31,7 @@
     {{ geometry_javascript.getvalue() }}
 
     openmodes_three_plot(three_container, {{ geometry_name }}, {{ canvas_width }}, {{ canvas_height }},
-                        {{ initial_wireframe|lower }}, "format_{{ geometry_name}}", {{ skip_webgl|lower }} );
+                        {{ initial_wireframe|lower }}, document.getElementById("format_{{ geometry_name}}"), 
+                        document.getElementById("arrow_length_{{geometry_name}}"), {{ skip_webgl|lower }} );
 })();
 </script>
