@@ -1,6 +1,15 @@
 What's new in OpenModes
 =======================
 
+**Release 0.0.4**
+
+December, 2014
+
+- New *3D Plotting in the web browser*, showing geometry and optionally charge
+  and current distribution. There is an example file showing how this works
+- Fixed a further bug with installing from source package.
+- The examples have been moved to their own repository at https://github.com/DavidPowell/openmodes-examples.
+
 **Release 0.0.3**
 
 November, 2014

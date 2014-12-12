@@ -32,7 +32,7 @@ Based on public domain code from Douglas Creager
 from subprocess import Popen, PIPE
 
 # THIS MUST BE UPDATED MANUALLY FOR NON-GIT
-RELEASE_VERSION = "0.0.3"
+RELEASE_VERSION = "0.0.4"
 
 
 def version_git():
