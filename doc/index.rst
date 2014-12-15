@@ -36,6 +36,7 @@ The :doc:`examples` give an overview of OpenModes' capabilities, and can be view
    whatsnew
    install
    examples
+   features
    using 
    thanks
    
