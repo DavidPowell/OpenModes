@@ -14,7 +14,7 @@ paper <http://dx.doi.org/10.1103/PhysRevB.90.075108>`_, also available as
 an `arXiv preprint <http://arxiv.org/abs/1405.3759>`_.
 
 Requires the python packages numpy, scipy and matplotlib, and the free meshing
-program gmsh. See the `documentation <http://www.pythonhosted.org/OpenModes/>`_ 
+program gmsh. See the `documentation <http://openmodes.readthedocs.org/en/latest/>`_ 
 for full installation instructions and requirements.
 
 The source is available on `GitHub <https://github.com/DavidPowell/OpenModes>`_,
