@@ -3,7 +3,7 @@ Getting started
 
 1. Install OpenModes as per the :doc:`installation instructions <install>`.
 
-2. Download and run the examples, see the instructions online_.
+2. Experiment with the :doc:`examples`.
 
 3. Learn about python.
 
@@ -13,6 +13,5 @@ Getting started
    
 4. To create geometries of your own, learn to use the program `gmsh`_.
 
-.. _online: https://github.com/DavidPowell/openmodes-examples
 .. _tutorial: https://scipy-lectures.github.io/
 .. _gmsh: http://geuz.org/gmsh/

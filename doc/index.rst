@@ -27,6 +27,7 @@ on my `web page <http://wwwrsphysse.anu.edu.au/nonlinear/people/DavidPowell.shtm
 
 To begin using the software, follow the :doc:`getting started instructions <gettingstarted>`.
 
+The :doc:`examples` give an overview of OpenModes' capabilities, and can be viewed online.
 
 .. toctree::
    :hidden:
@@ -34,6 +35,7 @@ To begin using the software, follow the :doc:`getting started instructions <gett
    gettingstarted
    whatsnew
    install
+   examples
    using 
    thanks
    
