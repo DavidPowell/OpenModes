@@ -131,9 +131,10 @@ div.header {
 div.header .headertitle {
   font-family: {{ theme_headerfont }};
   font-weight: bold;
-  font-size: 80%;
-  /*letter-spacing: .08em;*/
-  /*margin-bottom: .2em;*/
+  font-size: 210%;
+  letter-spacing: .08em;
+  margin-bottom: .4em;
+  margin-top: .4em;
 }
 
 div.header .headertitle a {
