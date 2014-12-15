@@ -64,9 +64,10 @@ copyright = u'2013, David Powell'
 #
 # The short X.Y version.
 
-import openmodes
+# run the script to find the version
+execfile(osp.join("openmodes", "version.py"))
 
-version = openmodes.__version__
+version = __version__
 # The full version, including alpha/beta/rc tags.
 release = version
 
