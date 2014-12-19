@@ -9,8 +9,7 @@ Web Preview
 -----------
 
 You can view *non-interactive* output without installing anything
-`here <http://nbviewer.ipython.org/github/DavidPowell/openmodes-examples/tree/master/>`_.
-From this link, click on any of the examples (``*.ipynb``) and they will open as a web page.
+`here <http://nbviewer.ipython.org/github/DavidPowell/openmodes-examples/tree/master/Index.ipynb>`_.
 
 Running Examples
 ----------------
