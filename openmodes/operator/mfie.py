@@ -20,12 +20,45 @@
 
 import numpy as np
 
-from openmodes.constants import epsilon_0, mu_0, pi
+from openmodes.constants import epsilon_0, mu_0, pi, c
 import openmodes.core
 from openmodes.basis import LinearTriangleBasis
 from openmodes.impedance import ImpedanceMatrix
 
 from openmodes.operator.operator import Operator, FreeSpaceGreensFunction
+
+
+#def Z_pair(nodes_o, nodes_s, xi_eta, weights, normal, jk_0):
+#    num_points = len(weights)
+##    for node_o in xrange(3):
+##        for node_s in xrange(3):
+#    for point_o, (xi_o, eta_o) in enumerate(xi_eta):
+#        zeta_o = 1 - xi_o - eta_o
+#        r_o = xi_o*nodes_o[:, 0] + eta_o*nodes_o[:, 1] + zeta_o*nodes_o[:, 2]
+#        for point_s, (xi_s, eta_s) in enumerate(xi_eta):
+#            zeta_s = 1 - xi_s - eta_s
+#            r_s = xi_s*nodes_s[:, 0] + eta_s*nodes_s[:, 1] + zeta_s*nodes_s[:, 2]
+#            
+#            r = r_o - r_s
+#            r_mag = np.sqrt(sum(r**2))
+#            np.exp(-jk_0*r_mag)/r_mag**3*(1+jk_0*r_mag)
+#                    
+#
+#def z_mfie_faces_self(nodes, triangles, s, xi_eta, weights, normals):
+#
+#    num_triangles = len(triangles)
+#
+#    Z_faces = np.empty((num_triangles, 3, num_triangles, 3), np.complex128)
+#    jk_0 = s/c
+#    
+#    for n in xrange(num_triangles):
+#        for m in xrange(num_triangles):
+#            if m == n:
+#                Z_faces[m, :, n, :] = 0.0
+#            else:
+#                Z_faces[m, :, n, :] = Z_pair(nodes[triangles[m]], nodes[triangles[n]],
+#                                         xi_eta, weights, normals[m], jk_0)
+#    return Z_faces
 
 
 def impedance_rwg_mfie_free_space(s, integration_rule, basis_o, nodes_o,
@@ -59,9 +92,10 @@ def impedance_rwg_mfie_free_space(s, integration_rule, basis_o, nodes_o,
 
     Z = transform_o.dot(transform_s.dot(Z_faces.reshape(num_faces_o*3,
                                                         num_faces_s*3,
-                                                        order='C').T).T)/4/pi
-    if self_impedance:
-        Z += 0.5*basis_o.gram_matrix
+                                                        order='C').T).T)#/4/pi
+    # Gram matrix is wrong, it is a question of same triangle, not the same basis function!                                                        
+    #if self_impedance:
+    #    Z = Z/(4*pi) + 0.5*basis_o.gram_matrix
 
     return Z
 
@@ -73,7 +107,7 @@ class MfieOperator(Operator):
     """
     reciprocal = False
     source_field = "magnetic_field"
-    source_cross = True
+    source_cross = False #True
 
     def __init__(self, integration_rule, basis_container,
                  greens_function=FreeSpaceGreensFunction()):

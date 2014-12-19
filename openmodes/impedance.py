@@ -34,7 +34,7 @@ class ImpedanceMatrix(object):
     """Holds an impedance matrix as a single object
     """
 
-    reciprocal = True
+    reciprocal = False
 
     def __init__(self, s, Z, basis_o, basis_s, operator, part_o, part_s):
         self.s = s
