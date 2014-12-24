@@ -20,13 +20,12 @@
 
 from StringIO import StringIO
 import os.path as osp
-from IPython.display import HTML
+from IPython.display import HTML, display
 import numpy as np
 import uuid
 import json
 
 from openmodes.mesh import combine_mesh
-from openmodes.visualise import preprocess
 from openmodes import template_env
 
 from pkg_resources import resource_filename
@@ -64,7 +63,7 @@ def init_3d():
     library_javascript.write(
                 "/* End of javascript injected by OpenModes */\n</script>\n")
 
-    return HTML(library_javascript.getvalue())
+    display(HTML(library_javascript.getvalue()))
 
 
 def plot_3d(parts_list, charges, currents, centres, width=700, height=500,
@@ -150,4 +149,4 @@ def plot_3d(parts_list, charges, currents, centres, width=700, height=500,
                                          'initial_wireframe': wireframe,
                                          'skip_webgl': skip_webgl})
 
-    return HTML(html_generated)
+    display(HTML(html_generated))
