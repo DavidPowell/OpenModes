@@ -126,8 +126,8 @@ class VectorParts(np.ndarray):
 
         # set default values for the custom attributes
         self.basis_container = obj.basis_container
-        self.parent_part = getattr(self, 'parent_part', None)
-        self.index_arrays = getattr(self, 'index_arrays', {})
+        self.parent_part = getattr(obj, 'parent_part', None)
+        self.index_arrays = getattr(obj, 'index_arrays', {})
 
     def __setstate__(self, state):
         """Allow additional attributes of this array type to be unpickled
