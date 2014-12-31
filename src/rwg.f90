@@ -793,12 +793,12 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
             g = (1.0 + jk_0*R)*exp(-jk_0*R)/R**3
      
             ! The n x RWG form
-            !forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
-            !    dot_product(rho_o(:, uu), cross_product(normal, cross_product(r_o - r_s, rho_s(:, vv)))))
+            forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
+                dot_product(rho_o(:, uu), cross_product(normal, cross_product(r_o - r_s, rho_s(:, vv)))))
 
             ! The tang RWG form
-            forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
-                dot_product(rho_o(:, uu), cross_product(r_o - r_s, rho_s(:, vv))))
+            !forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
+            !    dot_product(rho_o(:, uu), cross_product(r_o - r_s, rho_s(:, vv))))
 
         end do
     end do
@@ -867,43 +867,17 @@ subroutine face_integral_self_MFIE(n, xi_eta, weights, nodes_in, normal, I_Z)
         forall (uu=1:3) rho(:, uu) = r - nodes(:, uu)
 
         ! The n x RWG form
-        !forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w*( &
-        !    dot_product(rho(:, uu), rho(:, vv)))
+        forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w*( &
+            dot_product(rho(:, uu), rho(:, vv)))
 
         ! The tang RWG form
-        forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w*( &
-            dot_product(rho(:, uu), cross_product(normal, rho(:, vv))))
+        !forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) - w*( &
+        !    dot_product(rho(:, uu), cross_product(normal, rho(:, vv))))
     end do
 
-    I_Z = -I_Z_int/2
+    I_Z = I_Z_int/2 !(2*triangle_area)
 
 end subroutine face_integral_self_MFIE
-
-
-subroutine inner_product_triangle_face(nodes, res)
-    ! Inner product of linear basis functions sharing the same triangle
-    use core_for
-    ! need to divide by 2A??
-
-    real(WP), intent(in), dimension(0:2, 0:2) :: nodes
-    real(WP), intent(out), dimension(0:2, 0:2) :: res
-
-    real(wp), dimension(0:2) :: n0, n1, n2
-    n0 = nodes(:, 0)
-    n1 = nodes(:, 1)
-    n2 = nodes(:, 2)
-
-    res(0, 0) = sum(n0**2/4 - n0*n1/4 - n0*n2/4 + n1**2/12 + n1*n2/12 + n2**2/12)
-    res(0, 1) = sum(-n0**2/12 + n0*n1/4 - n0*n2/12 - n1**2/12 - n1*n2/12 + n2**2/12)
-    res(0, 2) = sum(-n0**2/12 - n0*n1/12 + n0*n2/4 + n1**2/12 - n1*n2/12 - n2**2/12)
-    res(1, 0) = res(0, 1)
-    res(1, 1) = sum(n0**2/12 - n0*n1/4 + n0*n2/12 + n1**2/4 - n1*n2/4 + n2**2/12)
-    res(1, 2) = sum(n0**2/12 - n0*n1/12 - n0*n2/12 - n1**2/12 + n1*n2/4 - n2**2/12)
-    res(2, 0) = res(0, 2)
-    res(2, 1) = res(1, 2)
-    res(2, 2) = sum(n0**2/12 + n0*n1/12 - n0*n2/4 + n1**2/12 - n1*n2/4 + n2**2/4)
-
-end subroutine
 
 subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, nodes, triangle_nodes, &
                                 s, xi_eta_eval, weights, normals, Z_face)
@@ -954,7 +928,8 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, nodes, t
             nodes_q = nodes(triangle_nodes(q, :), :)
             if (p == q) then
                 ! diagonal self terms will be handled externally
-                call face_integral_self_MFIE(num_integration, xi_eta_eval, weights, nodes_q, normals(p, :), I_Z)
+                I_Z = 0.0
+                !call face_integral_self_MFIE(num_integration, xi_eta_eval, weights, nodes_q, normals(p, :), I_Z)
             else
                 ! just perform regular integration
                 ! As per RWG, triangle area must be cancelled in the integration
