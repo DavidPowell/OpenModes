@@ -803,81 +803,10 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
         end do
     end do
 
-    I_Z = I_Z_int/(4*pi)
+    I_Z = I_Z_int
 
 end subroutine face_integral_MFIE
 
-
-subroutine face_integral_self_MFIE(n, xi_eta, weights, nodes_in, normal, I_Z)
-    ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
-    ! NB: includes the 1/4A**2 prefactor
-    !
-    ! xi_eta_s/o - list of coordinate pairs in source/observer triangle
-    ! weights_s/o - the integration weights of the source and observer
-    ! nodes_s/o - the nodes of the source and observer triangles
-    ! jk_0 - *complex* free space wavenumber, j*k_0
-    ! nodes - the position of the triangle nodes
-
-    use core_for
-    use vectors
-    implicit none
-
-    integer, intent(in) :: n
-    real(WP), dimension(3, 3), intent(in) :: nodes_in
-
-    real(WP), intent(in), dimension(0:n-1, 2) :: xi_eta
-    real(WP), intent(in), dimension(0:n-1) :: weights
-
-    real(WP), intent(in), dimension(3) :: normal
-
-    complex(WP), intent(out), dimension(3, 3) :: I_Z
-
-    real(WP) :: xi, eta, zeta, w
-    real(WP), dimension(3) :: r
-    real(WP), dimension(3, 3) :: rho
-    integer :: count_o, uu, vv
-    real(WP), dimension(3, 3) :: nodes
-
-    ! explictly copying the output arrays gives some small speedup,
-    ! possibly by avoiding access to the shared target array
-    complex(WP), dimension(3, 3) :: I_Z_int
-
-    
-    ! transpose for speed
-    nodes = transpose(nodes_in)
-
-    I_Z_int = 0.0
-
-    ! The loop over the source is repeated many times. Therefore pre-calculate the source
-    ! quantities to optimise speed (gives minor benefit)
-
-    do count_o = 0,n-1
-
-        w = weights(count_o)
-
-        ! Barycentric coordinates of the observer
-        xi = xi_eta(count_o, 1)
-        eta = xi_eta(count_o, 2)
-        zeta = 1.0 - eta - xi
-
-        ! Cartesian coordinates of the observer
-        r = xi*nodes(:, 1) + eta*nodes(:, 2) + zeta*nodes(:, 3)
-
-        ! Vector rho within the observer triangle
-        forall (uu=1:3) rho(:, uu) = r - nodes(:, uu)
-
-        ! The n x RWG form
-        forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w*( &
-            dot_product(rho(:, uu), rho(:, vv)))
-
-        ! The tang RWG form
-        !forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) - w*( &
-        !    dot_product(rho(:, uu), cross_product(normal, rho(:, vv))))
-    end do
-
-    I_Z = I_Z_int/2 !(2*triangle_area)
-
-end subroutine face_integral_self_MFIE
 
 subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, nodes, triangle_nodes, &
                                 s, xi_eta_eval, weights, normals, Z_face)
