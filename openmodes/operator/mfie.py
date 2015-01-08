@@ -61,7 +61,7 @@ def impedance_rwg_mfie_free_space(s, integration_rule, basis_o, nodes_o,
                                                         num_faces_s*3,
                                                         order='C').T).T)/4/pi
     if self_impedance:
-        Z += basis_o.gram_matrix
+        Z += basis_o.gram_matrix/2
 
     return Z
 
