@@ -24,15 +24,27 @@ import numpy as np
 import openmodes.core
 
 
-class SingularSparse(object):
-    """A sparse matrix class for holding A and phi arrays with the same
-    sparsity pattern to store singular triangle impedances"""
-    def __init__(self):
+class MultiSparse(object):
+    """A sparse matrix class for holding multiple arrays with the same
+    sparsity pattern."""
+    def __init__(self, subarrays):
+        """
+        Parameters
+        ----------
+        subarrays: list of tuple (dtype, shape)
+            The data type and shape of each of the arrays stored. Shape
+            refers to the individual stored elements, and should be set to
+            None if each element is a scalar.
+        """
         self.rows = {}
+        self.subarrays = subarrays
 
     def __setitem__(self, index, item):
         """Add an item, which will be stored in a dictionary of dictionaries.
-        Item is assumed to be (A, phi)"""
+        Item is a tuple, with elements corresponding to previously passed
+        subarrays list. Each item may be a arbitrary type, inlcluding a multi
+        dimensional array
+        """
 
         row, col = index
         try:
@@ -40,40 +52,68 @@ class SingularSparse(object):
         except KeyError:
             self.rows[row] = {col: item}
 
+    def __len__(self):
+        return sum(len(row_dict) for row, row_dict in self.rows.iteritems())
+
     def iteritems(self):
         "Iterate through all items"
         for row, row_dict in self.rows.iteritems():
             for col, item in row_dict.iteritems():
                 yield ((row, col), item)
 
-    def to_csr(self):
+    def to_csr(self, order='C'):
         """Convert the matrix to compressed sparse row format, with
-        common index array and two data arrays for A and phi"""
-        A_data = []
-        phi_data = []
-        indices = []
+        common index arrays
+
+        Parameters
+        ----------
+            order: string, optional
+                The order in which to create the dense arrays, should be 'C'
+                or 'F'
+
+        Returns
+        -------
+        array1,...arrayN : ndarray
+            Each of the data arrays
+        indices : ndarray
+            The indices within each row
+        indptr : ndarray
+            The pointer to each row's indices
+        """
+
+        num_objs = len(self)
+        indices = np.empty(num_objs, dtype=np.int32, order=order)
         indptr = [0]
 
-        data_index = 0
+        data_arrays = []
 
+        for (dtype, shape) in self.subarrays:
+            if shape is None:
+                data_arrays.append(np.empty(shape=num_objs, dtype=dtype,
+                                   order=order))
+            else:
+                data_arrays.append(np.empty(shape=(num_objs,)+shape,
+                                   dtype=dtype, order=order))
+
+        data_index = 0
         num_rows = max(self.rows.keys())+1
 
         for row in xrange(num_rows):
             if row in self.rows:
                 # the row exists, so process it
                 for col, item in self.rows[row].iteritems():
-                    A_data.append(item[0])
-                    phi_data.append(item[1])
-                    indices.append(col)
+                    for sub_count, sub_item in enumerate(item):
+                        data_arrays[sub_count][data_index] = sub_item
 
-                    data_index = data_index + 1
+                    indices[data_index] = col
+                    data_index += 1
+
             # regardless of whether the row exists, update the index pointer
             indptr.append(data_index)
 
-        return (np.array(phi_data, dtype=np.float64, order="F"),
-                np.array(A_data, dtype=np.float64, order="F"),
-                np.array(indices, dtype=np.int32, order="F"),
-                np.array(indptr, dtype=np.int32, order="F"))
+        # now put all subarrays and indices into a single dictionary
+        return (data_arrays+[indices,
+                             np.array(indptr, dtype=np.int32, order=order)])
 
 cached_singular_terms = {}
 
@@ -106,7 +146,8 @@ def singular_impedance_rwg_efie_homogeneous(basis, integration_rule):
         nodes = basis.mesh.nodes
         num_faces = len(polygons)
 
-        singular_terms = SingularSparse()
+        singular_terms = MultiSparse(((np.float64, None),     # phi
+                                      (np.float64, (3, 3))))  # A
         # find the neighbouring triangles (including self terms) to integrate
         # singular part
         for p in xrange(0, num_faces):  # observer
@@ -123,7 +164,7 @@ def singular_impedance_rwg_efie_homogeneous(basis, integration_rule):
                     # calculate the self term using the exact formula
                     res = openmodes.core.arcioni_singular(nodes_p,)
                     assert(np.all(np.isfinite(res[0])) and np.all(np.isfinite(res[1])))
-                    singular_terms[p, p] = res
+                    singular_terms[p, p] = (res[1], res[0])
                 else:
                     # at least one node is shared
                     # calculate neighbour integrals semi-numerically
@@ -132,7 +173,7 @@ def singular_impedance_rwg_efie_homogeneous(basis, integration_rule):
                                         integration_rule.xi_eta,
                                         integration_rule.weights, nodes_p)
                     assert(np.all(np.isfinite(res[0])) and np.all(np.isfinite(res[1])))
-                    singular_terms[p, q] = res
+                    singular_terms[p, q] = (res[1], res[0])
 
-        cached_singular_terms[unique_id] = singular_terms.to_csr()
+        cached_singular_terms[unique_id] = singular_terms.to_csr(order='F')
         return cached_singular_terms[unique_id]
