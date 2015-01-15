@@ -617,10 +617,9 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
     I_A = 0.0
     I_phi = 0.0
 
-    n_hat = cross_product(nodes_S(1, :) - nodes_s(2, :), nodes_s(1, :)-nodes_s(3,:))
+    n_hat = cross_product(nodes_s(2, :) - nodes_s(1, :), nodes_s(3, :)-nodes_s(1,:))
     area_s_2 = mag(n_hat)
     n_hat = n_hat/area_s_2
-    h = dot_product(r_o-p1, n_hat) ! currently assumed zero in some formulas
 
     do count_o = 0,n_o-1
 
@@ -633,6 +632,9 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
 
         ! Cartesian coordinates of the observer
         r_o = xi_o*nodes_o(1, :) + eta_o*nodes_o(2, :) + zeta_o*nodes_o(3, :)
+
+        ! Out of plane coordinate of observer
+        h = abs(dot_product(r_o-nodes_s(1, :), n_hat))
 
         ! Confusing Notation - this is projection of observer onto the plane of the source triangle
         rho_o = r_o-n_hat*dot_product(r_o, n_hat)
@@ -665,7 +667,7 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
 
             ! apply recursion formula for the line
             ! using the expression for R_0
-            I_L_1(count_s) = 0.5*((R_p**2 - s_p**2)*I_L_m1(count_s) + s_p*R_p - s_m*R_m)
+            I_L_1(count_s) = 0.5*((t(count_s)**2 + h**2)*I_L_m1(count_s) + s_p*R_p - s_m*R_m)
 
             !I_L_3(count_s) = 3.0/4.0*(R_p**2 - s_p**2)*I_L_m1(count_s) + 1/4.0*(s_p*R_p - s_m*R_m)
         end do
