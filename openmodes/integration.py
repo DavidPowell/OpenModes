@@ -61,6 +61,10 @@ class DunavantRule(Identified):
     def __len__(self):
         return self.num_points
 
+    def __repr__(self):
+        return "%s.%s(%d)" % (type(self).__module__, type(self).__name__,
+                              self.order)
+
 
 # This makes a useful default e.g. for interpolation
 triangle_centres = DunavantRule(1)
