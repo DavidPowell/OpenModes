@@ -25,6 +25,7 @@ import setuptools
 from distutils.util import get_platform
 import os.path as osp
 
+
 try:
     import numpy
 except ImportError:
@@ -81,6 +82,16 @@ core = Extension(name='openmodes.core',
 dunavant = Extension(name='openmodes.dunavant',
                      sources=[osp.join('src', 'dunavant.pyf'),
                               osp.join('src', 'dunavant.f90')])
+
+# Cython sources
+# TODO: ensure that cython or c/c++ source is distributed as appropriate
+from Cython.Build import cythonize
+taylor_duffy = cythonize(Extension(name='openmodes.taylor_duffy',
+                         sources=[osp.join('src', 'scuff', filename) for
+                                  filename in ["taylor_duffy.pyx",
+                                               "TaylorDuffy.cc",
+                                               "pcubature.c"]]),
+                         language="c++")
 
 from numpy.distutils.command.build_ext import build_ext
 
@@ -140,7 +151,7 @@ setup(name='OpenModes',
       package_data={'openmodes': [osp.join("geometry", "*.geo"),
                                   osp.join("external", "three.js", "*"),
                                   osp.join("templates", "*")]},
-      ext_modules=[dunavant, core],
+      ext_modules=[dunavant, core]+taylor_duffy,
       version=__version__,
       install_requires=['numpy >= 1.6.2', 'scipy', 'matplotlib', 'jinja2'],
       long_description=long_description,

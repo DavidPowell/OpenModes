@@ -22,6 +22,7 @@ quantities for both EFIE and MFIE may be calculated simultaneously"""
 
 import numpy as np
 import openmodes.core
+from openmodes.taylor_duffy import taylor_duffy
 
 
 class MultiSparse(object):
@@ -160,20 +161,25 @@ def singular_impedance_rwg_efie_homogeneous(basis, integration_rule):
 
             # find any neighbouring elements which are touching
             for q in sharing_triangles:
-                if q == p:
-                    # calculate the self term using the exact formula
-                    res = openmodes.core.arcioni_singular(nodes_p,)
-                    assert(np.all(np.isfinite(res[0])) and np.all(np.isfinite(res[1])))
-                    singular_terms[p, p] = (res[1], res[0])
+                # at least one node is shared
+                # calculate neighbour integrals semi-numerically
+                unique_nodes = np.where([n not in polygons[p] for n in polygons[q]])[0]
+                if len(unique_nodes) == 1:
+                    unique_s_1 = unique_nodes[0]
+                    unique_s_2 = -1
+                elif len(unique_nodes == 2):
+                    unique_s_1 = unique_nodes[0]
+                    unique_s_2 = unique_nodes[1]
                 else:
-                    # at least one node is shared
-                    # calculate neighbour integrals semi-numerically
-                    res = openmodes.core.face_integrals_hanninen(
-                                        nodes[polygons[q]],
-                                        integration_rule.xi_eta,
-                                        integration_rule.weights, nodes_p)
-                    assert(np.all(np.isfinite(res[0])) and np.all(np.isfinite(res[1])))
-                    singular_terms[p, q] = (res[1], res[0])
+                    unique_s_1 = -1
+                    unique_s_2 = -1
 
+                res = taylor_duffy(np.array(nodes_p, dtype=np.float64),
+                                   np.array(nodes[polygons[q]], dtype=np.float64),                                   
+                                   unique_s_1, unique_s_2, rel_tol=1e-4)
+                assert(np.all(np.isfinite(res[0])) and np.all(np.isfinite(res[1])))
+                singular_terms[p, q] = (res[1]*4*np.pi, res[0]*4*np.pi)
+
+        #raise Exception
         cached_singular_terms[unique_id] = singular_terms.to_csr(order='F')
         return cached_singular_terms[unique_id]
