@@ -53,6 +53,9 @@ class MultiSparse(object):
         except KeyError:
             self.rows[row] = {col: item}
 
+    def __getitem__(self, index):
+        return self.rows[index[0]][index[1]]
+
     def __len__(self):
         return sum(len(row_dict) for row, row_dict in self.rows.iteritems())
 
@@ -143,43 +146,30 @@ def singular_impedance_rwg_efie_homogeneous(basis, integration_rule):
 
         # Precalculate the singular integration rules for faces, which depend
         # on the observation point
-        polygons = basis.mesh.polygons
-        nodes = basis.mesh.nodes
+
+        # slightly inefficient reordering and resizing of nodes array
+        polygons = np.ascontiguousarray(basis.mesh.polygons)
+        nodes = np.ascontiguousarray(basis.mesh.nodes, dtype=np.float64)
         num_faces = len(polygons)
+
+        nodes_c = np.ascontiguousarray(nodes, dtype=np.float64)
+        polygons_c = np.ascontiguousarray(polygons)
 
         singular_terms = MultiSparse(((np.float64, None),     # phi
                                       (np.float64, (3, 3))))  # A
         # find the neighbouring triangles (including self terms) to integrate
         # singular part
         for p in xrange(0, num_faces):  # observer
-
-            nodes_p = nodes[polygons[p]]
-
             sharing_triangles = set()
             for node in polygons[p]:
                 sharing_triangles = sharing_triangles.union(sharing_nodes[node])
 
             # find any neighbouring elements which are touching
-            for q in sharing_triangles:
+            for q in sharing_triangles:  # source
                 # at least one node is shared
-                # calculate neighbour integrals semi-numerically
-                unique_nodes = np.where([n not in polygons[p] for n in polygons[q]])[0]
-                if len(unique_nodes) == 1:
-                    unique_s_1 = unique_nodes[0]
-                    unique_s_2 = -1
-                elif len(unique_nodes == 2):
-                    unique_s_1 = unique_nodes[0]
-                    unique_s_2 = unique_nodes[1]
-                else:
-                    unique_s_1 = -1
-                    unique_s_2 = -1
+                    res = taylor_duffy(nodes, polygons[p], polygons[q],
+                                       rel_tol=1e-8)
+                    singular_terms[p, q] = (res[1]*4*np.pi, res[0]*4*np.pi)
 
-                res = taylor_duffy(np.array(nodes_p, dtype=np.float64),
-                                   np.array(nodes[polygons[q]], dtype=np.float64),                                   
-                                   unique_s_1, unique_s_2, rel_tol=1e-4)
-                assert(np.all(np.isfinite(res[0])) and np.all(np.isfinite(res[1])))
-                singular_terms[p, q] = (res[1]*4*np.pi, res[0]*4*np.pi)
-
-        #raise Exception
         cached_singular_terms[unique_id] = singular_terms.to_csr(order='F')
         return cached_singular_terms[unique_id]

@@ -66,8 +66,23 @@ cdef extern from "complex" nogil:
     double imag(double complex)
 
 
-def taylor_duffy(double[:, ::1] nodes_o, double[:, ::1] nodes_s,
-                 int unique_s_1 = -1, int unique_s_2 = -1, int max_eval=1000,
+# An easy way to set the relevant vertex pointers
+cdef void set_vertex(TaylorDuffyArgStruct *Args, int which_vertex, double* address) nogil:
+    if which_vertex == 0:
+        Args.V1 = address
+    elif which_vertex == 1:
+        Args.V2 = address
+    elif which_vertex == 2:
+        Args.V3 = address
+    elif which_vertex == 3:
+        # note that V3P must be set before V2P!
+        Args.V3P = address
+    else:
+        Args.V2P = address
+
+
+def taylor_duffy(double[:, ::1] nodes, int[::1] triangle_o,
+                 int[::1] triangle_s, int max_eval=1000,
                  double rel_tol = 1e-10):
 
     cdef np.ndarray[np.float64_t, ndim=2] res_A_np = np.empty((3, 3), np.float64)
@@ -80,25 +95,56 @@ def taylor_duffy(double[:, ::1] nodes_o, double[:, ::1] nodes_s,
     cdef int count_o, count_s
     cdef double res_phi
 
+    cdef int obs_only[2], source_only[2], common[3]
+    cdef int obs_only_count = 0, source_only_count = 0, common_count = 0
+
+    cdef int v_count
+    cdef int node
+
     with nogil:
         InitTaylorDuffyArgs(&TDArgs)
 
-        # Determine how many nodes are in common
-        if unique_s_2 == -1:
-            if unique_s_1 == -1:
-                TDArgs.WhichCase = TD_COMMONTRIANGLE
+        # Determine which nodes are in common, or observer only
+        for count_o in xrange(3):
+            node = triangle_o[count_o]
+            if (node == triangle_s[0] or node == triangle_s[1] or
+                node == triangle_s[2]):
+                common[common_count] = node
+                common_count += 1
             else:
-                TDArgs.WhichCase = TD_COMMONEDGE
-                TDArgs.V3P = &nodes_s[unique_s_1, 0]
-        else:
+                obs_only[obs_only_count] = node
+                obs_only_count += 1
+
+        # Determine which nodes are in the source only
+        for count_o in xrange(3):
+            node = triangle_s[count_o]
+            if (node != triangle_o[0] and node != triangle_o[1] and
+                node != triangle_o[2]):
+                source_only[source_only_count] = node
+                source_only_count += 1
+
+        # Work out the relevant case
+        if common_count == 1:
             TDArgs.WhichCase = TD_COMMONVERTEX
-            TDArgs.V2P = &nodes_s[unique_s_1, 0]
-            TDArgs.V3P = &nodes_s[unique_s_2, 0]
+        elif common_count == 2:
+            TDArgs.WhichCase = TD_COMMONEDGE
+        else:
+            TDArgs.WhichCase = TD_COMMONTRIANGLE
+            
+        # point the V pointers to the relevant nodes
+        v_count = 0
+        for count_o in xrange(common_count):
+            set_vertex(&TDArgs, v_count, &nodes[common[count_o], 0])
+            v_count += 1
+            
+        for count_o in xrange(obs_only_count):
+            set_vertex(&TDArgs, v_count, &nodes[obs_only[count_o], 0])
+            v_count += 1
 
-        TDArgs.V1 = &nodes_o[0, 0]
-        TDArgs.V2 = &nodes_o[1, 0]
-        TDArgs.V3 = &nodes_o[2, 0]
-
+        for count_o in xrange(source_only_count):
+            set_vertex(&TDArgs, v_count, &nodes[source_only[count_o], 0])
+            v_count += 1
+            
         # specification of which integrals we want
         TDArgs.NumPKs = 1
         TDArgs.KIndex = [TD_RP]
@@ -118,9 +164,9 @@ def taylor_duffy(double[:, ::1] nodes_o, double[:, ::1] nodes_s,
         # evaluate the vector potential terms
         TDArgs.PIndex = [TD_PMCHWG1]
         for count_o in xrange(3):
-            TDArgs.Q = &nodes_o[count_o, 0]
+            TDArgs.Q = &nodes[triangle_o[count_o], 0]
             for count_s in xrange(3):
-                TDArgs.QP = &nodes_s[count_s, 0]
+                TDArgs.QP = &nodes[triangle_s[count_s], 0]
                 TaylorDuffy( &TDArgs )
                 res_A[count_o, count_s] = real(Result[0])
 
