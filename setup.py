@@ -24,6 +24,7 @@ import setuptools
 
 from distutils.util import get_platform
 import os.path as osp
+import os
 
 
 try:
@@ -83,15 +84,34 @@ dunavant = Extension(name='openmodes.dunavant',
                      sources=[osp.join('src', 'dunavant.pyf'),
                               osp.join('src', 'dunavant.f90')])
 
+# This code ensures that cython is only run if the 'OPENMODES_CYTHON'
+# environment variable is declared
+if 'OPENMODES_CYTHON' in os.environ:
+    from Cython.Build import cythonize
+else:
+    def cythonize(extensions, **_ignore):
+        "Dummy version in case cython is not installed"
+        for extension in extensions:
+            sources = []
+            for sfile in extension.sources:
+                path, ext = os.path.splitext(sfile)
+                if ext in ('.pyx', '.py'):
+                    if extension.language == 'c++':
+                        ext = '.cpp'
+                    else:
+                        ext = '.c'
+                    sfile = path + ext
+                sources.append(sfile)
+            extension.sources[:] = sources
+        return extensions
+
 # Cython sources
-# TODO: ensure that cython or c/c++ source is distributed as appropriate
-from Cython.Build import cythonize
-taylor_duffy = cythonize(Extension(name='openmodes.taylor_duffy',
+taylor_duffy = cythonize([Extension(name='openmodes.taylor_duffy',
                          sources=[osp.join('src', 'scuff', filename) for
                                   filename in ["taylor_duffy.pyx",
                                                "TaylorDuffy.cc",
-                                               "pcubature.c"]]),
-                         language="c++")
+                                               "pcubature.c"]],
+                         language="c++")])
 
 from numpy.distutils.command.build_ext import build_ext
 
