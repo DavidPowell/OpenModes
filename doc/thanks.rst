@@ -12,7 +12,7 @@ has a `Metamaterials Project <http://cudos.org.au/research/projects/functional_m
 Incorporated Software
 ---------------------
 
-* This program incorporates `Fortran code <http://people.sc.fsu.edu/~jburkardt/f_src/dunavant/dunavant.html>`_
+* This program incorporates `Fortran code <http://people.sc.fsu.edu/~jburkardt/f_src/triangle_dunavant_rule/triangle_dunavant_rule.html>`_
   for symmetric integration rules over triangles, written
   by John Burkardt, and distributed under the GNU LGPL license.
 
