@@ -159,7 +159,6 @@ subroutine source_integral_plane_wave(n_o, xi_eta_o, weights_o, nodes_o, &
     ! nodes - the position of the triangle nodes
 
     use constants
-    !use core_for
     implicit none
 
     integer, intent(in) :: n_o
@@ -327,11 +326,10 @@ subroutine Z_EFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
     complex(WP) :: jk_0 
     
     real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
-    complex(WP) :: A_part, phi_part
     complex(WP), dimension(3, 3) :: I_A
     complex(WP) :: I_phi
 
-    integer :: p, q !, q_p, q_m, p_p, p_m, ip_p, ip_m, iq_p, iq_m !, m, n
+    integer :: p, q
 
     jk_0 = s/c
 
@@ -417,7 +415,6 @@ subroutine EFIE_face_integrals(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta
 
     do count_s = 0,n_s-1
 
-        !w_s = weights_s(count_s)
         xi_s = xi_eta_s(count_s, 1)
         eta_s = xi_eta_s(count_s, 2)
 
@@ -520,7 +517,6 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
     complex(WP) :: jk_0 
     
     real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
-    !complex(WP) :: A_part, phi_part
     complex(WP), dimension(3, 3) :: I_A
     complex(WP) :: I_phi
 
@@ -593,10 +589,8 @@ subroutine V_EFIE_faces_plane_wave(num_nodes, num_triangles, num_integration, no
 
     complex(WP), intent(out), dimension(0:num_triangles-1, 0:2) :: V_faces
 
-
-    real(WP), dimension(0:2, 0:2) :: nodes_p!, nodes_q
-
-    integer :: p, p_p, p_m, ip_p, ip_m, m
+    real(WP), dimension(0:2, 0:2) :: nodes_p
+    integer :: p
 
     ! calculate all the integrations for each face pair
     !$OMP PARALLEL DO SCHEDULE(DYNAMIC) DEFAULT(SHARED) &
@@ -626,8 +620,7 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
     !
     ! Need to calculate I_S_m3, and h, giving a different formula for I_S_m1
     use constants
-    use vectors!, only : cross_product, mag
-    !use core_for
+    use vectors
     implicit none
 
     integer, intent(in) :: n_o
