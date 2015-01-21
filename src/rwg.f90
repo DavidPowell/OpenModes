@@ -649,7 +649,7 @@ end subroutine Z_EFIE_faces_mutual
 
 
 subroutine face_integrals_universal(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
-        weights_o, nodes_o_in, jk_0, func, I_A, I_phi)
+        weights_o, nodes_o_in, jk_0, singular, I_A, I_phi)
     ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
     ! NB: includes the 1/4A**2 prefactor
     !
@@ -673,17 +673,7 @@ subroutine face_integrals_universal(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, x
     real(WP), intent(in), dimension(0:n_o-1, 2) :: xi_eta_o
     real(WP), intent(in), dimension(0:n_o-1) :: weights_o
 
-    interface
-    function func(jk_0, r)
-    ! The scalar Green's function, with no extracted terms
-        use constants
-        implicit none
-        complex(WP), intent(in) :: jk_0
-        real(WP), intent(in) :: r
-        complex(WP) :: func
-    end function func
-    end interface
-
+    logical, intent(in) :: singular
 
     complex(WP), intent(out), dimension(3, 3) :: I_A
     complex(WP), intent(out) :: I_phi
@@ -749,9 +739,20 @@ subroutine face_integrals_universal(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, x
 
             r_s = r_s_table(:, count_s)
             rho_s = rho_s_table(:, :, count_s)
-              
+
             R = sqrt(sum((r_s - r_o)**2))
-            g = func(jk_0, R)
+
+            if (singular) then 
+                ! give the explicit limit for R=0 
+                ! (could use a Taylor expansion for small k_0*R?)
+                if (abs(jk_0*R) < 1e-8) then
+                    g = -jk_0
+                else
+                    g = (exp(-jk_0*R) - 1.0)/R
+                end if
+            else
+                g = exp(-jk_0*R)/R
+            end if
      
             I_phi_int = I_phi_int + g*w_s*w_o
 
@@ -827,7 +828,7 @@ subroutine Z_EFIE_faces_self_2(num_nodes, num_triangles, num_integration, num_si
             if (any(triangle_nodes(p, :) == triangle_nodes(q, :))) then
                 ! triangles have one or more common nodes, perform singularity extraction
                 call face_integrals_universal(num_integration, xi_eta_eval, weights, nodes_q, &
-                                    num_integration, xi_eta_eval, weights, nodes_p, jk_0, g_scalar_1, I_A, I_phi)
+                                    num_integration, xi_eta_eval, weights, nodes_p, jk_0, .TRUE., I_A, I_phi)
         
                 ! the singular 1/R components are pre-calculated
                 index_singular = scr_index(p, q, indices_precalc, indptr_precalc)
@@ -840,7 +841,7 @@ subroutine Z_EFIE_faces_self_2(num_nodes, num_triangles, num_integration, num_si
                 ! As per RWG, triangle area must be cancelled in the integration
                 ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
                 call face_integrals_universal(num_integration, xi_eta_eval, weights, nodes_q, &
-                                    num_integration, xi_eta_eval, weights, nodes_p, jk_0, g_scalar_0, I_A, I_phi)
+                                    num_integration, xi_eta_eval, weights, nodes_p, jk_0, .FALSE., I_A, I_phi)
             end if
 
             ! by symmetry of Galerkin procedure, transposed components are identical (but transposed node indices)
