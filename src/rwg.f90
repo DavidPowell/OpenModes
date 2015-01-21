@@ -122,10 +122,6 @@ contains
 end module core_for
 
 
-
-
-
-
 pure function scr_index(row, col, indices, indptr)
     ! Convert compressed sparse row notation into an index within an array
     ! row, col - row and column into the sparse array
@@ -151,110 +147,6 @@ pure function scr_index(row, col, indices, indptr)
 
 end function
 
-subroutine face_integrals_complex(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
-        weights_o, nodes_o_in, jk_0, I_A, I_phi)
-    ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
-    ! NB: includes the 1/4A**2 prefactor
-    !
-    ! xi_eta_s/o - list of coordinate pairs in source/observer triangle
-    ! weights_s/o - the integration weights of the source and observer
-    ! nodes_s/o - the nodes of the source and observer triangles
-    ! jk_0 - *complex* free space wavenumber, j*k_0
-    ! nodes - the position of the triangle nodes
-
-    use core_for
-    implicit none
-
-    integer, intent(in) :: n_s, n_o
-    ! f2py intent(hide) :: n_s, n_o
-    real(WP), dimension(3, 3), intent(in) :: nodes_s_in, nodes_o_in
-    complex(WP), intent(in) :: jk_0
-
-    real(WP), intent(in), dimension(0:n_s-1, 2) :: xi_eta_s
-    real(WP), intent(in), dimension(0:n_s-1) :: weights_s
-
-    real(WP), intent(in), dimension(0:n_o-1, 2) :: xi_eta_o
-    real(WP), intent(in), dimension(0:n_o-1) :: weights_o
-
-    complex(WP), intent(out), dimension(3, 3) :: I_A
-    complex(WP), intent(out) :: I_phi
-
-    real(WP) :: xi_s, eta_s, zeta_s, xi_o, eta_o, zeta_o, R, w_s, w_o
-    real(WP), dimension(3) :: r_s, r_o
-    real(WP), dimension(3, 3) :: rho_s, rho_o
-    complex(WP) :: g
-    integer :: count_s, count_o, uu!, vv !, ww
-    real(WP), dimension(3, 3) :: nodes_s, nodes_o
-
-    real(WP), dimension(3, 0:n_s-1) :: r_s_table
-    real(WP), dimension(3, 3, 0:n_s-1) :: rho_s_table
-
-    ! explictly copying the output arrays gives some small speedup,
-    ! possibly by avoiding access to the shared target array
-    complex(WP) :: I_phi_int
-    complex(WP), dimension(3, 3) :: I_A_int
-
-    
-    ! transpose for speed
-    nodes_s = transpose(nodes_s_in)
-    nodes_o = transpose(nodes_o_in)
-
-    I_A_int = 0.0
-    I_phi_int = 0.0
-
-    ! The loop over the source is repeated many times. Therefore pre-calculate the source
-    ! quantities to optimise speed (gives minor benefit)
-
-    do count_s = 0,n_s-1
-
-        !w_s = weights_s(count_s)
-        xi_s = xi_eta_s(count_s, 1)
-        eta_s = xi_eta_s(count_s, 2)
-
-        zeta_s = 1.0 - eta_s - xi_s
-        r_s = xi_s*nodes_s(:, 1) + eta_s*nodes_s(:, 2) + zeta_s*nodes_s(:, 3)
-        r_s_table(:, count_s) = r_s
-
-        forall (uu=1:3) rho_s_table(:, uu, count_s) = r_s - nodes_s(:, uu)
-
-    end do
-
-    do count_o = 0,n_o-1
-
-        w_o = weights_o(count_o)
-
-        ! Barycentric coordinates of the observer
-        xi_o = xi_eta_o(count_o, 1)
-        eta_o = xi_eta_o(count_o, 2)
-        zeta_o = 1.0 - eta_o - xi_o
-
-        ! Cartesian coordinates of the observer
-        r_o = xi_o*nodes_o(:, 1) + eta_o*nodes_o(:, 2) + zeta_o*nodes_o(:, 3)
-
-        ! Vector rho within the observer triangle
-        forall (uu=1:3) rho_o(:, uu) = r_o - nodes_o(:, uu)
-
-        do count_s = 0,n_s-1
-    
-            w_s = weights_s(count_s)
-
-            r_s = r_s_table(:, count_s)
-            rho_s = rho_s_table(:, :, count_s)
-              
-            R = sqrt(sum((r_s - r_o)**2))
-            g =  exp(-jk_0*R)/R
-     
-            I_phi_int = I_phi_int + g*w_s*w_o
-
-            I_A_int = I_A_int + g*w_s*w_o*matmul(transpose(rho_o), rho_s)
-
-        end do
-    end do
-
-    I_A = I_A_int
-    I_phi = I_phi_int
-
-end subroutine face_integrals_complex
 
 subroutine source_integral_plane_wave(n_o, xi_eta_o, weights_o, nodes_o, &
                                       jk_inc, e_inc, I)
@@ -397,187 +289,6 @@ subroutine arcioni_singular(nodes, I_A, I_phi)
 
 end subroutine
 
-pure subroutine face_integrals_smooth_complex(n_s, n_s2, xi_eta_s, weights_s, &
-                nodes_s, n_o, xi_eta_o, weights_o, nodes_o, jk_0, I_A, I_phi)
-    ! Integrate the smooth part of the kernel, currently excludes only the 1/R part
-    ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
-    ! with the singular term(s) 1/R and R subtracted
-    ! NB: includes the 1/4A**2 prefactor
-    !
-    ! xi_eta_s/o - list of coordinate pairs in source/observer triangle
-    ! weights_s/o - the integration weights of the source and observer
-    ! nodes_s/o - the nodes of the source and observer triangles
-    ! k_0 - free space wavenumber
-    ! nodes - the position of the triangle nodes
-    !
-    ! Note that weights_s has an additional dimension, which will normally be 
-    ! of length one, allowance is made for the use of the singularity 
-    ! technique, in which case the additional dimensions will be equal to the 
-    ! number of observer integration points. This feature is currently not
-    ! implemented 
-
-    use constants
-    implicit none
-
-    integer, intent(in) :: n_s, n_s2, n_o
-    ! f2py intent(hide) :: n_s, n_s2, n_o
-    real(WP), dimension(3, 3), intent(in) :: nodes_s, nodes_o
-    complex(WP), intent(in) :: jk_0
-
-    real(WP), intent(in), dimension(0:n_s2-1, 0:n_s-1, 2) :: xi_eta_s
-    real(WP), intent(in), dimension(0:n_s2-1, 0:n_s-1) :: weights_s
-
-    real(WP), intent(in), dimension(0:n_o-1, 2) :: xi_eta_o
-    real(WP), intent(in), dimension(0:n_o-1) :: weights_o
-
-    complex(WP), intent(out), dimension(3, 3) :: I_A
-    complex(WP), intent(out) :: I_phi
-
-    real(WP) :: xi_s, eta_s, zeta_s, xi_o, eta_o, zeta_o, R, w_s, w_o
-    real(WP), dimension(3) :: r_s, r_o
-    real(WP), dimension(3, 3) :: rho_s, rho_o
-    complex(WP) :: g
-    integer :: count_s, count_o, uu, vv
-    
-    I_A = 0.0
-    I_phi = 0.0
-
-    do count_o = 0,n_o-1
-
-        w_o = weights_o(count_o)
-
-        ! Barycentric coordinates of the observer
-        xi_o = xi_eta_o(count_o, 1)
-        eta_o = xi_eta_o(count_o, 2)
-        zeta_o = 1.0 - eta_o - xi_o
-
-        ! Cartesian coordinates of the observer
-        r_o = xi_o*nodes_o(1, :) + eta_o*nodes_o(2, :) + zeta_o*nodes_o(3, :)
-
-        ! Vector rho within the observer triangle
-        forall (uu=1:3) rho_o(uu, :) = r_o - nodes_o(uu, :)    
-
-        do count_s = 0,n_s-1
-    
-            ! for singular integrations, the source quadrature depends on the observation point
-            w_s = weights_s(0, count_s)
-            xi_s = xi_eta_s(0, count_s, 1)
-            eta_s = xi_eta_s(0, count_s, 2)
-
-            zeta_s = 1.0 - eta_s - xi_s
-            r_s = xi_s*nodes_s(1, :) + eta_s*nodes_s(2, :) + zeta_s*nodes_s(3, :)
-    
-    
-            forall (uu=1:3) rho_s(uu, :) = r_s - nodes_s(uu, :)
-              
-            R = sqrt(sum((r_s - r_o)**2))
-
-            ! give the explicit limit for R=0 
-            ! (could use a Taylor expansion for small k_0*R?)
-            if (abs(jk_0*R) < 1e-8) then
-                g = -jk_0
-            else
-                g = (exp(-jk_0*R) - 1.0)/R
-            end if
-
-            I_phi = I_phi + g*w_s*w_o
-
-            forall (uu=1:3, vv=1:3) I_A(uu, vv) = I_A(uu, vv) + g*dot_product(rho_o(uu, :), rho_s(vv, :))*w_s*w_o
-        end do
-    end do
-
-end subroutine face_integrals_smooth_complex
-
-
-subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_singular, nodes, triangle_nodes, &
-                                s, xi_eta_eval, weights, phi_precalc, A_precalc, indices_precalc, indptr_precalc, &
-                                A_face, phi_face)
-    ! Calculate the face to face interaction terms used to build the impedance matrix
-    !
-    ! As per Rao, Wilton, Glisson, IEEE Trans AP-30, 409 (1982)
-    ! Uses impedance extraction techqnique of Hanninen, precalculated
-    !
-    ! nodes - position of all the triangle nodes
-    ! basis_tri_p/m - the positive and negative triangles for each basis function
-    ! basis_node_p/m - the free nodes for each basis function
-    ! omega - evaulation frequency in rad/s
-    ! s - complex frequency
-    ! xi_eta_eval, weights - quadrature rule over the triangle (weights normalised to 0.5)
-    ! A_precalc, phi_precalc - precalculated 1/R singular terms
-
-    use core_for
-    implicit none
-
-    integer, intent(in) :: num_nodes, num_triangles, num_integration, num_singular
-    ! f2py intent(hide) :: num_nodes, num_triangles, num_integration, num_singular
-
-    real(WP), intent(in), dimension(0:num_nodes-1, 0:2) :: nodes
-    integer, intent(in), dimension(0:num_triangles-1, 0:2) :: triangle_nodes
-
-    complex(WP), intent(in) :: s
-
-    real(WP), intent(in), dimension(0:num_integration-1, 0:1) :: xi_eta_eval
-    real(WP), intent(in), dimension(0:num_integration-1) :: weights
-
-    real(WP), intent(in), dimension(0:num_singular-1) :: phi_precalc
-    real(WP), intent(in), dimension(0:num_singular-1, 3, 3) :: A_precalc
-    integer, intent(in), dimension(0:num_singular-1) :: indices_precalc
-    integer, intent(in), dimension(0:num_triangles) :: indptr_precalc
-
-    complex(WP), intent(out), dimension(0:num_triangles-1, 0:2, 0:num_triangles-1, 0:2) :: A_face
-    complex(WP), intent(out), dimension(0:num_triangles-1, 0:num_triangles-1) :: phi_face
-    
-    
-    complex(WP) :: jk_0 
-    
-    real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
-    !complex(WP) :: A_part, phi_part
-    complex(WP), dimension(3, 3) :: I_A
-    complex(WP) :: I_phi
-
-    integer :: p, q, index_singular!, q_p, q_m, p_p, p_m, ip_p, ip_m, iq_p, iq_m, m, n
-
-    jk_0 = s/c
-
-    ! calculate all the integrations for each face pair
-    !$OMP PARALLEL DO SCHEDULE(DYNAMIC) DEFAULT(SHARED) &
-    !$OMP PRIVATE (p, q, nodes_p, nodes_q, I_A, I_phi)
-    do p = 0,num_triangles-1 ! p is the index of the observer face:
-        nodes_p = nodes(triangle_nodes(p, :), :)
-        do q = 0,p ! q is the index of the source face, need for elements below diagonal
-
-            nodes_q = nodes(triangle_nodes(q, :), :)
-            if (any(triangle_nodes(p, :) == triangle_nodes(q, :))) then
-                ! triangles have one or more common nodes, perform singularity extraction
-                call face_integrals_smooth_complex(num_integration, 1, xi_eta_eval, weights, nodes_q, &
-                                    num_integration, xi_eta_eval, weights, nodes_p, jk_0, I_A, I_phi)
-        
-                ! the singular 1/R components are pre-calculated
-                index_singular = scr_index(p, q, indices_precalc, indptr_precalc)
-
-                I_A = I_A + A_precalc(index_singular, :, :)
-                I_phi = I_phi + phi_precalc(index_singular)
-        
-            else
-                ! just perform regular integration
-                ! As per RWG, triangle area must be cancelled in the integration
-                ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
-                call face_integrals_complex(num_integration, xi_eta_eval, weights, nodes_q, &
-                                    num_integration, xi_eta_eval, weights, nodes_p, jk_0, I_A, I_phi)
-            end if
-
-            ! by symmetry of Galerkin procedure, transposed components are identical (but transposed node indices)
-            A_face(p, :, q, :) = I_A
-            A_face(q, :, p, :) = transpose(I_A)
-            phi_face(p, q) = I_phi
-            phi_face(q, p) = I_phi
-
-        end do
-    end do
-    !$OMP END PARALLEL DO
-
-end subroutine Z_EFIE_faces_self
-
 
 subroutine Z_EFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_triangles_s, &
                                num_integration, nodes_o, triangle_nodes_o, nodes_s, triangle_nodes_s, &
@@ -635,8 +346,8 @@ subroutine Z_EFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
             ! just perform regular integration
             ! As per RWG, triangle area must be cancelled in the integration
             ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
-            call face_integrals_complex(num_integration, xi_eta_eval, weights, nodes_q, &
-                                num_integration, xi_eta_eval, weights, nodes_p, jk_0, I_A, I_phi)
+            call EFIE_face_integrals(num_integration, xi_eta_eval, weights, nodes_q, &
+                                num_integration, xi_eta_eval, weights, nodes_p, jk_0, .FALSE., I_A, I_phi)
             ! by symmetry of Galerkin procedure, transposed components are identical (but transposed node indices)
             A_face(p, :, q, :) = I_A
             phi_face(p, q) = I_phi
@@ -648,7 +359,7 @@ subroutine Z_EFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
 end subroutine Z_EFIE_faces_mutual
 
 
-subroutine face_integrals_universal(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
+subroutine EFIE_face_integrals(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
         weights_o, nodes_o_in, jk_0, singular, I_A, I_phi)
     ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
     ! NB: includes the 1/4A**2 prefactor
@@ -764,10 +475,10 @@ subroutine face_integrals_universal(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, x
     I_A = I_A_int
     I_phi = I_phi_int
 
-end subroutine face_integrals_universal
+end subroutine EFIE_face_integrals
 
 
-subroutine Z_EFIE_faces_self_2(num_nodes, num_triangles, num_integration, num_singular, nodes, triangle_nodes, &
+subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_singular, nodes, triangle_nodes, &
                                 s, xi_eta_eval, weights, phi_precalc, A_precalc, indices_precalc, indptr_precalc, &
                                 A_face, phi_face)
     ! Calculate the face to face interaction terms used to build the impedance matrix
@@ -827,7 +538,7 @@ subroutine Z_EFIE_faces_self_2(num_nodes, num_triangles, num_integration, num_si
             nodes_q = nodes(triangle_nodes(q, :), :)
             if (any(triangle_nodes(p, :) == triangle_nodes(q, :))) then
                 ! triangles have one or more common nodes, perform singularity extraction
-                call face_integrals_universal(num_integration, xi_eta_eval, weights, nodes_q, &
+                call EFIE_face_integrals(num_integration, xi_eta_eval, weights, nodes_q, &
                                     num_integration, xi_eta_eval, weights, nodes_p, jk_0, .TRUE., I_A, I_phi)
         
                 ! the singular 1/R components are pre-calculated
@@ -840,7 +551,7 @@ subroutine Z_EFIE_faces_self_2(num_nodes, num_triangles, num_integration, num_si
                 ! just perform regular integration
                 ! As per RWG, triangle area must be cancelled in the integration
                 ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
-                call face_integrals_universal(num_integration, xi_eta_eval, weights, nodes_q, &
+                call EFIE_face_integrals(num_integration, xi_eta_eval, weights, nodes_q, &
                                     num_integration, xi_eta_eval, weights, nodes_p, jk_0, .FALSE., I_A, I_phi)
             end if
 
@@ -854,7 +565,7 @@ subroutine Z_EFIE_faces_self_2(num_nodes, num_triangles, num_integration, num_si
     end do
     !$OMP END PARALLEL DO
 
-end subroutine Z_EFIE_faces_self_2
+end subroutine Z_EFIE_faces_self
 
 
 
