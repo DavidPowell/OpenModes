@@ -91,34 +91,6 @@ module core_for
 
 contains
 
-    pure function g_scalar_0(jk_0, r)
-    ! The scalar Green's function, with no extracted terms
-        use constants
-        implicit none
-        complex(WP), intent(in) :: jk_0
-        real(WP), intent(in) :: r
-        complex(WP) :: g_scalar_0
-    
-        g_scalar_0 = exp(-jk_0*R)/R
-    end function
-    
-    pure function g_scalar_1(jk_0, r)
-    ! The scalar Green's function, with one extracted term
-        use constants
-        implicit none
-        complex(WP), intent(in) :: jk_0
-        real(WP), intent(in) :: r
-        complex(WP) :: g_scalar_1
-    
-        ! give the explicit limit for R=0 
-        ! (could use a Taylor expansion for small k_0*R?)
-        if (abs(jk_0*R) < 1e-8) then
-            g_scalar_1 = -jk_0
-        else
-            g_scalar_1 = (exp(-jk_0*R) - 1.0)/R
-        end if
-    end function
-
 end module core_for
 
 
