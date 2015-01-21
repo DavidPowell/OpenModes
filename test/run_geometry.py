@@ -55,7 +55,8 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
         for mode in xrange(num_modes):
             current = sim.empty_vector()
             current[:] = mode_j[:, mode]
-            sim.plot_3d(solution=current, output_format='mayavi', compress_scalars=1)
+            sim.plot_3d(solution=current, output_format='mayavi',
+                        compress_scalars=1)
 
     if not plot_admittance:
         return

@@ -22,7 +22,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os.path as osp
 
-from openmodes.basis import DivRwgBasis, LoopStarBasis, DivRwgGramBasis
+from openmodes.basis import DivRwgBasis, LoopStarBasis#, DivRwgGramBasis
 from openmodes.integration import get_dunavant_rule
 from openmodes import load_mesh
 from openmodes.visualise import write_vtk

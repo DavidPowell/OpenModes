@@ -21,11 +21,9 @@
 import os.path as osp
 
 import numpy as np
+from numpy.testing import assert_allclose
 import matplotlib.pyplot as plt
 import scipy.linalg as la
-
-import logging
-logging.getLogger().setLevel(logging.INFO)
 
 import openmodes
 import openmodes.basis
@@ -34,8 +32,7 @@ from openmodes.constants import c
 def horseshoe_modes():
     sim = openmodes.Simulation(name='horseshoe_modes', 
                                basis_class=openmodes.basis.LoopStarBasis)
-    shoe = sim.load_mesh(osp.join('..', 'examples', 'geometry', 
-                                  'horseshoe_rect.geo'), mesh_tol=1e-3)
+    shoe = sim.load_mesh(osp.join(openmodes.geometry_dir, 'horseshoe_rect.geo'), mesh_tol=1e-3)
     
     sim.place_part(shoe)
     
@@ -47,12 +44,12 @@ def horseshoe_modes():
     sim.plot_solution([mode_j[0][:, 1]], 'mayavi', compress_scalars=1)
     sim.plot_solution([mode_j[0][:, 2]], 'mayavi', compress_scalars=1)
 
-def horseshoe_extinction():
+def test_extinction(plot_extinction=False):
+    tests_location = osp.split(__file__)[0]
     sim = openmodes.Simulation(name='horseshoe_extinction',
                                basis_class=openmodes.basis.LoopStarBasis)
 
-    shoe = sim.load_mesh(osp.join('..', 'examples', 'geometry', 
-                                  'horseshoe_rect.geo'), mesh_tol=2e-3)
+    shoe = sim.load_mesh(osp.join(tests_location, 'input', 'test_horseshoe', 'horseshoe_rect.msh'))
     
     sim.place_part(shoe)
     
@@ -66,24 +63,30 @@ def horseshoe_extinction():
     
     
     for freq_count, s in sim.iter_freqs(freqs):
-        Z = sim.impedance(s)[0][0]
-        V = sim.source_plane_wave(e_inc, s/c*k_hat)[0]
-        
-        extinction[freq_count] = np.vdot(V, la.solve(Z[:], V))
-        
-    plt.figure()
-    plt.plot(freqs*1e-9, extinction.real)
-    plt.plot(freqs*1e-9, extinction.imag)
-    plt.xlabel('f (GHz)')
-    plt.show()
+        Z = sim.impedance(s)
+        V = sim.source_plane_wave(e_inc, s/c*k_hat)
+        extinction[freq_count] = np.vdot(V, Z.solve(V))
+    
+    # to generate the reference extinction solution
+    # np.savetxt(osp.join(tests_location, 'reference', 'test_horseshoe', 'extinction.txt'), extinction, fmt="%.8e%+.8ej")
+    
+    extinction_ref = np.loadtxt(osp.join(tests_location, 'reference', 'test_horseshoe', 'extinction.txt'), dtype=np.complex128)
+    assert_allclose(extinction, extinction_ref)
+
+    if plot_extinction:
+        # to plot the generated and reference solutions
+        plt.figure()
+        plt.plot(freqs*1e-9, extinction.real)
+        plt.plot(freqs*1e-9, extinction_ref.real, '--')
+        plt.plot(freqs*1e-9, extinction.imag)
+        plt.plot(freqs*1e-9, extinction_ref.imag, '--')
+        plt.xlabel('f (GHz)')
+        plt.show()
 
 def horseshoe_extinction_modes():
     sim = openmodes.Simulation(name='horseshoe_extinction_modes', 
                                basis_class=openmodes.basis.LoopStarBasis)
-    #shoe = sim.load_mesh(osp.join('..', 'examples', 'geometry', 'horseshoe_rect.geo'),
-    #                     mesh_tol=3e-3)
-    shoe = sim.load_mesh(r'c:\users\dap124\appdata\local\temp\tmpxqs5wg\horseshoe_rect.msh')
-    
+    shoe = sim.load_mesh(osp.join('input', 'test_horseshoe', 'horseshoe_rect.msh'))   
     sim.place_part(shoe)
     
     s_start = 2j*np.pi*10e9
@@ -177,7 +180,7 @@ def horseshoe_extinction_modes():
     plt.suptitle("SEM and EEM admittance")
     plt.show()
 
-
-horseshoe_extinction_modes()
-#horseshoe_modes()
-#horseshoe_extinction()
+if __name__ == "__main__":
+    #test_extinction_modes()
+    #horseshoe_modes()
+    test_extinction(plot_extinction=True)
