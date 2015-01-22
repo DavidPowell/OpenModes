@@ -38,7 +38,8 @@ def test_interpolate_rwg(plot=False):
 
     sim = Simulation()
     mesh_tol = 0.5e-3
-    srr = sim.load_mesh(osp.join(openmodes.geometry_dir, "SRR.geo"), mesh_tol)
+    srr = sim.load_mesh(osp.join(tests_location, 'input', 'test_basis',
+                                 'SRR.msh'))
 
     basis = DivRwgBasis(srr)
 
@@ -50,16 +51,15 @@ def test_interpolate_rwg(plot=False):
     r, basis_func = basis.interpolate_function(rwg_function, rule)
 
     # save reference data
-    # np.savetxt(osp.join(tests_location, 'reference', 'test_interpolate_rwg',
+    # np.savetxt(osp.join(tests_location, 'reference', 'test_basis',
     #                     'rwg_r.txt'), r, fmt="%.8e")
-    # np.savetxt(osp.join(tests_location, 'reference', 'test_interpolate_rwg',
-    #                     'rwg_basis_func.txt'), basis_func, fmt="%.8e")
+    # np.savetxt(osp.join(tests_location, 'reference', 'test_basis',
+    #                    'rwg_basis_func.txt'), basis_func, fmt="%.8e")
 
     r_ref = np.loadtxt(osp.join(tests_location, 'reference',
-                                'test_interpolate_rwg', 'rwg_r.txt'))
+                                'test_basis', 'rwg_r.txt'))
     basis_func_ref = np.loadtxt(osp.join(tests_location, 'reference',
-                                         'test_interpolate_rwg',
-                                         'rwg_basis_func.txt'))
+                                         'test_basis', 'rwg_basis_func.txt'))
     assert_allclose(r, r_ref)
     assert_allclose(basis_func, basis_func_ref)
 
@@ -75,9 +75,8 @@ def test_interpolate_loop_star(plot=False):
 
     sim = Simulation()
     mesh_tol = 4e-3
-    mesh = sim.load_mesh(osp.join(openmodes.geometry_dir, "rectangle.geo"),
-                         parameters={'width': 10e-3, 'height': 10e-3},
-                         mesh_tol=mesh_tol)
+    mesh = sim.load_mesh(osp.join(tests_location, 'input', 'test_basis',
+                                  'rectangle.msh'))
 
     basis = LoopStarBasis(mesh)
 
@@ -94,19 +93,21 @@ def test_interpolate_loop_star(plot=False):
 
     the_basis = basis[star_basis]
 
-    plus_nodes = mesh.nodes[basis.mesh.polygons[the_basis.tri_p, the_basis.node_p]]
-    minus_nodes = mesh.nodes[basis.mesh.polygons[the_basis.tri_m, the_basis.node_m]]
+    plus_nodes = mesh.nodes[basis.mesh.polygons[the_basis.tri_p,
+                                                the_basis.node_p]]
+    minus_nodes = mesh.nodes[basis.mesh.polygons[the_basis.tri_m,
+                                                 the_basis.node_m]]
 
     # save reference data
-    # np.savetxt(osp.join(tests_location, 'reference', 'test_interpolate_rwg',
+    # np.savetxt(osp.join(tests_location, 'reference', 'test_basis',
     #                     'loop_star_r.txt'), r, fmt="%.8e")
-    # np.savetxt(osp.join(tests_location, 'reference', 'test_interpolate_rwg',
+    # np.savetxt(osp.join(tests_location, 'reference', 'test_basis',
     #                     'loop_star_basis_func.txt'), basis_func, fmt="%.8e")
 
     r_ref = np.loadtxt(osp.join(tests_location, 'reference',
-                                'test_interpolate_rwg', 'loop_star_r.txt'))
+                                'test_basis', 'loop_star_r.txt'))
     basis_func_ref = np.loadtxt(osp.join(tests_location, 'reference',
-                                         'test_interpolate_rwg',
+                                         'test_basis',
                                          'loop_star_basis_func.txt'))
     assert_allclose(r, r_ref)
     assert_allclose(basis_func, basis_func_ref)
