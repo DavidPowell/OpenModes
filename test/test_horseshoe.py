@@ -29,48 +29,60 @@ import openmodes
 import openmodes.basis
 from openmodes.constants import c
 
-def horseshoe_modes():
-    sim = openmodes.Simulation(name='horseshoe_modes', 
+tests_location = osp.split(__file__)[0]
+
+
+def horseshoe_modes(plot=False):
+    "Modes of horseshoe"
+    sim = openmodes.Simulation(name='horseshoe_modes',
                                basis_class=openmodes.basis.LoopStarBasis)
-    shoe = sim.load_mesh(osp.join(openmodes.geometry_dir, 'horseshoe_rect.geo'), mesh_tol=1e-3)
-    
+    shoe = sim.load_mesh(osp.join(tests_location, 'input', 'test_horseshoe',
+                                  'horseshoe_rect.msh'))
     sim.place_part(shoe)
-    
+
     s_start = 2j*np.pi*10e9
-    
-    mode_s, mode_j = sim.part_singularities(s_start, 3)
-    
-    sim.plot_solution([mode_j[0][:, 0]], 'mayavi', compress_scalars=1)
-    sim.plot_solution([mode_j[0][:, 1]], 'mayavi', compress_scalars=1)
-    sim.plot_solution([mode_j[0][:, 2]], 'mayavi', compress_scalars=1)
+
+    mode_s, mode_j = sim.singularities(s_start, 3)
+
+    if plot:
+        sim.plot_3d(solution=mode_j[:, 0], output_format='mayavi',
+                    compress_scalars=3)
+        sim.plot_3d(solution=mode_j[:, 1], output_format='mayavi',
+                    compress_scalars=3)
+        sim.plot_3d(solution=mode_j[:, 2], output_format='mayavi',
+                    compress_scalars=3)
+
 
 def test_extinction(plot_extinction=False):
-    tests_location = osp.split(__file__)[0]
+    "Test extinction of a horseshoe"
     sim = openmodes.Simulation(name='horseshoe_extinction',
                                basis_class=openmodes.basis.LoopStarBasis)
 
-    shoe = sim.load_mesh(osp.join(tests_location, 'input', 'test_horseshoe', 'horseshoe_rect.msh'))
-    
+    shoe = sim.load_mesh(osp.join(tests_location, 'input', 'test_horseshoe',
+                                  'horseshoe_rect.msh'))
     sim.place_part(shoe)
-    
+
     num_freqs = 101
     freqs = np.linspace(1e8, 20e9, num_freqs)
-    
+
     extinction = np.empty(num_freqs, np.complex128)
-    
+
     e_inc = np.array([1, 0, 0], dtype=np.complex128)
     k_hat = np.array([0, 0, 1], dtype=np.complex128)
-    
-    
+
     for freq_count, s in sim.iter_freqs(freqs):
         Z = sim.impedance(s)
         V = sim.source_plane_wave(e_inc, s/c*k_hat)
         extinction[freq_count] = np.vdot(V, Z.solve(V))
-    
+
     # to generate the reference extinction solution
-    # np.savetxt(osp.join(tests_location, 'reference', 'test_horseshoe', 'extinction.txt'), extinction, fmt="%.8e%+.8ej")
-    
-    extinction_ref = np.loadtxt(osp.join(tests_location, 'reference', 'test_horseshoe', 'extinction.txt'), dtype=np.complex128)
+    # np.savetxt(osp.join(tests_location, 'reference', 'test_horseshoe',
+    #                     'extinction.txt'), extinction, fmt="%.8e%+.8ej")
+
+    extinction_ref = np.loadtxt(osp.join(tests_location, 'reference',
+                                         'test_horseshoe', 'extinction.txt'),
+                                dtype=np.complex128)
+
     assert_allclose(extinction, extinction_ref)
 
     if plot_extinction:
@@ -83,50 +95,50 @@ def test_extinction(plot_extinction=False):
         plt.xlabel('f (GHz)')
         plt.show()
 
+
 def horseshoe_extinction_modes():
-    sim = openmodes.Simulation(name='horseshoe_extinction_modes', 
+    sim = openmodes.Simulation(name='horseshoe_extinction_modes',
                                basis_class=openmodes.basis.LoopStarBasis)
-    shoe = sim.load_mesh(osp.join('input', 'test_horseshoe', 'horseshoe_rect.msh'))   
+    shoe = sim.load_mesh(osp.join('input', 'test_horseshoe',
+                                  'horseshoe_rect.msh'))
     sim.place_part(shoe)
-    
+
     s_start = 2j*np.pi*10e9
-    
+
     num_modes = 5
     mode_s, mode_j = sim.part_singularities(s_start, num_modes)
-    
+
     models = sim.construct_models(mode_s, mode_j)[0]
-    
+
     num_freqs = 101
     freqs = np.linspace(1e8, 20e9, num_freqs)
-    
+
     extinction = np.empty(num_freqs, np.complex128)
     extinction_sem = np.empty((num_freqs, num_modes), np.complex128)
     extinction_eem = np.empty((num_freqs, num_modes), np.complex128)
-    
+
     e_inc = np.array([1, 0, 0], dtype=np.complex128)
     k_hat = np.array([0, 0, 1], dtype=np.complex128)
 
     z_sem = np.empty((num_freqs, num_modes), np.complex128)
     z_eem = np.empty((num_freqs, num_modes), np.complex128)
     z_eem_direct = np.empty((num_freqs, num_modes), np.complex128)
-    
+
     for freq_count, s in sim.iter_freqs(freqs):
         Z = sim.impedance(s)[0][0]
         V = sim.source_plane_wave(e_inc, s/c*k_hat)[0]
-        
+
         extinction[freq_count] = np.vdot(V, la.solve(Z[:], V))
-        
+
         z_sem[freq_count] = [model.scalar_impedance(s) for model in models]
         extinction_sem[freq_count] = [np.vdot(V, model.solve(s, V)) for model in models]
 
         z_eem_direct[freq_count], _ = Z.eigenmodes(num_modes, use_gram=False)
 
-        
         z_eem[freq_count], j_eem = Z.eigenmodes(start_j = mode_j[0], use_gram=True)
         extinction_eem[freq_count] = [np.vdot(V, j_eem[:, mode])*np.dot(V, j_eem[:, mode])/z_eem[freq_count, mode] for mode in xrange(num_modes)]
-        
-        
-    plt.figure(figsize=(10,5))
+
+    plt.figure(figsize=(10, 5))
     plt.subplot(121)
     plt.plot(freqs*1e-9, extinction.real)
     plt.plot(freqs*1e-9, np.sum(extinction_sem.real, axis=1), '--')
@@ -139,7 +151,7 @@ def horseshoe_extinction_modes():
     plt.suptitle("Extinction")
     plt.show()
 
-    plt.figure(figsize=(10,5))
+    plt.figure(figsize=(10, 5))
     plt.subplot(121)
     plt.plot(freqs*1e-9, z_eem_direct.real)
     #plt.ylim(0, 80)
@@ -150,7 +162,7 @@ def horseshoe_extinction_modes():
     plt.suptitle("EEM impedance without Gram matrix")
     plt.show()
 
-    plt.figure(figsize=(10,5))
+    plt.figure(figsize=(10, 5))
     plt.subplot(121)
     plt.plot(freqs*1e-9, z_eem.real)
     plt.plot(freqs*1e-9, z_sem.real, '--')
@@ -168,7 +180,7 @@ def horseshoe_extinction_modes():
     y_sem = 1/z_sem
     y_eem = 1/z_eem
 
-    plt.figure(figsize=(10,5))
+    plt.figure(figsize=(10, 5))
     plt.subplot(121)
     plt.plot(freqs*1e-9, y_eem.real)
     plt.plot(freqs*1e-9, y_sem.real, '--')
@@ -182,5 +194,5 @@ def horseshoe_extinction_modes():
 
 if __name__ == "__main__":
     #test_extinction_modes()
-    #horseshoe_modes()
+    horseshoe_modes(plot=True)
     test_extinction(plot_extinction=True)
