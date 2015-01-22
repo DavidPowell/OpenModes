@@ -667,7 +667,7 @@ class BasisContainer(object):
         except KeyError:
             logging.debug("Constructing basis functions of class %s for "
                           "mesh %s with args %s"
-                          % (part.mesh, self.basis_class,
+                          % (self.basis_class, part.mesh,
                              " ".join(str(x) for x in args)))
             result = self.basis_class(part.mesh, *args)
             self.cached_basis[unique_key] = result
