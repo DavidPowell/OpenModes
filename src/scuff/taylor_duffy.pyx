@@ -9,8 +9,11 @@ cdef extern from "TaylorDuffy.h" nogil:
         # mandatory input fields 
         int WhichCase
 
-        double *V1, *V2, *V3
-        double *V2P, *V3P
+        double *V1
+        double *V2
+        double *V3
+        double *V2P
+        double *V3P
 
         int NumPKs
         int *PIndex
@@ -18,11 +21,13 @@ cdef extern from "TaylorDuffy.h" nogil:
         double complex *KParam
 
         # output fields
-        double complex *Result, *Error
+        double complex *Result
+        double complex *Error
         int nCalls
 
         # optional input fields
-        double *Q, *QP
+        double *Q
+        double *QP
         double *nHat
 
         double AbsTol, RelTol
@@ -65,7 +70,6 @@ cdef extern from "complex" nogil:
     double real(double complex)
     double imag(double complex)
 
-
 # An easy way to set the relevant vertex pointers
 cdef void set_vertex(TaylorDuffyArgStruct *Args, int which_vertex, double* address) nogil:
     if which_vertex == 0:
@@ -80,9 +84,15 @@ cdef void set_vertex(TaylorDuffyArgStruct *Args, int which_vertex, double* addre
     else:
         Args.V2P = address
 
+# Definitions for which form of singularity to extract
+cpdef enum:
+    SING_T_EFIE
+    SING_N_EFIE
+    SING_T_MFIE
+    SING_N_MFIE
 
 def taylor_duffy(double[:, ::1] nodes, int[::1] triangle_o,
-                 int[::1] triangle_s, int max_eval=1000,
+                 int[::1] triangle_s, int which_form, int max_eval=1000,
                  double rel_tol = 1e-10):
 
     cdef np.ndarray[np.float64_t, ndim=2] res_A_np = np.empty((3, 3), np.float64)
@@ -90,16 +100,22 @@ def taylor_duffy(double[:, ::1] nodes, int[::1] triangle_o,
 
     cdef TaylorDuffyArgStruct TDArgs
     # output buffers
-    cdef double complex Result[1], Error[1]
+    cdef double complex Result[1]
+    cdef double complex Error[1]
 
     cdef int count_o, count_s
     cdef double res_phi
 
-    cdef int obs_only[2], source_only[2], common[3]
+    cdef int obs_only[2]
+    cdef int source_only[2]
+    cdef int common[3]
     cdef int obs_only_count = 0, source_only_count = 0, common_count = 0
 
     cdef int v_count
     cdef int node
+
+    if which_form not in (SING_T_EFIE, SING_N_MFIE):
+        raise ValueError("Unkown singularity form")
 
     with nogil:
         InitTaylorDuffyArgs(&TDArgs)
@@ -156,13 +172,19 @@ def taylor_duffy(double[:, ::1] nodes, int[::1] triangle_o,
         TDArgs.MaxEval = max_eval
         TDArgs.RelTol = rel_tol
 
-        # evaluate the scalar potential term
-        TDArgs.PIndex = [TD_UNITY]
-        TaylorDuffy( &TDArgs )
-        res_phi = real(Result[0])
+        # evaluate the scalar potential term if using EFIE
+        if which_form == SING_T_EFIE:
+            TDArgs.PIndex = [TD_UNITY]
+            TaylorDuffy( &TDArgs )
+            res_phi = real(Result[0])
 
+        # choose which vector potential term to return
+        if which_form == SING_T_EFIE:
+            TDArgs.PIndex = [TD_PMCHWG1]
+        elif which_form == SING_N_MFIE:
+            TDArgs.PIndex = [TD_NMULLERC]
+            
         # evaluate the vector potential terms
-        TDArgs.PIndex = [TD_PMCHWG1]
         for count_o in xrange(3):
             TDArgs.Q = &nodes[triangle_o[count_o], 0]
             for count_s in xrange(3):
@@ -170,4 +192,7 @@ def taylor_duffy(double[:, ::1] nodes, int[::1] triangle_o,
                 TaylorDuffy( &TDArgs )
                 res_A[count_o, count_s] = real(Result[0])
 
-    return res_A_np, res_phi
+    if which_form in (SING_T_EFIE, SING_N_EFIE):
+        return res_A_np, res_phi
+    else:
+        return res_A_np

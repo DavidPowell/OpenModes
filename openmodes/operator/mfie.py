@@ -75,7 +75,7 @@ class MfieOperator(Operator):
 
     def __init__(self, integration_rule, basis_container,
                  greens_function=FreeSpaceGreensFunction(),
-                 tangential_form=False):
+                 tangential_form=False, singularity_accuracy=1e-5):
         """
         Parameters
         ----------

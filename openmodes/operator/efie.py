@@ -19,19 +19,21 @@
 
 
 import numpy as np
+import logging
 
 from openmodes.constants import epsilon_0, mu_0, pi
-import openmodes.core
+from openmodes.core import z_efie_faces_self, z_efie_faces_mutual
 from openmodes.basis import LinearTriangleBasis, LoopStarBasis
 from openmodes.impedance import (EfieImpedanceMatrix,
                                  EfieImpedanceMatrixLoopStar)
 
 from openmodes.operator.operator import Operator, FreeSpaceGreensFunction
-from openmodes.operator.singularities import singular_impedance_rwg_efie_homogeneous
+from openmodes.operator.singularities import singular_impedance_rwg
 
 
 def impedance_rwg_efie_free_space(s, integration_rule, basis_o, nodes_o,
-                                  basis_s, nodes_s, self_impedance):
+                                  basis_s, nodes_s, self_impedance,
+                                  singularity_accuracy):
     """EFIE derived Impedance matrix for RWG or loop-star basis functions"""
 
     transform_L_o, transform_S_o = basis_o.transformation_matrices
@@ -40,17 +42,19 @@ def impedance_rwg_efie_free_space(s, integration_rule, basis_o, nodes_o,
     if (self_impedance):
         # calculate self impedance
 
-        singular_terms = singular_impedance_rwg_efie_homogeneous(basis_o,
-                                                             integration_rule)
+        singular_terms = singular_impedance_rwg(basis_o, operator="EFIE",
+                                                tangential_form=True,
+                                                rel_tol=singularity_accuracy)
         if (np.any(np.isnan(singular_terms[0])) or
                 np.any(np.isnan(singular_terms[1]))):
             raise ValueError("NaN returned in singular impedance terms")
 
         num_faces_s = num_faces_o
-        A_faces, phi_faces = openmodes.core.z_efie_faces_self(nodes_o,
-                                         basis_o.mesh.polygons, s,
-                                         integration_rule.xi_eta,
-                                         integration_rule.weights, *singular_terms)
+        A_faces, phi_faces = z_efie_faces_self(nodes_o,
+                                               basis_o.mesh.polygons, s,
+                                               integration_rule.xi_eta,
+                                               integration_rule.weights,
+                                               *singular_terms)
 
         transform_L_s = transform_L_o
         transform_S_s = transform_S_o
@@ -60,7 +64,7 @@ def impedance_rwg_efie_free_space(s, integration_rule, basis_o, nodes_o,
 
         num_faces_s = len(basis_s.mesh.polygons)
 
-        A_faces, phi_faces = openmodes.core.z_efie_faces_mutual(nodes_o,
+        A_faces, phi_faces = z_efie_faces_mutual(nodes_o,
                                 basis_o.mesh.polygons, nodes_s,
                                 basis_s.mesh.polygons, s,
                                 integration_rule.xi_eta,
@@ -91,10 +95,22 @@ class EfieOperator(Operator):
     source_cross = False
 
     def __init__(self, integration_rule, basis_container,
-                 greens_function=FreeSpaceGreensFunction()):
+                 greens_function=FreeSpaceGreensFunction(),
+                 tangential_form=True, singularity_accuracy=1e-5):
         self.basis_container = basis_container
         self.integration_rule = integration_rule
         self.greens_function = greens_function
+        self.singularities_accuracy = singularity_accuracy
+
+        self.tangential_form = tangential_form
+        if tangential_form:
+            self.reciprocal = False
+            self.source_cross = False
+        else:
+            raise NotImplementedError("Tangential EFIE")
+
+        logging.info("Creating EFIE operator, tangential form: %s"
+                     % str(tangential_form))
 
     def impedance_single_parts(self, s, part_o, part_s=None):
         """Calculate a self or mutual impedance matrix at a given complex
@@ -121,7 +137,8 @@ class EfieOperator(Operator):
                 L, S = impedance_rwg_efie_free_space(s, self.integration_rule,
                                                      basis_o, part_o.nodes,
                                                      basis_s, part_s.nodes,
-                                                     part_o == part_s)
+                                                     part_o == part_s,
+                                                     self.singularities_accuracy)
             else:
                 raise NotImplementedError
         else:

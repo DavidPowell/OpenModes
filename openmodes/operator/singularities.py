@@ -22,7 +22,8 @@ quantities for both EFIE and MFIE may be calculated simultaneously"""
 
 import numpy as np
 import openmodes.core
-from openmodes.taylor_duffy import taylor_duffy
+from openmodes.taylor_duffy import taylor_duffy, SING_T_EFIE, SING_N_MFIE
+from openmodes.basis import LinearTriangleBasis
 
 
 class MultiSparse(object):
@@ -122,54 +123,80 @@ class MultiSparse(object):
 cached_singular_terms = {}
 
 
-def singular_impedance_rwg_efie_homogeneous(basis, integration_rule):
+def singular_impedance_rwg(basis, operator, tangential_form, rel_tol):
     """Precalculate the singular impedance terms for an object
 
     Parameters
     ----------
-    quadrature_rule : tuple of 2 ndarrays
-        The barycentric coordinates and weights of the quadrature to
-        use for the non-analytical neighbour terms.
+    basis: LinearTriangleBasis object
+        The basis functions representing the object for which to calculate the
+        singularities
+    operator: string
+        The operator form, either "EFIE" or "MFIE"
+    tangential_form: boolean
+        If True, the T form operator is taken, otherwise the N form
+    rel_tol: float
+        The desired relative tolerance of the singular integrals
 
     Returns
     -------
     singular_terms : SingularSparse object
         The sparse array of singular impedance terms
-
     """
-    unique_id = ("EFIE", "RWG", basis.id, integration_rule.id)
+
+    if not isinstance(basis, LinearTriangleBasis):
+        raise ValueError("Basis functions are not RWG based")
+
+    # Check if this part's singularities have previously been calculated
+    # Note that higher accuracy calculations will not be used if a lower
+    # accuracy is requested. This avoids non-deterministic behaviour.
+    unique_id = ("RWG", operator, tangential_form, basis.id, rel_tol)
     if unique_id in cached_singular_terms:
-        #print "singular terms retrieved from cache"
         return cached_singular_terms[unique_id]
+
+    sharing_nodes = basis.mesh.triangles_sharing_nodes()
+
+    # slightly inefficient reordering and resizing of nodes array
+    polygons = np.ascontiguousarray(basis.mesh.polygons)
+    nodes = np.ascontiguousarray(basis.mesh.nodes, dtype=np.float64)
+    num_faces = len(polygons)
+
+    nodes_c = np.ascontiguousarray(nodes, dtype=np.float64)
+    polygons_c = np.ascontiguousarray(polygons)
+
+    # Choose what to store based on the operator for which the singularities
+    # are to be calculated, including T vs N form
+    if operator == "EFIE" and tangential_form:
+        singular_terms = MultiSparse([(np.float64, None),     # phi
+                                      (np.float64, (3, 3))])  # A
+        which_form = SING_T_EFIE
+    elif operator == "EFIE":
+        raise NotImplementedError
+    elif operator == "MFIE" and not tangential_form:
+        singular_terms = MultiSparse([(np.float64, (3, 3))])  # A
+        which_form = SING_N_MFIE
+    elif operator == "MFIE":
+        raise NotImplementedError
     else:
-        sharing_nodes = basis.mesh.triangles_sharing_nodes()
+        raise ValueError("Don't know how to handle singularities for operator "
+                         "%s with tangential_form=%s" %
+                         (operator, tangential_form))
 
-        # Precalculate the singular integration rules for faces, which depend
-        # on the observation point
+    # find the neighbouring triangles (including self terms) to integrate
+    # singular part
+    for p in xrange(0, num_faces):  # observer
+        sharing_triangles = set()
+        for node in polygons[p]:
+            sharing_triangles = sharing_triangles.union(sharing_nodes[node])
 
-        # slightly inefficient reordering and resizing of nodes array
-        polygons = np.ascontiguousarray(basis.mesh.polygons)
-        nodes = np.ascontiguousarray(basis.mesh.nodes, dtype=np.float64)
-        num_faces = len(polygons)
+        # find any neighbouring elements which are touching
+        for q in sharing_triangles:  # source
+            # at least one node is shared
+            res = taylor_duffy(nodes, polygons[p], polygons[q], which_form,
+                               rel_tol=rel_tol)
+            singular_terms[p, q] = (res[1]*4*np.pi, res[0]*4*np.pi)
 
-        nodes_c = np.ascontiguousarray(nodes, dtype=np.float64)
-        polygons_c = np.ascontiguousarray(polygons)
-
-        singular_terms = MultiSparse(((np.float64, None),     # phi
-                                      (np.float64, (3, 3))))  # A
-        # find the neighbouring triangles (including self terms) to integrate
-        # singular part
-        for p in xrange(0, num_faces):  # observer
-            sharing_triangles = set()
-            for node in polygons[p]:
-                sharing_triangles = sharing_triangles.union(sharing_nodes[node])
-
-            # find any neighbouring elements which are touching
-            for q in sharing_triangles:  # source
-                # at least one node is shared
-                    res = taylor_duffy(nodes, polygons[p], polygons[q],
-                                       rel_tol=1e-8)
-                    singular_terms[p, q] = (res[1]*4*np.pi, res[0]*4*np.pi)
-
-        cached_singular_terms[unique_id] = singular_terms.to_csr(order='F')
-        return cached_singular_terms[unique_id]
+    # Arrays are currently put into fortran order, under the assumption
+    # that they will mostly be used by fortran routines.
+    cached_singular_terms[unique_id] = singular_terms.to_csr(order='F')
+    return cached_singular_terms[unique_id]
