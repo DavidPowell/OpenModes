@@ -24,6 +24,8 @@ import setuptools
 
 from distutils.util import get_platform
 import os.path as osp
+import os
+
 
 try:
     import numpy
@@ -81,6 +83,35 @@ core = Extension(name='openmodes.core',
 dunavant = Extension(name='openmodes.dunavant',
                      sources=[osp.join('src', 'dunavant.pyf'),
                               osp.join('src', 'dunavant.f90')])
+
+# This code ensures that cython is only run if the 'OPENMODES_CYTHON'
+# environment variable is declared
+if 'OPENMODES_CYTHON' in os.environ:
+    from Cython.Build import cythonize
+else:
+    def cythonize(extensions, **_ignore):
+        "Dummy version in case cython is not installed"
+        for extension in extensions:
+            sources = []
+            for sfile in extension.sources:
+                path, ext = os.path.splitext(sfile)
+                if ext in ('.pyx', '.py'):
+                    if extension.language == 'c++':
+                        ext = '.cpp'
+                    else:
+                        ext = '.c'
+                    sfile = path + ext
+                sources.append(sfile)
+            extension.sources[:] = sources
+        return extensions
+
+# Cython sources
+taylor_duffy = cythonize([Extension(name='openmodes.taylor_duffy',
+                         sources=[osp.join('src', 'scuff', filename) for
+                                  filename in ["taylor_duffy.pyx",
+                                               "TaylorDuffy.cc",
+                                               "pcubature.c"]],
+                         language="c++")])
 
 from numpy.distutils.command.build_ext import build_ext
 
@@ -140,7 +171,7 @@ setup(name='OpenModes',
       package_data={'openmodes': [osp.join("geometry", "*.geo"),
                                   osp.join("external", "three.js", "*"),
                                   osp.join("templates", "*")]},
-      ext_modules=[dunavant, core],
+      ext_modules=[dunavant, core]+taylor_duffy,
       version=__version__,
       install_requires=['numpy >= 1.6.2', 'scipy', 'matplotlib', 'jinja2'],
       long_description=long_description,

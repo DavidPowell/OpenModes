@@ -49,3 +49,4 @@ examples/output/
 RELEASE-VERSION
 doc/modules.txt
 doc/openmodes*.txt
+src/scuff/taylor_duffy.cpp
