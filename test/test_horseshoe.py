@@ -72,10 +72,11 @@ def test_horseshoe_modes(plot=False, skip_asserts=False,
     if not skip_asserts:
         assert_allclose(mode_s, [-2.585729e+09 + 3.156438e+10j,
                                  -1.887518e+10 + 4.500579e+10j,
-                                 -1.991163e+10 + 6.846221e+10j])
-        assert_allclose(mode_j[:, 0], j_0_ref)
-        assert_allclose(mode_j[:, 1], j_1_ref)
-        assert_allclose(mode_j[:, 2], j_2_ref)
+                                 -1.991163e+10 + 6.846221e+10j],
+                                 rtol=1e-3)
+        assert_allclose(mode_j[:, 0], j_0_ref, rtol=1e-2)
+        assert_allclose(mode_j[:, 1], j_1_ref, rtol=1e-2)
+        assert_allclose(mode_j[:, 2], j_2_ref, rtol=1e-2)
 
     if plot:
         sim.plot_3d(solution=mode_j[:, 0], output_format='mayavi',
@@ -158,7 +159,7 @@ def test_extinction(plot_extinction=False, skip_asserts=False,
                                 dtype=np.complex128)
 
     if not skip_asserts:
-        assert_allclose(extinction, extinction_ref)
+        assert_allclose(extinction, extinction_ref, rtol=1e-3)
 
     if plot_extinction:
         # to plot the generated and reference solutions
