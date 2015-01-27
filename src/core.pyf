@@ -69,17 +69,19 @@ python module core ! in
             real(kind=wp) dimension(3,3),intent(out) :: i_a
             real(kind=wp) intent(out) :: i_phi
         end subroutine face_integrals_hanninen
-        subroutine z_mfie_faces_self(num_nodes,num_triangles,num_integration,nodes,triangle_nodes,s,xi_eta_eval,weights,normals,z_face) ! in :core:src/rwg.f90
+        subroutine z_mfie_faces_self(num_nodes,num_triangles,num_integration,nodes,triangle_nodes,triangle_areas,s,xi_eta,weights,normals,t_form,z_face) ! in :core:src/rwg.f90
             use core_for
             integer, optional,intent(in),check(shape(nodes,0)==num_nodes),depend(nodes) :: num_nodes=shape(nodes,0)
             integer, optional,intent(in),check(shape(triangle_nodes,0)==num_triangles),depend(triangle_nodes) :: num_triangles=shape(triangle_nodes,0)
-            integer, optional,intent(in),check(shape(xi_eta_eval,0)==num_integration),depend(xi_eta_eval) :: num_integration=shape(xi_eta_eval,0)
+            integer, optional,intent(in),check(shape(xi_eta,0)==num_integration),depend(xi_eta) :: num_integration=shape(xi_eta,0)
             real(kind=wp) dimension(num_nodes,3),intent(in) :: nodes
             integer dimension(num_triangles,3),intent(in) :: triangle_nodes
+            real(kind=wp) dimension(num_triangles),intent(in),depend(num_triangles) :: triangle_areas
             complex(kind=wp) intent(in) :: s
-            real(kind=wp) dimension(num_integration,2),intent(in) :: xi_eta_eval
+            real(kind=wp) dimension(num_integration,2),intent(in) :: xi_eta
             real(kind=wp) dimension(num_integration),intent(in),depend(num_integration) :: weights
             real(kind=wp) dimension(num_triangles,3),intent(in),depend(num_triangles) :: normals
+            logical intent(in) :: t_form
             complex(kind=wp) dimension(num_triangles,3,num_triangles,3),intent(out),depend(num_triangles,num_triangles) :: z_face
         end subroutine z_mfie_faces_self
         module constants ! in :core:src/common.f90

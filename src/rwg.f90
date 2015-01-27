@@ -87,6 +87,63 @@ module core_for
             complex(WP), intent(out) :: I_phi
         end subroutine
 
+        subroutine face_unit_integral(n, xi_eta, weights, nodes_in, normal, T_form, I_Z)
+            ! Double integral of Dirac delta function over a single triangle face
+            ! NB: includes only the 1/2A prefactor, may need an additional 1/2A
+            !
+            ! xi_eta - list of coordinate pairs in the triangle
+            ! weights - the integration weights
+            ! nodes - the position of the triangle nodes
+            ! normal - the vector of the triangle normal
+            ! T_form - if true, the tangential form is used, otherwise the n x form
+
+            use constants        
+            implicit none
+        
+            integer, intent(in) :: n
+            real(WP), dimension(3, 3), intent(in) :: nodes_in
+        
+            real(WP), intent(in), dimension(0:n-1, 2) :: xi_eta
+            real(WP), intent(in), dimension(0:n-1) :: weights
+            logical, intent(in) :: T_form
+        
+            real(WP), intent(in), dimension(3) :: normal
+        
+            complex(WP), intent(out), dimension(3, 3) :: I_Z
+        end subroutine
+
+        subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
+                weights_o, nodes_o_in, jk_0, normal, T_form, I_Z)
+            ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
+            ! NB: includes the 1/4A**2 prefactor
+            !
+            ! xi_eta_s/o - list of coordinate pairs in source/observer triangle
+            ! weights_s/o - the integration weights of the source and observer
+            ! nodes_s/o - the nodes of the source and observer triangles
+            ! jk_0 - *complex* free space wavenumber, j*k_0
+            ! nodes - the position of the triangle nodes
+        
+            use constants
+            implicit none
+        
+            integer, intent(in) :: n_s, n_o
+            real(WP), dimension(3, 3), intent(in) :: nodes_s_in, nodes_o_in
+            complex(WP), intent(in) :: jk_0
+        
+            real(WP), intent(in), dimension(0:n_s-1, 2) :: xi_eta_s
+            real(WP), intent(in), dimension(0:n_s-1) :: weights_s
+        
+            real(WP), intent(in), dimension(0:n_o-1, 2) :: xi_eta_o
+            real(WP), intent(in), dimension(0:n_o-1) :: weights_o
+        
+            real(WP), intent(in), dimension(3) :: normal
+            logical, intent(in) :: T_form
+        
+            complex(WP), intent(out), dimension(3, 3) :: I_z
+        end subroutine
+
+
+
     end interface
 
 contains
@@ -701,7 +758,7 @@ end subroutine face_integrals_hanninen
 
 
 subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
-        weights_o, nodes_o_in, jk_0, normal, I_Z)
+        weights_o, nodes_o_in, jk_0, normal, T_form, I_Z)
     ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
     ! NB: includes the 1/4A**2 prefactor
     !
@@ -726,6 +783,7 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
     real(WP), intent(in), dimension(0:n_o-1) :: weights_o
 
     real(WP), intent(in), dimension(3) :: normal
+    logical, intent(in) :: T_form
 
     complex(WP), intent(out), dimension(3, 3) :: I_z
 
@@ -791,14 +849,28 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
               
             R = sqrt(sum((r_s - r_o)**2))
             g = (1.0 + jk_0*R)*exp(-jk_0*R)/R**3
-     
-            ! The n x RWG form
-            forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
-                dot_product(rho_o(:, uu), cross_product(normal, cross_product(r_o - r_s, rho_s(:, vv)))))
 
-            ! The tang RWG form
-            !forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
-            !    dot_product(rho_o(:, uu), cross_product(r_o - r_s, rho_s(:, vv))))
+            
+            if (T_form) then
+                ! The tang RWG form
+                forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
+                    dot_product(rho_o(:, uu), -cross_product(normal, cross_product(normal, cross_product(r_o - r_s, rho_s(:, vv))))))
+                !forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
+                !    dot_product(rho_o(:, uu), cross_product(r_o - r_s, rho_s(:, vv))))
+
+
+                !forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
+                !    dot_product(rho_o(:, uu), cross_product(r_o - r_s, rho_s(:, vv))))
+
+                ! From Reid
+                !forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
+                !    dot_product(r_o - r_s, cross_product(rho_o(:, uu), rho_s(:, vv))))
+
+            else     
+                ! The n x RWG form
+                forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
+                    dot_product(rho_o(:, uu), cross_product(normal, cross_product(r_o - r_s, rho_s(:, vv)))))
+            end if
 
         end do
     end do
@@ -807,9 +879,82 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
 
 end subroutine face_integral_MFIE
 
+subroutine face_unit_integral(n, xi_eta, weights, nodes_in, normal, n_cross, I_Z)
+    ! Double integral of Dirac delta function over a single triangle face
+    ! NB: includes only the 1/2A prefactor, may need an additional 1/2A
+    !
+    ! xi_eta - list of coordinate pairs in the triangle
+    ! weights - the integration weights
+    ! nodes - the position of the triangle nodes
+    ! normal - the vector of the triangle normal
+    ! n_cross - if true, n x RWG is used as the source function 
+
+    use core_for
+    use vectors
+    implicit none
+
+    integer, intent(in) :: n
+    real(WP), dimension(3, 3), intent(in) :: nodes_in
+
+    real(WP), intent(in), dimension(0:n-1, 2) :: xi_eta
+    real(WP), intent(in), dimension(0:n-1) :: weights
+    logical, intent(in) :: n_cross
+
+    real(WP), intent(in), dimension(3) :: normal
+
+    complex(WP), intent(out), dimension(3, 3) :: I_Z
+
+    real(WP) :: xi, eta, zeta, w
+    real(WP), dimension(3) :: r
+    real(WP), dimension(3, 3) :: rho
+    integer :: count_o, uu, vv
+    real(WP), dimension(3, 3) :: nodes
+
+    ! explictly copying the output arrays gives some small speedup,
+    ! possibly by avoiding access to the shared target array
+    complex(WP), dimension(3, 3) :: I_Z_int
+
+    
+    ! transpose for speed
+    nodes = transpose(nodes_in)
+
+    I_Z_int = 0.0
+
+    ! The loop over the source is repeated many times. Therefore pre-calculate the source
+    ! quantities to optimise speed (gives minor benefit)
+
+    do count_o = 0,n-1
+
+        w = weights(count_o)
+
+        ! Barycentric coordinates of the observer
+        xi = xi_eta(count_o, 1)
+        eta = xi_eta(count_o, 2)
+        zeta = 1.0 - eta - xi
+
+        ! Cartesian coordinates of the observer
+        r = xi*nodes(:, 1) + eta*nodes(:, 2) + zeta*nodes(:, 3)
+
+        ! Vector rho within the observer triangle
+        forall (uu=1:3) rho(:, uu) = r - nodes(:, uu)
+
+        if (n_cross) then
+            ! Use n x RWG source function
+            forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) - w*( &
+                dot_product(rho(:, uu), cross_product(normal, rho(:, vv))))
+        else
+            ! RWG source function
+            forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w*( &
+                dot_product(rho(:, uu), rho(:, vv)))
+        end if
+    end do
+
+    I_Z = I_Z_int
+
+end subroutine face_unit_integral
 
 subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, nodes, triangle_nodes, &
-                                s, xi_eta_eval, weights, normals, Z_face)
+                                triangle_areas, s, xi_eta, weights, normals, T_form, Z_face)
     ! Calculate the face to face interaction terms used to build the impedance matrix
     !
     ! As per Rao, Wilton, Glisson, IEEE Trans AP-30, 409 (1982)
@@ -820,7 +965,7 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, nodes, t
     ! basis_node_p/m - the free nodes for each basis function
     ! omega - evaulation frequency in rad/s
     ! s - complex frequency
-    ! xi_eta_eval, weights - quadrature rule over the triangle (weights normalised to 0.5)
+    ! xi_eta, weights - quadrature rule over the triangle (weights normalised to 0.5)
     ! A_precalc, phi_precalc - precalculated 1/R singular terms
 
     use core_for
@@ -831,12 +976,14 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, nodes, t
 
     real(WP), intent(in), dimension(0:num_nodes-1, 0:2) :: nodes
     integer, intent(in), dimension(0:num_triangles-1, 0:2) :: triangle_nodes
+    real(WP), intent(in), dimension(0:num_triangles-1) :: triangle_areas
 
     complex(WP), intent(in) :: s
 
-    real(WP), intent(in), dimension(0:num_integration-1, 0:1) :: xi_eta_eval
+    real(WP), intent(in), dimension(0:num_integration-1, 0:1) :: xi_eta
     real(WP), intent(in), dimension(0:num_integration-1) :: weights
     real(WP), intent(in), dimension(0:num_triangles-1, 0:2) :: normals
+    logical, intent(in) :: T_form
 
     complex(WP), intent(out), dimension(0:num_triangles-1, 0:2, 0:num_triangles-1, 0:2) :: Z_face
     
@@ -856,15 +1003,16 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, nodes, t
 
             nodes_q = nodes(triangle_nodes(q, :), :)
             if (p == q) then
-                ! diagonal self terms will be handled externally
-                I_Z = 0.0
-                !call face_integral_self_MFIE(num_integration, xi_eta_eval, weights, nodes_q, normals(p, :), I_Z)
+                ! diagonal self terms
+                call face_unit_integral(num_integration, xi_eta, weights, nodes_p, normals(p, :), T_form, I_Z)
+                I_Z = I_Z/4.0/triangle_areas(p)
             else
                 ! just perform regular integration
                 ! As per RWG, triangle area must be cancelled in the integration
                 ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
-                call face_integral_MFIE(num_integration, xi_eta_eval, weights, nodes_q, &
-                                    num_integration, xi_eta_eval, weights, nodes_p, jk_0, normals(p, :), I_Z)
+                call face_integral_MFIE(num_integration, xi_eta, weights, nodes_q, &
+                                    num_integration, xi_eta, weights, nodes_p, jk_0, normals(p, :), T_form, I_Z)
+                I_Z = I_Z/4.0/pi
             end if
 
             ! there is no symmetry for MFIE
