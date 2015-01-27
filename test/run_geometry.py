@@ -25,12 +25,13 @@ import matplotlib.pyplot as plt
 import scipy.linalg as la
 
 import logging
-logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.INFO)
 
 import openmodes
 import openmodes.basis
 from openmodes.constants import c
 from openmodes.model import ScalarModelLeastSq
+from openmodes.sources import PlaneWaveSource
 
 
 def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
@@ -72,6 +73,7 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
 
     e_inc = np.array([1, 1, 0], dtype=np.complex128)/np.sqrt(2)
     k_hat = np.array([0, 0, 1], dtype=np.complex128)
+    pw = PlaneWaveSource(e_inc, k_hat)
 
     z_sem = np.empty((num_freqs, num_modes), np.complex128)
     z_eem = np.empty((num_freqs, num_modes), np.complex128)
@@ -79,7 +81,7 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
 
     for freq_count, s in sim.iter_freqs(freqs):
         Z = sim.impedance(s)
-        V = sim.source_plane_wave(e_inc, s/c*k_hat)
+        V = sim.source_vector(pw, s)
         I = Z.solve(V)
         extinction[freq_count] = np.vdot(V[part], I)
 
