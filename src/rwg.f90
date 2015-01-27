@@ -67,7 +67,7 @@ module core_for
 
         end subroutine
 
-        pure subroutine face_integrals_smooth_complex(n_s, n_s2, xi_eta_s, weights_s, &
+        pure subroutine face_integral_EFIE(n_s, n_s2, xi_eta_s, weights_s, &
                         nodes_s, n_o, xi_eta_o, weights_o, nodes_o, jk_0, I_A, I_phi)
             use constants
             implicit none
@@ -318,7 +318,7 @@ subroutine Z_EFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
             ! As per RWG, triangle area must be cancelled in the integration
             ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
             call EFIE_face_integrals(num_integration, xi_eta_eval, weights, nodes_q, &
-                                num_integration, xi_eta_eval, weights, nodes_p, jk_0, .FALSE., I_A, I_phi)
+                                num_integration, xi_eta_eval, weights, nodes_p, jk_0, 0, I_A, I_phi)
             ! by symmetry of Galerkin procedure, transposed components are identical (but transposed node indices)
             A_face(p, :, q, :) = I_A
             phi_face(p, q) = I_phi
@@ -331,7 +331,7 @@ end subroutine Z_EFIE_faces_mutual
 
 
 subroutine EFIE_face_integrals(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
-        weights_o, nodes_o_in, jk_0, singular, I_A, I_phi)
+        weights_o, nodes_o_in, jk_0, degree_singular, I_A, I_phi)
     ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
     ! NB: includes the 1/4A**2 prefactor
     !
@@ -355,7 +355,7 @@ subroutine EFIE_face_integrals(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta
     real(WP), intent(in), dimension(0:n_o-1, 2) :: xi_eta_o
     real(WP), intent(in), dimension(0:n_o-1) :: weights_o
 
-    logical, intent(in) :: singular
+    integer, intent(in) :: degree_singular
 
     complex(WP), intent(out), dimension(3, 3) :: I_A
     complex(WP), intent(out) :: I_phi
@@ -423,20 +423,22 @@ subroutine EFIE_face_integrals(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta
 
             R = sqrt(sum((r_s - r_o)**2))
 
-            if (singular) then 
-                ! give the explicit limit for R=0 
-                ! (could use a Taylor expansion for small k_0*R?)
+            if (degree_singular == 0) then 
+                g = exp(-jk_0*R)/R
+            else
                 if (abs(jk_0*R) < 1e-8) then
+                    ! give the explicit limit for R=0 
+                    ! (could use a Taylor expansion for small k_0*R?)
                     g = -jk_0
                 else
                     g = (exp(-jk_0*R) - 1.0)/R
                 end if
-            else
-                g = exp(-jk_0*R)/R
+                if (degree_singular > 1) then
+                    g = g - (jk_0**2)*R/2.0
+                end if
             end if
-     
-            I_phi_int = I_phi_int + g*w_s*w_o
 
+            I_phi_int = I_phi_int + g*w_s*w_o
             I_A_int = I_A_int + g*w_s*w_o*matmul(transpose(rho_o), rho_s)
 
         end do
@@ -508,20 +510,26 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
             if (any(triangle_nodes(p, :) == triangle_nodes(q, :))) then
                 ! triangles have one or more common nodes, perform singularity extraction
                 call EFIE_face_integrals(num_integration, xi_eta_eval, weights, nodes_q, &
-                                    num_integration, xi_eta_eval, weights, nodes_p, jk_0, .TRUE., I_A, I_phi)
+                                    num_integration, xi_eta_eval, weights, nodes_p, jk_0, degree_singular, I_A, I_phi)
         
                 ! the singular 1/R components are pre-calculated
                 index_singular = scr_index(p, q, indices_precalc, indptr_precalc)
 
                 I_A = I_A + A_precalc(index_singular, 0, :, :)
                 I_phi = I_phi + phi_precalc(index_singular, 0)
+                
+                ! The R term
+                if (degree_singular > 1) then
+                    I_A = I_A + A_precalc(index_singular, 1, :, :)*jk_0**2/2
+                    I_phi = I_phi + phi_precalc(index_singular, 1)*jk_0**2/2
+                end if
         
             else
                 ! just perform regular integration
                 ! As per RWG, triangle area must be cancelled in the integration
                 ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
                 call EFIE_face_integrals(num_integration, xi_eta_eval, weights, nodes_q, &
-                                    num_integration, xi_eta_eval, weights, nodes_p, jk_0, .FALSE., I_A, I_phi)
+                                    num_integration, xi_eta_eval, weights, nodes_p, jk_0, 0, I_A, I_phi)
             end if
 
             ! by symmetry of Galerkin procedure, transposed components are identical (but transposed node indices)

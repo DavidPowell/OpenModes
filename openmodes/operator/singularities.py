@@ -20,6 +20,7 @@
 """Routines for dealing with singular integrals, where for convenience the
 quantities for both EFIE and MFIE may be calculated simultaneously"""
 
+import logging
 import numpy as np
 import openmodes.core
 from openmodes.taylor_duffy import taylor_duffy, OPERATOR_EFIE, OPERATOR_MFIE
@@ -123,7 +124,8 @@ class MultiSparse(object):
 cached_singular_terms = {}
 
 
-def singular_impedance_rwg(basis, operator, tangential_form, rel_tol):
+def singular_impedance_rwg(basis, operator, tangential_form, num_terms,
+                           rel_tol):
     """Precalculate the singular impedance terms for an object
 
     Parameters
@@ -135,6 +137,8 @@ def singular_impedance_rwg(basis, operator, tangential_form, rel_tol):
         The operator form, either "EFIE" or "MFIE"
     tangential_form: boolean
         If True, the T form operator is taken, otherwise the N form
+    num_terms: integer
+        The number of singular terms to extract
     rel_tol: float
         The desired relative tolerance of the singular integrals
 
@@ -167,13 +171,13 @@ def singular_impedance_rwg(basis, operator, tangential_form, rel_tol):
     # Choose what to store based on the operator for which the singularities
     # are to be calculated, including T vs N form
     if operator == "EFIE" and tangential_form:
-        singular_terms = MultiSparse([(np.float64, (1,)),        # phi
-                                      (np.float64, (1, 3, 3))])  # A
+        singular_terms = MultiSparse([(np.float64, (num_terms,)),        # phi
+                                      (np.float64, (num_terms, 3, 3))])  # A
         which_operator = OPERATOR_EFIE
     elif operator == "EFIE":
         raise NotImplementedError
     elif operator == "MFIE" and not tangential_form:
-        singular_terms = MultiSparse([(np.float64, (1, 3, 3))])  # A
+        singular_terms = MultiSparse([(np.float64, (num_terms, 3, 3))])  # A
         which_operator = OPERATOR_MFIE
     elif operator == "MFIE":
         raise NotImplementedError
@@ -181,6 +185,11 @@ def singular_impedance_rwg(basis, operator, tangential_form, rel_tol):
         raise ValueError("Don't know how to handle singularities for operator "
                          "%s with tangential_form=%s" %
                          (operator, tangential_form))
+
+    logging.info("Integrating singular terms for basis function %s, with "
+                 "operator type %s, tangential_form %s, %d terms, "
+                 "relative tolerance %e" % (basis, operator, tangential_form,
+                                            num_terms, rel_tol))
 
     # find the neighbouring triangles (including self terms) to integrate
     # singular part
@@ -193,7 +202,7 @@ def singular_impedance_rwg(basis, operator, tangential_form, rel_tol):
         for q in sharing_triangles:  # source
             # at least one node is shared
             res = taylor_duffy(nodes, polygons[p], polygons[q], which_operator,
-                               tangential_form, 1, rel_tol=rel_tol)
+                               tangential_form, num_terms, rel_tol=rel_tol)
             singular_terms[p, q] = res
 
     # Arrays are currently put into fortran order, under the assumption

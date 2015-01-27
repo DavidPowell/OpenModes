@@ -33,7 +33,7 @@ from openmodes.operator.singularities import singular_impedance_rwg
 
 def impedance_rwg_efie_free_space(s, integration_rule, basis_o, nodes_o,
                                   basis_s, nodes_s, self_impedance,
-                                  singularity_accuracy):
+                                  num_singular_terms, singularity_accuracy):
     """EFIE derived Impedance matrix for RWG or loop-star basis functions"""
 
     transform_L_o, transform_S_o = basis_o.transformation_matrices
@@ -44,6 +44,7 @@ def impedance_rwg_efie_free_space(s, integration_rule, basis_o, nodes_o,
 
         singular_terms = singular_impedance_rwg(basis_o, operator="EFIE",
                                                 tangential_form=True,
+                                                num_terms=num_singular_terms,
                                                 rel_tol=singularity_accuracy)
         if (np.any(np.isnan(singular_terms[0])) or
                 np.any(np.isnan(singular_terms[1]))):
@@ -96,10 +97,12 @@ class EfieOperator(Operator):
 
     def __init__(self, integration_rule, basis_container,
                  greens_function=FreeSpaceGreensFunction(),
-                 tangential_form=True, singularity_accuracy=1e-5):
+                 tangential_form=True, num_singular_terms=2,
+                 singularity_accuracy=1e-5):
         self.basis_container = basis_container
         self.integration_rule = integration_rule
         self.greens_function = greens_function
+        self.num_singular_terms = num_singular_terms
         self.singularities_accuracy = singularity_accuracy
 
         self.tangential_form = tangential_form
@@ -138,6 +141,7 @@ class EfieOperator(Operator):
                                                      basis_o, part_o.nodes,
                                                      basis_s, part_s.nodes,
                                                      part_o == part_s,
+                                                     self.num_singular_terms,
                                                      self.singularities_accuracy)
             else:
                 raise NotImplementedError
