@@ -87,25 +87,62 @@ cdef void set_vertex(TaylorDuffyArgStruct *Args, int which_vertex, double* addre
 
 # Definitions for which form of singularity to extract
 cpdef enum:
-    SING_T_EFIE
-    SING_N_EFIE
-    SING_T_MFIE
-    SING_N_MFIE
+    OPERATOR_EFIE
+    OPERATOR_MFIE
+
+cdef extern from "math.h" nogil:
+    double M_PI
+
+cdef enum:
+    MAX_TERMS = 2
 
 def taylor_duffy(double[:, ::1] nodes, int[::1] triangle_o,
-                 int[::1] triangle_s, int which_form, int max_eval=1000,
-                 double rel_tol = 1e-10):
+                 int[::1] triangle_s, int which_operator, bint tangential_form,
+                 int num_terms, int max_eval=1000, double rel_tol = 1e-10):
+    """Calculate singular terms for RWG basis functions using the Taylor-Duffy 
+    method. Wraps C++ code from scuff-EM.
+    
+    Parameters
+    ----------
+    nodes: ndarray(num_nodes, 3) of double
+        A list containing a set of unique nodes
+    triangle_o: ndarray(3) of int
+        The node indices of the observer triangle
+    triangle_s: ndarray(3) of int
+        The node indices of the source triangle
+    which_operator: int
+        Either OPERATOR_EFIE or OPERATOR MFIE specifying whether the EFIE or
+        MFIE operator terms are required
+    tangential_form: bool
+        If True, the tangential form of the operator is used, otherwise the
+        n x form is used
+    num_terms: int
+        The number of singular terms to extract
+    max_eval: int
+        The maximum number of times to evaulate the function during
+        adaptive integration
+    rel_tol: double
+        The desired relative tolerance in the integrals
+    """
 
-    cdef np.ndarray[np.float64_t, ndim=2] res_A_np = np.empty((3, 3), np.float64)
-    cdef double[:, ::1] res_A = res_A_np
+    cdef np.ndarray[np.float64_t, ndim=3] res_A_np = np.empty((num_terms, 3, 3), np.float64)
+    cdef double[:, :, ::1] res_A = res_A_np
+    
+    cdef np.ndarray[np.float64_t, ndim=1] res_phi_np = np.empty(num_terms, np.float64)
+    cdef double[::1] res_phi = res_phi_np
 
     cdef TaylorDuffyArgStruct TDArgs
+    
+    # input buffers
+    cdef int PIndex[MAX_TERMS]
+    cdef int KIndex[MAX_TERMS]
+    cdef double complex KParam[MAX_TERMS]
+    
     # output buffers
-    cdef double complex Result[1]
-    cdef double complex Error[1]
+    cdef double complex Result[MAX_TERMS]
+    cdef double complex Error[MAX_TERMS]
 
     cdef int count_o, count_s
-    cdef double res_phi
 
     cdef int obs_only[2]
     cdef int source_only[2]
@@ -114,9 +151,13 @@ def taylor_duffy(double[:, ::1] nodes, int[::1] triangle_o,
 
     cdef int v_count
     cdef int node
+    cdef int n, start_term
 
-    if which_form not in (SING_T_EFIE, SING_N_MFIE):
-        raise ValueError("Unkown singularity form")
+    if which_operator not in (OPERATOR_EFIE, OPERATOR_MFIE):
+        raise ValueError("Unkown operator %s" % str(which_operator))
+        
+    if num_terms > MAX_TERMS:
+        raise ValueError("Too many singular terms: %d" % num_terms)
 
     with nogil:
         InitTaylorDuffyArgs(&TDArgs)
@@ -163,9 +204,14 @@ def taylor_duffy(double[:, ::1] nodes, int[::1] triangle_o,
             v_count += 1
             
         # specification of which integrals we want
-        TDArgs.NumPKs = 1
-        TDArgs.KIndex = [TD_RP]
-        TDArgs.KParam = [ -1.0+0j]
+        TDArgs.NumPKs = num_terms
+        
+        TDArgs.KIndex = KIndex
+        for n in xrange(num_terms):        
+            KIndex[n] = TD_RP
+
+        TDArgs.PIndex = PIndex
+        TDArgs.KParam = KParam
 
         TDArgs.Result = Result
         TDArgs.Error = Error 
@@ -173,17 +219,35 @@ def taylor_duffy(double[:, ::1] nodes, int[::1] triangle_o,
         TDArgs.MaxEval = max_eval
         TDArgs.RelTol = rel_tol
 
-        # evaluate the scalar potential term if using EFIE
-        if which_form == SING_T_EFIE:
-            TDArgs.PIndex = [TD_UNITY]
-            TaylorDuffy( &TDArgs )
-            res_phi = real(Result[0])
+        # polynomial terms are -1, 1, for EFIE, -3, -1 for MFIE
+        if which_operator == OPERATOR_EFIE:
+            start_term = -1
+        else:
+            start_term = -3
+        for n in xrange(num_terms):
+            KParam[n] = <double complex>(start_term+2*n)
 
-        # choose which vector potential term to return
-        if which_form == SING_T_EFIE:
-            TDArgs.PIndex = [TD_PMCHWG1]
-        elif which_form == SING_N_MFIE:
-            TDArgs.PIndex = [TD_NMULLERC]
+        # evaluate the scalar potential term if using EFIE
+        if which_operator == OPERATOR_EFIE:
+            for n in xrange(num_terms):
+                PIndex[n] = TD_UNITY
+
+            TaylorDuffy( &TDArgs )
+            for n in xrange(num_terms):
+                res_phi[n] = real(Result[n])*4*M_PI
+
+        # choose which vector potential term to calculate
+        for n in xrange(num_terms):
+            if which_operator == OPERATOR_EFIE:
+                if tangential_form:
+                    PIndex[n] = TD_PMCHWG1
+                else:
+                    pass
+            else:
+                if tangential_form:
+                    pass
+                else:
+                    PIndex[n] = TD_NMULLERC
             
         # evaluate the vector potential terms
         for count_o in xrange(3):
@@ -191,9 +255,10 @@ def taylor_duffy(double[:, ::1] nodes, int[::1] triangle_o,
             for count_s in xrange(3):
                 TDArgs.QP = &nodes[triangle_s[count_s], 0]
                 TaylorDuffy( &TDArgs )
-                res_A[count_o, count_s] = real(Result[0])
+                for n in xrange(num_terms):
+                    res_A[n, count_o, count_s] = real(Result[n])*4*M_PI
 
-    if which_form in (SING_T_EFIE, SING_N_EFIE):
-        return res_phi*4*pi, res_A_np*4*pi
+    if which_operator == OPERATOR_EFIE:
+        return res_phi_np, res_A_np
     else:
-        return res_A_np*4*pi
+        return res_A_np

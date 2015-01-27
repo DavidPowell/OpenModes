@@ -22,7 +22,7 @@ quantities for both EFIE and MFIE may be calculated simultaneously"""
 
 import numpy as np
 import openmodes.core
-from openmodes.taylor_duffy import taylor_duffy, SING_T_EFIE, SING_N_MFIE
+from openmodes.taylor_duffy import taylor_duffy, OPERATOR_EFIE, OPERATOR_MFIE
 from openmodes.basis import LinearTriangleBasis
 
 
@@ -167,14 +167,14 @@ def singular_impedance_rwg(basis, operator, tangential_form, rel_tol):
     # Choose what to store based on the operator for which the singularities
     # are to be calculated, including T vs N form
     if operator == "EFIE" and tangential_form:
-        singular_terms = MultiSparse([(np.float64, None),     # phi
-                                      (np.float64, (3, 3))])  # A
-        which_form = SING_T_EFIE
+        singular_terms = MultiSparse([(np.float64, (1,)),        # phi
+                                      (np.float64, (1, 3, 3))])  # A
+        which_operator = OPERATOR_EFIE
     elif operator == "EFIE":
         raise NotImplementedError
     elif operator == "MFIE" and not tangential_form:
-        singular_terms = MultiSparse([(np.float64, (3, 3))])  # A
-        which_form = SING_N_MFIE
+        singular_terms = MultiSparse([(np.float64, (1, 3, 3))])  # A
+        which_operator = OPERATOR_MFIE
     elif operator == "MFIE":
         raise NotImplementedError
     else:
@@ -192,8 +192,8 @@ def singular_impedance_rwg(basis, operator, tangential_form, rel_tol):
         # find any neighbouring elements which are touching
         for q in sharing_triangles:  # source
             # at least one node is shared
-            res = taylor_duffy(nodes, polygons[p], polygons[q], which_form,
-                               rel_tol=rel_tol)
+            res = taylor_duffy(nodes, polygons[p], polygons[q], which_operator,
+                               tangential_form, 1, rel_tol=rel_tol)
             singular_terms[p, q] = res
 
     # Arrays are currently put into fortran order, under the assumption

@@ -10,24 +10,6 @@ python module core ! in
             real(kind=wp) dimension(3,3),intent(out) :: i_a
             real(kind=wp) intent(out) :: i_phi
         end subroutine arcioni_singular
-        subroutine z_efie_faces_self(num_nodes,num_triangles,num_integration,num_singular,nodes,triangle_nodes,s,xi_eta_eval,weights,phi_precalc,a_precalc,indices_precalc,indptr_precalc,a_face,phi_face) ! in :core:src/rwg.f90
-            use core_for
-            integer, optional,intent(in),check(shape(nodes,0)==num_nodes),depend(nodes) :: num_nodes=shape(nodes,0)
-            integer, optional,intent(in),check(shape(triangle_nodes,0)==num_triangles),depend(triangle_nodes) :: num_triangles=shape(triangle_nodes,0)
-            integer, optional,intent(in),check(shape(xi_eta_eval,0)==num_integration),depend(xi_eta_eval) :: num_integration=shape(xi_eta_eval,0)
-            integer, optional,intent(in),check(len(phi_precalc)>=num_singular),depend(phi_precalc) :: num_singular=len(phi_precalc)
-            real(kind=wp) dimension(num_nodes,3),intent(in) :: nodes
-            integer dimension(num_triangles,3),intent(in) :: triangle_nodes
-            complex(kind=wp) intent(in) :: s
-            real(kind=wp) dimension(num_integration,2),intent(in) :: xi_eta_eval
-            real(kind=wp) dimension(num_integration),intent(in),depend(num_integration) :: weights
-            real(kind=wp) dimension(num_singular),intent(in) :: phi_precalc
-            real(kind=wp) dimension(num_singular,3,3),intent(in),depend(num_singular) :: a_precalc
-            integer dimension(num_singular),intent(in),depend(num_singular) :: indices_precalc
-            integer dimension(num_triangles + 1),intent(in),depend(num_triangles) :: indptr_precalc
-            complex(kind=wp) dimension(num_triangles,3,num_triangles,3),intent(out),depend(num_triangles,num_triangles) :: a_face
-            complex(kind=wp) dimension(num_triangles,num_triangles),intent(out),depend(num_triangles,num_triangles) :: phi_face
-        end subroutine z_efie_faces_self
         subroutine z_efie_faces_mutual(num_nodes_o,num_triangles_o,num_nodes_s,num_triangles_s,num_integration,nodes_o,triangle_nodes_o,nodes_s,triangle_nodes_s,s,xi_eta_eval,weights,a_face,phi_face) ! in :core:src/rwg.f90
             use core_for
             integer, optional,intent(in),check(shape(nodes_o,0)==num_nodes_o),depend(nodes_o) :: num_nodes_o=shape(nodes_o,0)
@@ -45,6 +27,25 @@ python module core ! in
             complex(kind=wp) dimension(num_triangles_o,3,num_triangles_s,3),intent(out),depend(num_triangles_o,num_triangles_s) :: a_face
             complex(kind=wp) dimension(num_triangles_o,num_triangles_s),intent(out),depend(num_triangles_o,num_triangles_s) :: phi_face
         end subroutine z_efie_faces_mutual
+        subroutine z_efie_faces_self(num_nodes,num_triangles,num_integration,num_singular,degree_singular,nodes,triangle_nodes,s,xi_eta_eval,weights,phi_precalc,a_precalc,indices_precalc,indptr_precalc,a_face,phi_face) ! in :core:src/rwg.f90
+            use core_for
+            integer, optional,intent(in),check(shape(nodes,0)==num_nodes),depend(nodes) :: num_nodes=shape(nodes,0)
+            integer, optional,intent(in),check(shape(triangle_nodes,0)==num_triangles),depend(triangle_nodes) :: num_triangles=shape(triangle_nodes,0)
+            integer, optional,intent(in),check(shape(xi_eta_eval,0)==num_integration),depend(xi_eta_eval) :: num_integration=shape(xi_eta_eval,0)
+            integer, optional,intent(in),check(shape(phi_precalc,0)==num_singular),depend(phi_precalc) :: num_singular=shape(phi_precalc,0)
+            integer, optional,intent(in),check(shape(phi_precalc,1)==degree_singular),depend(phi_precalc) :: degree_singular=shape(phi_precalc,1)
+            real(kind=wp) dimension(num_nodes,3),intent(in) :: nodes
+            integer dimension(num_triangles,3),intent(in) :: triangle_nodes
+            complex(kind=wp) intent(in) :: s
+            real(kind=wp) dimension(num_integration,2),intent(in) :: xi_eta_eval
+            real(kind=wp) dimension(num_integration),intent(in),depend(num_integration) :: weights
+            real(kind=wp) dimension(num_singular,degree_singular),intent(in) :: phi_precalc
+            real(kind=wp) dimension(num_singular,degree_singular,3,3),intent(in),depend(num_singular,degree_singular) :: a_precalc
+            integer dimension(num_singular),intent(in),depend(num_singular) :: indices_precalc
+            integer dimension(num_triangles + 1),intent(in),depend(num_triangles) :: indptr_precalc
+            complex(kind=wp) dimension(num_triangles,3,num_triangles,3),intent(out),depend(num_triangles,num_triangles) :: a_face
+            complex(kind=wp) dimension(num_triangles,num_triangles),intent(out),depend(num_triangles,num_triangles) :: phi_face
+        end subroutine z_efie_faces_self
         subroutine face_integrals_hanninen(nodes_s,n_o,xi_eta_o,weights_o,nodes_o,i_a,i_phi) ! in :core:src/rwg.f90
             use vectors
             use constants

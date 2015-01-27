@@ -448,9 +448,9 @@ subroutine EFIE_face_integrals(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta
 end subroutine EFIE_face_integrals
 
 
-subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_singular, nodes, triangle_nodes, &
-                                s, xi_eta_eval, weights, phi_precalc, A_precalc, indices_precalc, indptr_precalc, &
-                                A_face, phi_face)
+subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_singular, degree_singular, &
+                                nodes, triangle_nodes, s, xi_eta_eval, weights, phi_precalc, A_precalc, &
+                                indices_precalc, indptr_precalc, A_face, phi_face)
     ! Calculate the face to face interaction terms used to build the impedance matrix
     !
     ! As per Rao, Wilton, Glisson, IEEE Trans AP-30, 409 (1982)
@@ -467,7 +467,7 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
     use core_for
     implicit none
 
-    integer, intent(in) :: num_nodes, num_triangles, num_integration, num_singular
+    integer, intent(in) :: num_nodes, num_triangles, num_integration, num_singular, degree_singular
     ! f2py intent(hide) :: num_nodes, num_triangles, num_integration, num_singular
 
     real(WP), intent(in), dimension(0:num_nodes-1, 0:2) :: nodes
@@ -478,8 +478,8 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
     real(WP), intent(in), dimension(0:num_integration-1, 0:1) :: xi_eta_eval
     real(WP), intent(in), dimension(0:num_integration-1) :: weights
 
-    real(WP), intent(in), dimension(0:num_singular-1) :: phi_precalc
-    real(WP), intent(in), dimension(0:num_singular-1, 3, 3) :: A_precalc
+    real(WP), intent(in), dimension(0:num_singular-1, 0:degree_singular-1) :: phi_precalc
+    real(WP), intent(in), dimension(0:num_singular-1, 0:degree_singular-1, 3, 3) :: A_precalc
     integer, intent(in), dimension(0:num_singular-1) :: indices_precalc
     integer, intent(in), dimension(0:num_triangles) :: indptr_precalc
 
@@ -493,7 +493,7 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
     complex(WP), dimension(3, 3) :: I_A
     complex(WP) :: I_phi
 
-    integer :: p, q, index_singular!, q_p, q_m, p_p, p_m, ip_p, ip_m, iq_p, iq_m, m, n
+    integer :: p, q, index_singular
 
     jk_0 = s/c
 
@@ -513,8 +513,8 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
                 ! the singular 1/R components are pre-calculated
                 index_singular = scr_index(p, q, indices_precalc, indptr_precalc)
 
-                I_A = I_A + A_precalc(index_singular, :, :)
-                I_phi = I_phi + phi_precalc(index_singular)
+                I_A = I_A + A_precalc(index_singular, 0, :, :)
+                I_phi = I_phi + phi_precalc(index_singular, 0)
         
             else
                 ! just perform regular integration
