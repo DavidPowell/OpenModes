@@ -194,7 +194,7 @@ def singular_impedance_rwg(basis, operator, tangential_form, rel_tol):
             # at least one node is shared
             res = taylor_duffy(nodes, polygons[p], polygons[q], which_form,
                                rel_tol=rel_tol)
-            singular_terms[p, q] = (res[1]*4*np.pi, res[0]*4*np.pi)
+            singular_terms[p, q] = res
 
     # Arrays are currently put into fortran order, under the assumption
     # that they will mostly be used by fortran routines.

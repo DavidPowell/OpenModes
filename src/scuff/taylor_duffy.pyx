@@ -3,6 +3,7 @@
 
 import numpy as np
 cimport numpy as np
+from numpy import pi
 
 cdef extern from "TaylorDuffy.h" nogil:
     cdef cppclass TaylorDuffyArgStruct:
@@ -193,6 +194,6 @@ def taylor_duffy(double[:, ::1] nodes, int[::1] triangle_o,
                 res_A[count_o, count_s] = real(Result[0])
 
     if which_form in (SING_T_EFIE, SING_N_EFIE):
-        return res_A_np, res_phi
+        return res_phi*4*pi, res_A_np*4*pi
     else:
-        return res_A_np
+        return res_A_np*4*pi
