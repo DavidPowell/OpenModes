@@ -27,12 +27,15 @@ import scipy.linalg as la
 
 import openmodes
 import openmodes.basis
+from openmodes.sources import PlaneWaveSource
 from openmodes.constants import c
+from openmodes.integration import triangle_centres
 
 tests_location = osp.split(__file__)[0]
 
 
-def horseshoe_modes(plot=False, skip_asserts=False, write_reference=False):
+def test_horseshoe_modes(plot=False, skip_asserts=False,
+                         write_reference=False):
     "Modes of horseshoe"
     sim = openmodes.Simulation(name='horseshoe_modes',
                                basis_class=openmodes.basis.LoopStarBasis)
@@ -67,9 +70,9 @@ def horseshoe_modes(plot=False, skip_asserts=False, write_reference=False):
                          dtype=np.complex128)
 
     if not skip_asserts:
-        assert_allclose(mode_s, [-2.57653205e+09 + 3.15228009e+10j,
-                                 -1.88483326e+10 + 4.50133995e+10j,
-                                 -1.98138107e+10 + 6.84443248e+10j])
+        assert_allclose(mode_s, [-2.585729e+09 + 3.156438e+10j,
+                                 -1.887518e+10 + 4.500579e+10j,
+                                 -1.991163e+10 + 6.846221e+10j])
         assert_allclose(mode_j[:, 0], j_0_ref)
         assert_allclose(mode_j[:, 1], j_1_ref)
         assert_allclose(mode_j[:, 2], j_2_ref)
@@ -81,6 +84,44 @@ def horseshoe_modes(plot=False, skip_asserts=False, write_reference=False):
                     compress_scalars=3)
         sim.plot_3d(solution=mode_j[:, 2], output_format='mayavi',
                     compress_scalars=3)
+
+
+def test_surface_normals(plot=False, skip_asserts=False,
+                         write_reference=False):
+    "Test the surface normals of a horseshoe mesh"
+    sim = openmodes.Simulation()
+    mesh = sim.load_mesh(osp.join(tests_location, 'input', 'test_horseshoe',
+                                  'horseshoe_rect.msh'))
+    part = sim.place_part(mesh)
+    basis = sim.basis_container[part]
+
+    r, rho = basis.integration_points(mesh.nodes, triangle_centres)
+    normals = mesh.surface_normals
+    r = r.reshape((-1, 3))
+
+    if write_reference:
+        np.savetxt(osp.join(tests_location, 'reference', 'test_horseshoe',
+                            'surface_r.txt'), r, fmt="%.8e")
+        np.savetxt(osp.join(tests_location, 'reference', 'test_horseshoe',
+                            'surface_normals.txt'), normals, fmt="%.8e")
+
+    r_ref = np.loadtxt(osp.join(tests_location, 'reference', 'test_horseshoe',
+                                'surface_r.txt'))
+    normals_ref = np.loadtxt(osp.join(tests_location, 'reference',
+                                      'test_horseshoe', 'surface_normals.txt'))
+
+    if not skip_asserts:
+        assert_allclose(r, r_ref)
+        assert_allclose(normals, normals_ref)
+
+    if plot:
+        from mayavi import mlab
+        mlab.figure()
+        mlab.quiver3d(r[:, 0], r[:, 1], r[:, 2],
+                      normals[:, 0], normals[:, 1], normals[:, 2],
+                      mode='cone')
+        mlab.view(distance='auto')
+        mlab.show()
 
 
 def test_extinction(plot_extinction=False, skip_asserts=False,
@@ -100,10 +141,11 @@ def test_extinction(plot_extinction=False, skip_asserts=False,
 
     e_inc = np.array([1, 0, 0], dtype=np.complex128)
     k_hat = np.array([0, 0, 1], dtype=np.complex128)
+    pw = PlaneWaveSource(e_inc, k_hat)
 
     for freq_count, s in sim.iter_freqs(freqs):
         Z = sim.impedance(s)
-        V = sim.source_plane_wave(e_inc, s/c*k_hat)
+        V = sim.source_vector(pw, s)
         extinction[freq_count] = np.vdot(V, Z.solve(V))
 
     if write_reference:
@@ -227,5 +269,6 @@ def horseshoe_extinction_modes():
 
 if __name__ == "__main__":
     #test_extinction_modes()
-    horseshoe_modes(plot=True, skip_asserts=True)
+    test_horseshoe_modes(plot=True, skip_asserts=True)
     test_extinction(plot_extinction=True, skip_asserts=True)
+    test_surface_normals(plot=True, skip_asserts=True)
