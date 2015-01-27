@@ -177,62 +177,6 @@ pure function scr_index(row, col, indices, indptr)
 end function
 
 
-subroutine source_integral_plane_wave(n_o, xi_eta_o, weights_o, nodes_o, &
-                                      jk_inc, e_inc, I)
-    ! Inner product of source field with testing function to give source "voltage"
-    !
-    ! xi_eta_s/o - list of coordinate pairs in source/observer triangle
-    ! weights_s/o - the integration weights of the source and observer
-    ! nodes_s/o - the nodes of the source and observer triangles
-    ! k_0 - free space wavenumber
-    ! nodes - the position of the triangle nodes
-
-    use constants
-    implicit none
-
-    integer, intent(in) :: n_o
-    ! f2py intent(hide) :: n_o
-    real(WP), dimension(3, 3), intent(in) :: nodes_o
-
-    real(WP), intent(in), dimension(0:n_o-1, 2) :: xi_eta_o
-    real(WP), intent(in), dimension(0:n_o-1) :: weights_o
-    complex(WP), intent(in), dimension(3) :: jk_inc
-    complex(WP), intent(in), dimension(3) :: e_inc
-
-    complex(WP), intent(out), dimension(:) :: I
-
-    real(WP) :: xi_o, eta_o, zeta_o, w_o
-    real(WP), dimension(3) :: r_o
-    real(WP), dimension(3, 3) :: rho_o
-    complex(WP), dimension(3) :: e_r
-    integer :: count_o, uu
-
-    I = 0.0
-
-    do count_o = 0,n_o-1
-
-        w_o = weights_o(count_o)
-
-        ! Barycentric coordinates of the observer
-        xi_o = xi_eta_o(count_o, 1)
-        eta_o = xi_eta_o(count_o, 2)
-        zeta_o = 1.0 - eta_o - xi_o
-
-        ! Cartesian coordinates of the observer
-        r_o = xi_o*nodes_o(1, :) + eta_o*nodes_o(2, :) + zeta_o*nodes_o(3, :)
-
-        ! Vector rho within the observer triangle
-        forall (uu=1:3) rho_o(uu, :) = r_o - nodes_o(uu, :)
-
-        ! calculate the incident electric field
-        e_r = exp(-sum(jk_inc*r_o))*e_inc
-
-        forall (uu=1:3) I(uu) = I(uu) + dot_product(rho_o(uu, :), e_r)*w_o
-    end do
-
-end subroutine source_integral_plane_wave
-
-
 subroutine arcioni_singular(nodes, I_A, I_phi)
     ! Calculate singular 1/R term of the MOM integrals as per
     ! P. Arcioni, M. Bressan, and L. Perregrini, 
@@ -591,47 +535,6 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
     !$OMP END PARALLEL DO
 
 end subroutine Z_EFIE_faces_self
-
-
-
-subroutine V_EFIE_faces_plane_wave(num_nodes, num_triangles, num_integration, nodes, triangle_nodes, &                                
-                                xi_eta_eval, weights, e_inc, jk_inc, V_faces)
-    ! Calculate the voltage term, assuming a plane-wave incidence
-    !
-    ! Note that this assumes a free-space background
-
-
-    use core_for
-    implicit none
-
-    integer, intent(in) :: num_nodes, num_triangles, num_integration
-    ! f2py intent(hide) :: num_nodes, num_triangles, num_integration
-
-    real(WP), intent(in), dimension(0:num_nodes-1, 0:2) :: nodes
-    integer, intent(in), dimension(0:num_triangles-1, 0:2) :: triangle_nodes
-
-    real(WP), intent(in), dimension(0:num_integration-1, 0:1) :: xi_eta_eval
-    real(WP), intent(in), dimension(0:num_integration-1) :: weights
-
-    complex(WP), intent(in), dimension(3) :: jk_inc
-    complex(WP), intent(in), dimension(3) :: e_inc
-
-    complex(WP), intent(out), dimension(0:num_triangles-1, 0:2) :: V_faces
-
-    real(WP), dimension(0:2, 0:2) :: nodes_p
-    integer :: p
-
-    ! calculate all the integrations for each face pair
-    !$OMP PARALLEL DO SCHEDULE(DYNAMIC) DEFAULT(SHARED) &
-    !$OMP PRIVATE (p, nodes_p)
-    do p = 0,num_triangles-1 ! p is the index of the observer face:
-        nodes_p = nodes(triangle_nodes(p, :), :)
-        ! perform testing of the incident field
-        call source_integral_plane_wave(num_integration, xi_eta_eval, weights, &
-                nodes_p, jk_inc, e_inc, V_faces(p, :))
-    end do
-    !$OMP END PARALLEL DO
-end subroutine V_EFIE_faces_plane_wave
 
 
 subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &

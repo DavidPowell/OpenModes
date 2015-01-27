@@ -134,38 +134,6 @@ class EfieOperator(Operator):
             return EfieImpedanceMatrix(s, L, S, basis_o, basis_s, self, part_o,
                                        part_s)
 
-    def source_plane_wave_single_part(self, part, e_inc, jk_inc):
-        """Evaluate the source vector due to the incident wave
-
-        Parameters
-        ----------
-        e_inc: ndarray
-            incident field polarisation in free space
-        jk_inc: ndarray
-            incident wave vector in free space
-
-        Returns
-        -------
-        V : ndarray
-            the source "voltage" vector
-        """
-        basis = self.basis_container[part]
-
-        if (isinstance(basis, LinearTriangleBasis) and
-                isinstance(self.greens_function, FreeSpaceGreensFunction)):
-
-            incident_faces = openmodes.core.v_efie_faces_plane_wave(part.nodes,
-                                        basis.mesh.polygons,
-                                        self.integration_rule.xi_eta,
-                                        self.integration_rule.weights,
-                                        e_inc, jk_inc)
-
-            transform_L, _ = basis.transformation_matrices
-            return transform_L.dot(incident_faces.flatten())
-        else:
-            raise NotImplementedError("%s, %s" % (str(type(basis)),
-                                              str(type(self.greens_function))))
-
     def far_field_radiation(self, s, part, current_vec, direction):
         """Calculate the far-field radiation in a given direction. Note that
         all calculations will be referenced to the global origin. This means
