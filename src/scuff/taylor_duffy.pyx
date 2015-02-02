@@ -72,28 +72,19 @@ cdef extern from "complex" nogil:
     double imag(double complex)
 
 # An easy way to set the relevant vertex pointers
-cdef void set_vertex(TaylorDuffyArgStruct *Args, int which_vertex, double* address): # nogil:
+cdef void set_vertex(TaylorDuffyArgStruct *Args, int which_vertex, double* address) nogil:
     if which_vertex == 0:
-        print "V1"
         Args.V1 = address
     elif which_vertex == 1:
-        print "V2"
         Args.V2 = address
     elif which_vertex == 2:
-        print "V3"
         Args.V3 = address
     elif which_vertex == 3:
         # note that V3P must be set before V2P!
-        print "V3P"
         Args.V3P = address
     else:
-        print "V2P"
         Args.V2P = address
         
-    #with gil:
-    #print("setting vertex %d" % which_vertex)
-    for count in xrange(3):
-        print address[count]
 
 # Definitions for which form of singularity to extract
 cpdef enum:
@@ -177,16 +168,13 @@ def taylor_duffy(double[:, ::1] nodes, int[::1] triangle_o,
     if not tangential_form and (normal is None):
         raise ValueError("Normal required for n x operator form")
 
-    #with nogil:
-    if 1:
+    with nogil:
         InitTaylorDuffyArgs(&TDArgs)
 
         # Determine which nodes are in common, or observer only
         for count_o in xrange(3):
             node = triangle_o[count_o]
-            if node in triangle_s:
-            #(node == triangle_s[0] or node == triangle_s[1] or
-               # node == triangle_s[2]):
+            if node in (triangle_s[0], triangle_s[1], triangle_s[2]):
                 common[common_count] = node
                 common_count += 1
             else:
@@ -196,50 +184,33 @@ def taylor_duffy(double[:, ::1] nodes, int[::1] triangle_o,
         # Determine which nodes are in the source only
         for count_s in xrange(3):
             node = triangle_s[count_s]
-            if node not in triangle_o:
-            #!= triangle_o[0] and node != triangle_o[1] and
-            #    node != triangle_o[2]):
+            if node not in (triangle_o[0], triangle_o[1], triangle_o[2]):
                 source_only[source_only_count] = node
                 source_only_count += 1
 
         # The relevant case is just the number of common vertices
         TDArgs.WhichCase = common_count
-        print "Case", common_count
-        #if common_count == 1:
-        #    TDArgs.WhichCase = TD_COMMONVERTEX
-        #elif common_count == 2:
-        #    TDArgs.WhichCase = TD_COMMONEDGE
-        #else:
-        #    TDArgs.WhichCase = TD_COMMONTRIANGLE
             
         # point the V pointers to the relevant nodes
         v_count = 0
         for count_o in xrange(common_count):
-            print "setting common"
             set_vertex(&TDArgs, v_count, &nodes[common[count_o], 0])
             v_count += 1
 
         for count_o in xrange(obs_only_count):
-            print "setting obs only"
             set_vertex(&TDArgs, v_count, &nodes[obs_only[count_o], 0])
             v_count += 1
 
         for count_o in xrange(source_only_count):
-            print "setting src only"
             set_vertex(&TDArgs, v_count, &nodes[source_only[count_o], 0])
             v_count += 1
-            
-
         
         # specification of which integrals we want
         TDArgs.NumPKs = num_terms
-        print "NumPKs", TDArgs.NumPKs
         
-        print "KIndex"
         TDArgs.KIndex = KIndex
         for n in xrange(num_terms):
             KIndex[n] = TD_RP
-            print TDArgs.KIndex[n]
 
         TDArgs.PIndex = PIndex
         TDArgs.KParam = KParam
@@ -247,8 +218,8 @@ def taylor_duffy(double[:, ::1] nodes, int[::1] triangle_o,
         TDArgs.Result = Result
         TDArgs.Error = Error 
 
-        #TDArgs.MaxEval = max_eval
-        #%TDArgs.RelTol = rel_tol
+        TDArgs.MaxEval = max_eval
+        TDArgs.RelTol = rel_tol
 
         # polynomial terms are -1, 1, for EFIE, -3, -1 for MFIE
         if which_operator == OPERATOR_EFIE:
@@ -256,27 +227,23 @@ def taylor_duffy(double[:, ::1] nodes, int[::1] triangle_o,
         else:
             start_term = -3
             
-        print "KParam"
         for n in xrange(num_terms):
             KParam[n] = <double complex>(start_term+2*n)
-            print TDArgs.KParam[n]
 
-#        # evaluate the scalar potential term if using EFIE
-#        if which_operator == OPERATOR_EFIE:
-#            for n in xrange(num_terms):
-#                PIndex[n] = TD_UNITY
-#
-#            TaylorDuffy( &TDArgs )
-#            for n in xrange(num_terms):
-#                res_phi[n] = real(Result[n])*4*M_PI
+        # evaluate the scalar potential term if using EFIE
+        if which_operator == OPERATOR_EFIE:
+            for n in xrange(num_terms):
+                PIndex[n] = TD_UNITY
+
+            TaylorDuffy( &TDArgs )
+            for n in xrange(num_terms):
+                res_phi[n] = real(Result[n])*4*M_PI
 
         # Check the normals, and pass them
         if not tangential_form:
             TDArgs.nHat = &normal[0]
-            print "Normal", TDArgs.nHat[0], TDArgs.nHat[1], TDArgs.nHat[2]
 
         # choose which vector potential term to calculate
-        print "PIndex"
         for n in xrange(num_terms):
             if which_operator == OPERATOR_EFIE:
                 if tangential_form:
@@ -288,35 +255,17 @@ def taylor_duffy(double[:, ::1] nodes, int[::1] triangle_o,
                     PIndex[n] = TD_PMCHWC
                 else:
                     PIndex[n] = TD_NMULLERC
-            print TDArgs.PIndex[n]
             
         # evaluate the vector potential terms
-#        for count_o in xrange(3):
-#            TDArgs.Q = &nodes[triangle_o[count_o], 0]
-#            for count_s in xrange(3):
-#                TDArgs.QP = &nodes[triangle_s[count_s], 0]
+        for count_o in xrange(3):
+            TDArgs.Q = &nodes[triangle_o[count_o], 0]
+            for count_s in xrange(3):
+                TDArgs.QP = &nodes[triangle_s[count_s], 0]
+                TaylorDuffy( &TDArgs )
+                for n in xrange(num_terms):
+                    res_A[n, count_o, count_s] = real(Result[n])*4*M_PI
 
-        TDArgs.Q = &nodes[triangle_o[1], 0]
-        TDArgs.QP = &nodes[triangle_s[0], 0]
-
-        print "Q", TDArgs.Q[0], TDArgs.Q[1], TDArgs.Q[2]
-        print "QP", TDArgs.QP[0], TDArgs.QP[1], TDArgs.QP[2]
-
-
-        TaylorDuffy( &TDArgs )
-#                for n in xrange(num_terms):
-#                    res_A[n, count_o, count_s] = real(Result[n])*4*M_PI
-
-        print "Result"
-        for n in xrange(num_terms):
-            print "%.8e" % real(Result[n])
-
-
-    print "Error"
-    for n in xrange(num_terms):
-        print "%.8e" % real(Error[n])
-
-#    if which_operator == OPERATOR_EFIE:
-#        return res_phi_np, res_A_np
-#    else:
-#        return (res_A_np,)
+    if which_operator == OPERATOR_EFIE:
+        return res_phi_np, res_A_np
+    else:
+        return (res_A_np,)
