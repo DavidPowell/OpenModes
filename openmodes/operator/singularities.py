@@ -125,7 +125,7 @@ cached_singular_terms = {}
 
 
 def singular_impedance_rwg(basis, operator, tangential_form, num_terms,
-                           rel_tol):
+                           rel_tol, normals=None):
     """Precalculate the singular impedance terms for an object
 
     Parameters
@@ -141,6 +141,8 @@ def singular_impedance_rwg(basis, operator, tangential_form, num_terms,
         The number of singular terms to extract
     rel_tol: float
         The desired relative tolerance of the singular integrals
+    normals: ndarray(num_triangles, 3) of float, optional
+        The surface normals, required for n x operator forms
 
     Returns
     -------
@@ -197,12 +199,20 @@ def singular_impedance_rwg(basis, operator, tangential_form, num_terms,
         sharing_triangles = set()
         for node in polygons[p]:
             sharing_triangles = sharing_triangles.union(sharing_nodes[node])
-
         # find any neighbouring elements which are touching
         for q in sharing_triangles:  # source
+            if operator == "MFIE":
+                # The self triangle terms are not evaluated for MFIE
+                if q == p:
+                    continue
+                normal = normals[p]
+            else:
+                # normals are not supplied for EFIE
+                normal = None
             # at least one node is shared
             res = taylor_duffy(nodes, polygons[p], polygons[q], which_operator,
-                               tangential_form, num_terms, rel_tol=rel_tol)
+                               tangential_form, num_terms, rel_tol=rel_tol,
+                               normal=normal)
             singular_terms[p, q] = res
 
     # Arrays are currently put into fortran order, under the assumption

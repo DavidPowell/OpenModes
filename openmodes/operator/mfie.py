@@ -27,10 +27,12 @@ from openmodes.impedance import ImpedanceMatrix
 import logging
 
 from openmodes.operator.operator import Operator, FreeSpaceGreensFunction
+from openmodes.operator.singularities import singular_impedance_rwg
 
 
 def impedance_rwg_mfie_free_space(s, integration_rule, basis_o, nodes_o,
                                   basis_s, nodes_s, normals, self_impedance,
+                                  num_singular_terms, singularity_accuracy,
                                   tangential_form):
     """MFIE derived Impedance matrix for RWG or loop-star basis functions"""
 
@@ -39,6 +41,15 @@ def impedance_rwg_mfie_free_space(s, integration_rule, basis_o, nodes_o,
 
     if self_impedance:
         # calculate self impedance
+
+        singular_terms = singular_impedance_rwg(basis_o, operator="MFIE",
+                                                tangential_form=tangential_form,
+                                                num_terms=num_singular_terms,
+                                                rel_tol=singularity_accuracy,
+                                                normals=normals)
+
+        if np.any(np.isnan(singular_terms[0])):
+            raise ValueError("NaN returned in singular impedance terms")
 
         num_faces_s = num_faces_o
         Z_faces = z_mfie_faces_self(nodes_o, basis_o.mesh.polygons,
@@ -75,7 +86,8 @@ class MfieOperator(Operator):
 
     def __init__(self, integration_rule, basis_container,
                  greens_function=FreeSpaceGreensFunction(),
-                 tangential_form=False, singularity_accuracy=1e-5):
+                 tangential_form=False, num_singular_terms=2,
+                 singularity_accuracy=1e-5):
         """
         Parameters
         ----------
@@ -90,6 +102,8 @@ class MfieOperator(Operator):
         self.basis_container = basis_container
         self.integration_rule = integration_rule
         self.greens_function = greens_function
+        self.num_singular_terms = num_singular_terms
+        self.singularity_accuracy = singularity_accuracy
 
         self.tangential_form = tangential_form
         if tangential_form:
@@ -131,6 +145,8 @@ class MfieOperator(Operator):
                                                   basis_s, part_s.nodes,
                                                   normals,
                                                   part_o == part_s,
+                                                  self.num_singular_terms,
+                                                  self.singularity_accuracy,
                                                   self.tangential_form)
             else:
                 raise NotImplementedError

@@ -214,7 +214,8 @@ class Simulation(Identified):
 
         return V
 
-    def singularities(self, s_start, modes, part=None, use_gram=True):
+    def singularities(self, s_start, modes, part=None, use_gram=True,
+                      rel_tol=1e-6, max_iter=200):
         """Find the singularities of a part or of the whole system
 
         Parameters
@@ -231,6 +232,11 @@ class Simulation(Identified):
         use_gram : boolean, optional
             Use the Gram matrix to scale the eigenvectors, so that the
             eigenvalues will be independent of the basis functions.
+        rel_tol : float, optional
+            The relative tolerance on the search for singularities
+        max_iter : integer, optional
+            The maximum number of iterations to use when searching for
+            singularities
 
         Returns
         -------
@@ -242,7 +248,8 @@ class Simulation(Identified):
 
         part = part or self.parts
 
-        return self.operator.singularities(s_start, modes, part, use_gram)
+        return self.operator.singularities(s_start, modes, part, use_gram,
+                                           rel_tol, max_iter)
 
     def construct_models(self, mode_s, mode_j, part=None,
                          model_class=ScalarModelLeastSq):

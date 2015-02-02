@@ -111,7 +111,8 @@ class Operator(object):
 
         return vector
 
-    def singularities(self, s_start, modes, part, use_gram=True):
+    def singularities(self, s_start, modes, part, use_gram=True,
+                      rel_tol=1e-6, max_iter=200):
         """Find the singularities of a part or of the whole system
 
         Parameters
@@ -127,6 +128,11 @@ class Operator(object):
         use_gram : boolean, optional
             Use the Gram matrix to scale the eigenvectors, so that the
             eigenvalues will be independent of the basis functions.
+        rel_tol : float, optional
+            The relative tolerance on the search for singularities
+        max_iter : integer, optional
+            The maximum number of iterations to use when searching for
+            singularities
 
         Returns
         -------
@@ -163,8 +169,8 @@ class Operator(object):
         # at this point need not correspond to the original mode numbering
         for mode in xrange(num_modes):
             res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode],
-                             weight='max element', lambda_tol=1e-8,
-                             max_iter=200)
+                             weight='max element', lambda_tol=rel_tol,
+                             max_iter=max_iter)
 
             lin_hz = lin_s[mode]/2/np.pi
             nl_hz = res['eigval']/2/np.pi
