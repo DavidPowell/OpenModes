@@ -143,29 +143,33 @@ class CompositePart(Part):
         Part.__init__(self, location)
         self.initial_location = location
         self.reset()
-        self.parts = []
+        self.children = []
+
+    def clear(self):
+        "Clear all child parts from this part"
+        self.children = []
 
     def add_part(self, part):
         "Add a part to this part"
         if part.parent_ref is not None:
             raise ValueError("Part already has a different parent")
-        self.parts.append(part)
+        self.children.append(part)
         part.parent_ref = PicklableRef(self)
 
     def iter_single(self):
-        """Returns a generator which iterates over all single parts
+        """Iterates over all single parts which are within this part
 
         Returns
         -------
         it : iterator
             An iterator object over all SingleParts
         """
-        for part in self.parts:
+        for part in self.children:
             for sub_part in part.iter_single():
                 yield sub_part
 
     def iter_all(self, parent_first=False):
-        """Returns a generator which iterates over all parts
+        """Iterates over all parts within this part
 
         Parameters
         ----------
@@ -180,7 +184,7 @@ class CompositePart(Part):
         """
         if parent_first:
             yield self
-        for part in self.parts:
+        for part in self.children:
             for sub_part in part.iter_all(parent_first=parent_first):
                 yield sub_part
         if not parent_first:
@@ -188,4 +192,4 @@ class CompositePart(Part):
 
     def __contains__(self, key):
         """Check if the given part is stored within this tree of parts"""
-        return self == key or any(key in part for part in self.parts)
+        return self == key or any(key in part for part in self.children)

@@ -56,10 +56,10 @@ def build_index_arrays(parent_part, basis_container):
     index_arrays = {}
     single_part_num = 0
     for part in parent_part.iter_all(parent_first=False):
-        if hasattr(part, 'parts'):
+        if hasattr(part, 'children'):
             # build up the index array from the children
             index_arrays[part] = np.hstack(index_arrays[child]
-                                           for child in part.parts)
+                                           for child in part.children)
             # sort to prevent unwanted reordering
             index_arrays[part].sort()
         else:
