@@ -1458,6 +1458,9 @@ void ComputeGeometricParameters(TaylorDuffyArgStruct *Args,
      /* determine the lower and upper limits of the sum over n,     */
      /* and the number of nonzero monomial coefficients in the      */
      /* Upsilon vector                                              */
+     /* The check on the magnitude of Upsilon below should really   */
+     /* involve a lengthscale because the Upsilon values are        */
+     /* dimensionful quantities.                                    */
      /***************************************************************/
      CMVStoUpsilon(Args->WhichCase, C, M, V, S, TDW->Upsilon[np]);
    
@@ -1467,7 +1470,7 @@ void ComputeGeometricParameters(TaylorDuffyArgStruct *Args,
      for(int n=0; n<NUMWPOWERS; n++)
       for(int nr=0; nr<NumRegions; nr++)
        for(int nm=0; nm<NUMMONOMIALS; nm++)
-        if ( TDW->Upsilon[np][nr][n][nm] != 0.0 )
+        if ( TDW->Upsilon[np][nr][n][nm] >= 1.0e-12)
          { if (n<nMin) nMin=n;
            if (n>nMax) nMax=n;
            if (nm>MaxMonomial) MaxMonomial=nm;
