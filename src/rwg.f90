@@ -569,18 +569,18 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
     real(WP), intent(in), dimension(0:n_o-1, 2) :: xi_eta_o
     real(WP), intent(in), dimension(0:n_o-1) :: weights_o
 
-    real(WP), intent(out), dimension(3, 3) :: I_A
-    real(WP), intent(out) :: I_phi
+    real(WP), intent(out), dimension(2, 3, 3) :: I_A
+    real(WP), intent(out), dimension(2) :: I_phi
 
     real(WP) :: xi_o, eta_o, zeta_o, w_o
     real(WP), dimension(3) :: r_o, rho_o
     real(WP), dimension(3, 3) :: m_hat, a
     integer :: count_s, count_o, uu, vv
-    real(WP), dimension(3) :: I_L_m1, I_L_1 !, I_L_3
+    real(WP), dimension(3) :: I_L_m1, I_L_1, I_L_3
     real(WP) :: I_S_m3_h, I_S_m1, I_S_1, x, y
 
     real(WP), dimension(3) :: p1, p2, s_hat, n_hat, t
-    real(WP) :: R_m, R_p, s_m, s_p, h, area_s_2
+    real(WP) :: R_m, R_p, s_m, s_p, h, area_s_2, R0_sq
     
     I_A = 0.0
     I_phi = 0.0
@@ -634,10 +634,10 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
             end if
 
             ! apply recursion formula for the line
-            ! using the expression for R_0
-            I_L_1(count_s) = 0.5*((t(count_s)**2 + h**2)*I_L_m1(count_s) + s_p*R_p - s_m*R_m)
-
-            !I_L_3(count_s) = 3.0/4.0*(R_p**2 - s_p**2)*I_L_m1(count_s) + 1/4.0*(s_p*R_p - s_m*R_m)
+            ! using the expression for R_0^2
+            R0_sq = (t(count_s)**2 + h**2)
+            I_L_1(count_s) = 0.5*(R0_sq*I_L_m1(count_s) + s_p*R_p - s_m*R_m)
+            I_L_3(count_s) = 3.0/4.0*R0_sq*I_L_1(count_s) + 1/4.0*(s_p*R_p**3 - s_m*R_m**3)
         end do
 
         ! Find the initial area integral (zero for h=0)
@@ -647,20 +647,23 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
         y = abs(dot_product(a(:, 1), cross_product(a(:, 2), a(:, 3))))
         I_S_m3_h = 2*atan2(y, x)
 
-        ! currently assumes that source and observer are in the same plane, so that h=0
-        I_S_m1 = -sum(t*I_L_m1) - h*I_S_m3_h
-        I_S_1 = -0.5*sum(t*I_L_1) + h**2/3.0*I_S_m1
+        I_S_m1 = -h*I_S_m3_h - sum(t*I_L_m1) 
+        I_S_1 = h**2/3.0*I_S_m1 -sum(t*I_L_1)/3.0
 
         ! Final results do not have explicit h dependance
-        I_phi = I_phi + w_o*(I_S_m1) ! eq (65)
+        I_phi(1) = I_phi(1) + w_o*(I_S_m1) ! eq (65), 1/R term
+        I_phi(2) = I_phi(2) + w_o*(I_S_1)  ! eq (65), R term
 
-        ! check ordering of source vs observer triangle node
-        ! eq (70)
-        forall (uu=1:3, vv=1:3) I_A(uu, vv) = I_A(uu, vv) + w_o*( &
-            !dot_product((m_hat(:, 1)*I_L_1(1)+m_hat(:, 2)*I_L_1(2)+m_hat(:, 3)*I_L_1(3)) + &
-            !     (rho_o-nodes_s(vv, :))*I_S_m1,(r_o - nodes_o(uu, :))))! + &
+        ! eq (70) 1/R term
+        forall (uu=1:3, vv=1:3) I_A(1, uu, vv) = I_A(1, uu, vv) + w_o*( &
             dot_product(matmul(I_L_1, transpose(m_hat)) + (rho_o-nodes_s(vv, :))*I_S_m1, &
-                        (r_o - nodes_o(uu, :)) ) )! + &
+                        (r_o - nodes_o(uu, :))))
+
+        ! eq (70) R term
+        forall (uu=1:3, vv=1:3) I_A(2, uu, vv) = I_A(2, uu, vv) + w_o*( &
+            dot_product(matmul(I_L_3, transpose(m_hat))/3 + (rho_o-nodes_s(vv, :))*I_S_1, &
+                        (r_o - nodes_o(uu, :))))
+
     end do
     I_phi = I_phi/area_s_2
     I_A = I_A/area_s_2
