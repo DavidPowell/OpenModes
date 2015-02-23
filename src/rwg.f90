@@ -585,6 +585,7 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
     I_A = 0.0
     I_phi = 0.0
 
+    ! The sign of this normal does not matter?
     n_hat = cross_product(nodes_s(2, :) - nodes_s(1, :), nodes_s(3, :)-nodes_s(1,:))
     area_s_2 = mag(n_hat)
     n_hat = n_hat/area_s_2
@@ -602,6 +603,7 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
         r_o = xi_o*nodes_o(1, :) + eta_o*nodes_o(2, :) + zeta_o*nodes_o(3, :)
 
         ! Out of plane coordinate of observer
+        ! Absolute value is apparently necessary to get correct vector potential term A
         h = abs(dot_product(r_o-nodes_s(1, :), n_hat))
 
         ! Confusing Notation - this is projection of observer onto the plane of the source triangle
@@ -651,15 +653,15 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
         I_S_1 = h**2/3.0*I_S_m1 -sum(t*I_L_1)/3.0
 
         ! Final results do not have explicit h dependance
-        I_phi(1) = I_phi(1) + w_o*(I_S_m1) ! eq (65), 1/R term
-        I_phi(2) = I_phi(2) + w_o*(I_S_1)  ! eq (65), R term
+        I_phi(1) = I_phi(1) + w_o*(I_S_m1) ! eq (65), 1/R term, q=-1
+        I_phi(2) = I_phi(2) + w_o*(I_S_1)  ! eq (65), R term, q=1
 
-        ! eq (70) 1/R term
+        ! eq (70) 1/R term, q=-1
         forall (uu=1:3, vv=1:3) I_A(1, uu, vv) = I_A(1, uu, vv) + w_o*( &
             dot_product(matmul(I_L_1, transpose(m_hat)) + (rho_o-nodes_s(vv, :))*I_S_m1, &
                         (r_o - nodes_o(uu, :))))
 
-        ! eq (70) R term
+        ! eq (70) R term, q=1
         forall (uu=1:3, vv=1:3) I_A(2, uu, vv) = I_A(2, uu, vv) + w_o*( &
             dot_product(matmul(I_L_3, transpose(m_hat))/3 + (rho_o-nodes_s(vv, :))*I_S_1, &
                         (r_o - nodes_o(uu, :))))
