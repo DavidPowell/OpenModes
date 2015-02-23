@@ -546,7 +546,7 @@ end subroutine Z_EFIE_faces_self
 
 
 subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
-                                   nodes_o, I_A, I_phi)
+                                   nodes_o, normal_o, I_A, I_phi, Z_NMFIE)
     ! Fully integrated over source and observer the singular part of the MOM 
     ! for RWG basis functions
     ! NB: includes the 1/4A**2 prefactor
@@ -557,8 +557,6 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
     ! but for singular integrals will be equal to the number of observer integration points
     ! nodes_s/o - the nodes of the source and observer triangles
     ! nodes - the position of the triangle nodes
-    !
-    ! Need to calculate I_S_m3, and h, giving a different formula for I_S_m1
     use constants
     use vectors
     implicit none
@@ -568,9 +566,11 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
     real(WP), dimension(3, 3), intent(in) :: nodes_s, nodes_o
     real(WP), intent(in), dimension(0:n_o-1, 2) :: xi_eta_o
     real(WP), intent(in), dimension(0:n_o-1) :: weights_o
+    real(WP), intent(in), dimension(3) :: normal_o
 
     real(WP), intent(out), dimension(2, 3, 3) :: I_A
     real(WP), intent(out), dimension(2) :: I_phi
+    real(WP), intent(out), dimension(2, 3, 3) :: Z_NMFIE
 
     real(WP) :: xi_o, eta_o, zeta_o, w_o
     real(WP), dimension(3) :: r_o, rho_o
@@ -584,6 +584,7 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
     
     I_A = 0.0
     I_phi = 0.0
+    Z_NMFIE = 0.0
 
     ! The sign of this normal does not matter?
     n_hat = cross_product(nodes_s(2, :) - nodes_s(1, :), nodes_s(3, :)-nodes_s(1,:))
@@ -666,9 +667,22 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
             dot_product(matmul(I_L_3, transpose(m_hat))/3 + (rho_o-nodes_s(vv, :))*I_S_1, &
                         (r_o - nodes_o(uu, :))))
 
+        ! eqs (74, 77) 1/R term, n x testing, q=-1
+        ! Note that this term suffers from a logarithmic singularity
+        forall (uu=1:3, vv=1:3) Z_NMFIE(1, uu, vv) = Z_NMFIE(1, uu, vv) + w_o*( &
+            dot_product(r_o - nodes_o(uu, :), cross_product(normal_o, &
+            cross_product(r_o - nodes_s(vv, :), matmul(I_L_m1, transpose(m_hat)) + n_hat*I_S_m3_h))))
+
+        ! eqs (74, 77) R term, n x testing, q=1
+        ! This term has no singularity problems
+        forall (uu=1:3, vv=1:3) Z_NMFIE(2, uu, vv) = Z_NMFIE(2, uu, vv) + w_o*( &
+            dot_product(r_o - nodes_o(uu, :), cross_product(normal_o, &
+            cross_product(r_o - nodes_s(vv, :), matmul(I_L_1, transpose(m_hat)) - h*n_hat*I_S_1))))
+
     end do
     I_phi = I_phi/area_s_2
     I_A = I_A/area_s_2
+    Z_NMFIE = Z_NMFIE/area_s_2
 
 end subroutine face_integrals_hanninen
 

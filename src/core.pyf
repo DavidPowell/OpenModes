@@ -46,7 +46,7 @@ python module core ! in
             complex(kind=wp) dimension(num_triangles,3,num_triangles,3),intent(out),depend(num_triangles,num_triangles) :: a_face
             complex(kind=wp) dimension(num_triangles,num_triangles),intent(out),depend(num_triangles,num_triangles) :: phi_face
         end subroutine z_efie_faces_self
-        subroutine face_integrals_hanninen(nodes_s,n_o,xi_eta_o,weights_o,nodes_o,i_a,i_phi) ! in :core:src/rwg.f90
+        subroutine face_integrals_hanninen(nodes_s,n_o,xi_eta_o,weights_o,nodes_o,normal_o,i_a,i_phi,z_nmfie) ! in :core:src/rwg.f90
             use vectors
             use constants
             real(kind=wp) dimension(3,3),intent(in) :: nodes_s
@@ -54,8 +54,10 @@ python module core ! in
             real(kind=wp) dimension(n_o,2),intent(in) :: xi_eta_o
             real(kind=wp) dimension(n_o),intent(in),depend(n_o) :: weights_o
             real(kind=wp) dimension(3,3),intent(in) :: nodes_o
+            real(kind=wp) dimension(3), intent(in), optional :: normal_o = 0.0
             real(kind=wp) dimension(2,3,3),intent(out) :: i_a
             real(kind=wp) dimension(2),intent(out) :: i_phi
+            real(kind=wp) dimension(2,3,3),intent(out) :: z_nmfie
         end subroutine face_integrals_hanninen
         subroutine z_mfie_faces_self(num_nodes,num_triangles,num_integration,nodes,triangle_nodes,triangle_areas,s,xi_eta,weights,normals,t_form,z_face) ! in :core:src/rwg.f90
             use core_for
