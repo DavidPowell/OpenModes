@@ -687,6 +687,172 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
 end subroutine face_integrals_hanninen
 
 
+subroutine face_integrals_yla_oijala(nodes_s, n_o, xi_eta_o, weights_o, &
+                                   nodes_o, normal_o, I_A, I_phi, Z_NMFIE)
+    ! Fully integrated over source and observer the singular part of the MOM 
+    ! for RWG basis functions
+    ! NB: includes the 1/4A**2 prefactor
+    ! Use method from Yla-Oijala and Taskinene, IEEE Trans Ant Prop 51, 1837 (2003)
+    !
+    ! xi_eta_o - list of coordinate pairs in source/observer triangle
+    ! weights_o - the integration weights of the source and observer
+    ! but for singular integrals will be equal to the number of observer integration points
+    ! nodes_s/o - the nodes of the source and observer triangles
+    use constants
+    use vectors
+    implicit none
+
+    integer, intent(in) :: n_o
+    ! f2py intent(hide) :: n_o
+    real(WP), dimension(3, 3), intent(in) :: nodes_s, nodes_o
+    real(WP), intent(in), dimension(0:n_o-1, 2) :: xi_eta_o
+    real(WP), intent(in), dimension(0:n_o-1) :: weights_o
+    real(WP), intent(in), dimension(3) :: normal_o
+
+    real(WP), intent(out), dimension(2, 3, 3) :: I_A
+    real(WP), intent(out), dimension(2) :: I_phi
+    real(WP), intent(out), dimension(2, 3, 3) :: Z_NMFIE
+
+    real(WP) :: xi_o, eta_o, zeta_o, w_o
+    integer :: count_o, count_s, basis_o, basis_s, order
+
+    real(WP), dimension(3) :: u, v, rho, r, p1, p2
+
+    real(WP), dimension(3) :: t_0, s_p, s_m, R_0_sq, l, n_hat, R_p, R_m, beta
+    real(WP) :: u_3, v_3, A, K_1_m3_w0, u_0, v_0, w_0
+    real(WP), dimension(-1:1) :: K_1 ! K^-1 and K^1
+    real(WP), dimension(-1:1, 3, 3) :: K_2, K_4 ! dimension power, source_basis, vector components
+    real(WP), dimension(-1:1, 3) :: K_3 ! dimension power, vector components
+    real(WP), dimension(-1:3, 3) :: I_L ! dimension power, source_basis
+    !real(WP), dimension(-1:3, 3, 3) :: I_m ! dimension power, source_basis, vector components
+    real(WP), dimension(3) :: s_hat
+    real(WP), dimension(3, 3) :: m_hat ! dimension source_basis, vector_component
+    real(WP), dimension(-1:3, 3) :: I_m ! dimension power, vector component
+    !real(WP), dimension(3, 3) :: m ! dimension source_basis, vector_component
+
+    I_A = 0.0
+    I_phi = 0.0
+    Z_NMFIE = 0.0
+
+    ! The sign of this normal does not matter?
+    n_hat = cross_product(nodes_s(2, :) - nodes_s(1, :), nodes_s(3, :)-nodes_s(1,:))
+    A = mag(n_hat)
+    n_hat = n_hat/A
+    A = A/2
+
+    do count_o = 0,n_o-1
+
+        w_o = weights_o(count_o)
+
+        ! Barycentric coordinates of the observer within the observer's triangle
+        xi_o = xi_eta_o(count_o, 1)
+        eta_o = xi_eta_o(count_o, 2)
+        zeta_o = 1.0 - eta_o - xi_o
+
+        ! Cartesian coordinates of the observer
+        r = xi_o*nodes_o(1, :) + eta_o*nodes_o(2, :) + zeta_o*nodes_o(3, :)
+
+        ! calculate lengths of edges, and the edge outward normals
+        do count_s = 1,3
+            ! select the nodes on the edge opposite the current node
+            p1 = nodes_s(mod(count_s, 3)+1, :)
+            p2 = nodes_s(mod(count_s+1, 3)+1, :)
+
+            l(count_s) = mag(p1-p2)
+
+            s_hat = (p2 - p1)/mag(p2 - p1)
+            m_hat(count_s, :) = cross_product(s_hat, n_hat)
+
+        end do
+
+        u = (nodes_s(2, :)-nodes_s(1, :))/l(3)
+        v = cross_product(n_hat, u)
+
+        u_0 = dot_product(r-nodes_s(1, :), u)
+        v_0 = dot_product(r-nodes_s(1, :), v)
+        w_0 = dot_product(r-nodes_s(1, :), n_hat)
+
+        rho = r - w_0*n_hat
+
+        u_3 = dot_product(nodes_s(3, :)-nodes_s(1, :), nodes_s(2, :)-nodes_s(1, :))/l(3)
+        v_3 = 2*A/l(3)
+        s_m(1) = -((l(3)-u_0)*(l(3)-u_3) + v_0*v_3)/l(1)
+        s_m(2) = -(u_3*(u_3-u_0) + v_3*(v_3-v_0))/l(2)
+        s_m(3) = -u_0
+
+        s_p = s_m + l
+
+        t_0(1) = (v_0*(u_3-l(3)) + v_3*(l(3) - u_0))/l(1)
+        t_0(2) = (u_0*v_3-v_0*u_3)/l(2)
+        t_0(3) = v_0
+
+        R_p(1) = mag(r - nodes_s(3, :))
+        R_m(2) = R_p(1)
+        R_p(2) = mag(r - nodes_s(1, :))
+        R_m(3) = R_p(2)
+        R_p(3) = mag(r - nodes_s(2, :))
+        R_m(1) = R_p(3)
+
+        R_0_sq = (t_0**2 + w_0**2)
+
+        ! start of recursive formula
+        beta = atan((t_0*s_p)/(R_0_sq + abs(w_0)*R_p)) - atan((t_0*s_m)/(R_0_sq + abs(w_0)*R_m))
+
+        ! w_0 is considered 0 if it's much less than any of the side lengths
+        if (abs(w_0) > 1e-9*minval(l)) then
+            K_1_m3_w0 = sum(beta)*w_0/abs(w_0)
+        else
+            K_1_m3_w0 = 0.0
+        end if
+
+        ! Initialise I_L^-1 using best-conditioned expressions for each case
+        where (abs(R_m + s_m) > abs(R_p - s_p))
+            I_L(-1, :) = log((R_p + s_p)/(R_m + s_m))
+        elsewhere
+            I_L(-1, :) = log((R_m - s_m)/(R_p - s_p))
+        end where
+
+        ! recursive formula for I_L
+        do order = 1,3,2
+            I_L(order, :) = 1.0/(order+1.0)*(s_p*R_p**order - s_m*R_m**order + order*R_0_sq*I_L(order-2, :))
+        end do
+
+        forall (order = -1:3:2)
+            I_m(order, :) = matmul(transpose(m_hat), I_L(order, :))
+        end forall
+
+        K_1(-1) = (-w_0*K_1_m3_w0 + sum(t_0*I_L(-1, :)))
+        K_1(1) = (w_0**2*K_1(-1) + sum(t_0*I_L(1, :)))/3.0
+
+        forall (basis_s=1:3) 
+            K_2(-1, basis_s, :) = I_m(1, :) + (rho - nodes_s(basis_s, :))*K_1(-1)
+            K_2(1, basis_s, :) = I_m(3, :)/3.0 + (rho - nodes_s(basis_s, :))*K_1(1)
+        end forall
+        K_3(-1, :) = -n_hat*K_1_m3_w0 - I_m(-1, :)
+        K_3(1, :) = n_hat*w_0*K_1(-1) - I_m(1, :)
+
+        forall (basis_s=1:3, order=-1:1:2)
+            K_4(order, basis_s, :) = -cross_product(r-nodes_s(basis_s, L), K_3(order, :))
+        end forall
+
+        ! Now assign to the output variables, which need to integrate over the
+        ! observer triangles
+        I_phi(1) = I_phi(1) + w_o*K_1(-1)
+        I_phi(2) = I_phi(2) + w_o*K_1(1)
+
+        forall (basis_o=1:3, basis_s=1:3)
+            I_A(1, basis_o, basis_s) = I_A(1, basis_o, basis_s) + w_o*dot_product(r-nodes_o(basis_o, :), K_2(-1, basis_s, :))
+            I_A(2, basis_o, basis_s) = I_A(2, basis_o, basis_s) + w_o*dot_product(r-nodes_o(basis_o, :), K_2(1,  basis_s, :))
+        end forall
+
+    end do
+    I_phi = I_phi/A/2
+    I_A = I_A/A/2
+    Z_NMFIE = Z_NMFIE/A/2
+
+end subroutine face_integrals_yla_oijala
+
+
 subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
         weights_o, nodes_o_in, jk_0, normal, T_form, I_Z)
     ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
