@@ -703,7 +703,6 @@ subroutine face_integrals_yla_oijala(nodes_s, n_o, xi_eta_o, weights_o, &
     implicit none
 
     integer, intent(in) :: n_o
-    ! f2py intent(hide) :: n_o
     real(WP), dimension(3, 3), intent(in) :: nodes_s, nodes_o
     real(WP), intent(in), dimension(0:n_o-1, 2) :: xi_eta_o
     real(WP), intent(in), dimension(0:n_o-1) :: weights_o
@@ -724,11 +723,9 @@ subroutine face_integrals_yla_oijala(nodes_s, n_o, xi_eta_o, weights_o, &
     real(WP), dimension(-1:1, 3, 3) :: K_2, K_4 ! dimension power, source_basis, vector components
     real(WP), dimension(-1:1, 3) :: K_3 ! dimension power, vector components
     real(WP), dimension(-1:3, 3) :: I_L ! dimension power, source_basis
-    !real(WP), dimension(-1:3, 3, 3) :: I_m ! dimension power, source_basis, vector components
     real(WP), dimension(3) :: s_hat
     real(WP), dimension(3, 3) :: m_hat ! dimension source_basis, vector_component
     real(WP), dimension(-1:3, 3) :: I_m ! dimension power, vector component
-    !real(WP), dimension(3, 3) :: m ! dimension source_basis, vector_component
 
     I_A = 0.0
     I_phi = 0.0
@@ -739,6 +736,25 @@ subroutine face_integrals_yla_oijala(nodes_s, n_o, xi_eta_o, weights_o, &
     A = mag(n_hat)
     n_hat = n_hat/A
     A = A/2
+
+    ! calculate lengths of edges, and the edge outward normals
+    do count_s = 1,3
+        ! select the nodes on the edge opposite the current node
+        p1 = nodes_s(mod(count_s, 3)+1, :)
+        p2 = nodes_s(mod(count_s+1, 3)+1, :)
+
+        l(count_s) = mag(p2-p1)
+
+        s_hat = (p2 - p1)/mag(p2 - p1)
+        m_hat(count_s, :) = cross_product(s_hat, n_hat)
+    end do
+
+
+    ! quantities which do not depend on the observer location
+    u = (nodes_s(2, :)-nodes_s(1, :))/l(3)
+    v = cross_product(n_hat, u)
+    u_3 = dot_product(nodes_s(3, :)-nodes_s(1, :), nodes_s(2, :)-nodes_s(1, :))/l(3)
+    v_3 = 2*A/l(3)
 
     do count_o = 0,n_o-1
 
@@ -752,30 +768,12 @@ subroutine face_integrals_yla_oijala(nodes_s, n_o, xi_eta_o, weights_o, &
         ! Cartesian coordinates of the observer
         r = xi_o*nodes_o(1, :) + eta_o*nodes_o(2, :) + zeta_o*nodes_o(3, :)
 
-        ! calculate lengths of edges, and the edge outward normals
-        do count_s = 1,3
-            ! select the nodes on the edge opposite the current node
-            p1 = nodes_s(mod(count_s, 3)+1, :)
-            p2 = nodes_s(mod(count_s+1, 3)+1, :)
-
-            l(count_s) = mag(p1-p2)
-
-            s_hat = (p2 - p1)/mag(p2 - p1)
-            m_hat(count_s, :) = cross_product(s_hat, n_hat)
-
-        end do
-
-        u = (nodes_s(2, :)-nodes_s(1, :))/l(3)
-        v = cross_product(n_hat, u)
-
         u_0 = dot_product(r-nodes_s(1, :), u)
         v_0 = dot_product(r-nodes_s(1, :), v)
         w_0 = dot_product(r-nodes_s(1, :), n_hat)
 
         rho = r - w_0*n_hat
 
-        u_3 = dot_product(nodes_s(3, :)-nodes_s(1, :), nodes_s(2, :)-nodes_s(1, :))/l(3)
-        v_3 = 2*A/l(3)
         s_m(1) = -((l(3)-u_0)*(l(3)-u_3) + v_0*v_3)/l(1)
         s_m(2) = -(u_3*(u_3-u_0) + v_3*(v_3-v_0))/l(2)
         s_m(3) = -u_0
