@@ -830,7 +830,7 @@ subroutine face_integrals_yla_oijala(nodes_s, n_o, xi_eta_o, weights_o, &
         K_3(1, :) = n_hat*w_0*K_1(-1) - I_m(1, :)
 
         forall (basis_s=1:3, order=-1:1:2)
-            K_4(order, basis_s, :) = -cross_product(r-nodes_s(basis_s, L), K_3(order, :))
+            K_4(order, basis_s, :) = -cross_product(r-nodes_s(basis_s, :), K_3(order, :))
         end forall
 
         ! Now assign to the output variables, which need to integrate over the
@@ -841,6 +841,14 @@ subroutine face_integrals_yla_oijala(nodes_s, n_o, xi_eta_o, weights_o, &
         forall (basis_o=1:3, basis_s=1:3)
             I_A(1, basis_o, basis_s) = I_A(1, basis_o, basis_s) + w_o*dot_product(r-nodes_o(basis_o, :), K_2(-1, basis_s, :))
             I_A(2, basis_o, basis_s) = I_A(2, basis_o, basis_s) + w_o*dot_product(r-nodes_o(basis_o, :), K_2(1,  basis_s, :))
+        end forall
+
+        ! n x MFIE term, invalid on self triangle
+        forall (basis_o=1:3, basis_s=1:3)
+            Z_NMFIE(1, basis_o, basis_s) = Z_NMFIE(1, basis_o, basis_s) + w_o*dot_product(r-nodes_o(basis_o, :), &
+                    cross_product(normal_o, K_4(-1, basis_s, :)))
+            Z_NMFIE(2, basis_o, basis_s) = Z_NMFIE(2, basis_o, basis_s) + w_o*dot_product(r-nodes_o(basis_o, :), &
+                    cross_product(normal_o, K_4(1,  basis_s, :)))
         end forall
 
     end do
