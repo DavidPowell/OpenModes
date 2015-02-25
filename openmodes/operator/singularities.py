@@ -22,7 +22,7 @@ quantities for both EFIE and MFIE may be calculated simultaneously"""
 
 import logging
 import numpy as np
-import openmodes.core
+from openmodes.core import face_integrals_yla_oijala
 from openmodes.taylor_duffy import taylor_duffy, OPERATOR_EFIE, OPERATOR_MFIE
 from openmodes.basis import LinearTriangleBasis
 
@@ -124,6 +124,10 @@ class MultiSparse(object):
 cached_singular_terms = {}
 
 
+from openmodes.integration import DunavantRule
+rule = DunavantRule(20)
+
+
 def singular_impedance_rwg(basis, operator, tangential_form, num_terms,
                            rel_tol, normals=None):
     """Precalculate the singular impedance terms for an object
@@ -210,10 +214,12 @@ def singular_impedance_rwg(basis, operator, tangential_form, num_terms,
                 # normals are not supplied for EFIE
                 normal = None
             # at least one node is shared
-            res = taylor_duffy(nodes, polygons[p], polygons[q], which_operator,
-                               tangential_form, num_terms, rel_tol=rel_tol,
-                               normal=normal)
-            singular_terms[p, q] = res
+            res = face_integrals_yla_oijala(nodes[polygons[q]], rule.xi_eta, rule.weights,
+                                          nodes[polygons[p]], normal_o=normal)
+            if operator == "MFIE":
+                singular_terms[p, q] = (res[2],)
+            else:
+                singular_terms[p, q] = (res[1], res[0])
 
     # Arrays are currently put into fortran order, under the assumption
     # that they will mostly be used by fortran routines.
