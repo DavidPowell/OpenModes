@@ -113,7 +113,7 @@ module core_for
         end subroutine
 
         subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
-                weights_o, nodes_o_in, jk_0, normal, T_form, I_Z)
+                weights_o, nodes_o_in, jk_0, normal, T_form, num_singular_terms, I_Z)
             ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
             ! NB: includes the 1/4A**2 prefactor
             !
@@ -138,6 +138,7 @@ module core_for
         
             real(WP), intent(in), dimension(3) :: normal
             logical, intent(in) :: T_form
+            integer, intent(in) :: num_singular_terms
         
             complex(WP), intent(out), dimension(3, 3) :: I_z
         end subroutine
@@ -860,7 +861,7 @@ end subroutine face_integrals_yla_oijala
 
 
 subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
-        weights_o, nodes_o_in, jk_0, normal, T_form, I_Z)
+        weights_o, nodes_o_in, jk_0, normal, T_form, num_singular_terms, I_Z)
     ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
     ! NB: includes the 1/4A**2 prefactor
     !
@@ -886,6 +887,7 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
 
     real(WP), intent(in), dimension(3) :: normal
     logical, intent(in) :: T_form
+    integer, intent(in) :: num_singular_terms
 
     complex(WP), intent(out), dimension(3, 3) :: I_z
 
@@ -950,7 +952,14 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
             rho_s = rho_s_table(:, :, count_s)
               
             R = sqrt(sum((r_s - r_o)**2))
-            g = (1.0 + jk_0*R)*exp(-jk_0*R)/R**3
+
+            if (num_singular_terms == 1) then
+                g = ((1.0 + jk_0*R)*exp(-jk_0*R) - 1.0)/R**3
+            elseif (num_singular_terms == 2) then
+                g = ((1.0 + jk_0*R)*exp(-jk_0*R) - 1.0 + 0.5*(jk_0*R)**2)/R**3
+            else
+                g = (1.0 + jk_0*R)*exp(-jk_0*R)/R**3
+            end if
 
             
             if (T_form) then
@@ -1055,8 +1064,9 @@ subroutine face_unit_integral(n, xi_eta, weights, nodes_in, normal, n_cross, I_Z
 
 end subroutine face_unit_integral
 
-subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, nodes, triangle_nodes, &
-                                triangle_areas, s, xi_eta, weights, normals, T_form, Z_face)
+subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_singular, degree_singular, nodes, triangle_nodes, &
+                                triangle_areas, s, xi_eta, weights, normals, T_form, Z_precalc, &
+                                indices_precalc, indptr_precalc, Z_face)
     ! Calculate the face to face interaction terms used to build the impedance matrix
     !
     ! As per Rao, Wilton, Glisson, IEEE Trans AP-30, 409 (1982)
@@ -1068,13 +1078,13 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, nodes, t
     ! omega - evaulation frequency in rad/s
     ! s - complex frequency
     ! xi_eta, weights - quadrature rule over the triangle (weights normalised to 0.5)
-    ! A_precalc, phi_precalc - precalculated 1/R singular terms
+    ! Z_precalc - precalculated 1/R and R singular terms
 
     use core_for
     implicit none
 
-    integer, intent(in) :: num_nodes, num_triangles, num_integration
-    ! f2py intent(hide) :: num_nodes, num_triangles, num_integration
+    ! f2py intent(hide) :: num_nodes, num_triangles, num_integration, num_singular, degree_singular
+    integer, intent(in) :: num_nodes, num_triangles, num_integration, num_singular, degree_singular
 
     real(WP), intent(in), dimension(0:num_nodes-1, 0:2) :: nodes
     integer, intent(in), dimension(0:num_triangles-1, 0:2) :: triangle_nodes
@@ -1087,6 +1097,10 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, nodes, t
     real(WP), intent(in), dimension(0:num_triangles-1, 0:2) :: normals
     logical, intent(in) :: T_form
 
+    real(WP), intent(in), dimension(0:num_singular-1, 0:degree_singular-1, 3, 3) :: Z_precalc
+    integer, intent(in), dimension(0:num_singular-1) :: indices_precalc
+    integer, intent(in), dimension(0:num_triangles) :: indptr_precalc
+
     complex(WP), intent(out), dimension(0:num_triangles-1, 0:2, 0:num_triangles-1, 0:2) :: Z_face
     
     complex(WP) :: jk_0 
@@ -1094,7 +1108,7 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, nodes, t
     real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
     complex(WP), dimension(3, 3) :: I_Z
 
-    integer :: p, q
+    integer :: p, q, index_singular
 
     jk_0 = s/c
 
@@ -1108,12 +1122,32 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, nodes, t
                 ! diagonal self terms
                 call face_unit_integral(num_integration, xi_eta, weights, nodes_p, normals(p, :), T_form, I_Z)
                 I_Z = I_Z/4.0/triangle_areas(p)
+
+            elseif (any(triangle_nodes(p, :) == triangle_nodes(q, :))) then
+                ! triangles have one or two common nodes, perform singularity extraction
+                call face_integral_MFIE(num_integration, xi_eta, weights, nodes_q, &
+                                    num_integration, xi_eta, weights, nodes_p, jk_0, normals(p, :), T_form, degree_singular, I_Z)
+                ! the singular components are pre-calculated
+                index_singular = scr_index(p, q, indices_precalc, indptr_precalc)
+
+
+                if (degree_singular > 0) then
+                    I_Z = I_Z - Z_precalc(index_singular, 0, :, :)
+                end if
+
+                ! The R term
+                if (degree_singular > 1) then
+                    I_Z = I_Z - Z_precalc(index_singular, 1, :, :)*jk_0**2/2
+                end if
+
+                I_Z = I_Z/4.0/pi
+        
             else
                 ! just perform regular integration
                 ! As per RWG, triangle area must be cancelled in the integration
                 ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
                 call face_integral_MFIE(num_integration, xi_eta, weights, nodes_q, &
-                                    num_integration, xi_eta, weights, nodes_p, jk_0, normals(p, :), T_form, I_Z)
+                                    num_integration, xi_eta, weights, nodes_p, jk_0, normals(p, :), T_form, 0, I_Z)
                 I_Z = I_Z/4.0/pi
             end if
 

@@ -56,7 +56,7 @@ def impedance_rwg_mfie_free_space(s, integration_rule, basis_o, nodes_o,
                                     basis_o.mesh.polygon_areas, s,
                                     integration_rule.xi_eta,
                                     integration_rule.weights, normals,
-                                    tangential_form)
+                                    tangential_form, *singular_terms)
 
         transform_s = transform_o
 
