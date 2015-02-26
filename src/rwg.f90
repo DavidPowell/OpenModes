@@ -605,8 +605,7 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
         r_o = xi_o*nodes_o(1, :) + eta_o*nodes_o(2, :) + zeta_o*nodes_o(3, :)
 
         ! Out of plane coordinate of observer
-        ! Absolute value is apparently necessary to get correct vector potential term A
-        h = abs(dot_product(r_o-nodes_s(1, :), n_hat))
+        h = dot_product(r_o-nodes_s(1, :), n_hat)
 
         ! Confusing Notation - this is projection of observer onto the plane of the source triangle
         rho_o = r_o-n_hat*dot_product(r_o, n_hat)
@@ -649,7 +648,9 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
         forall (uu=1:3) a(:, uu) = (nodes_s(uu, :)-r_o)/mag(nodes_s(uu, :)-r_o)
         x = 1 + dot_product(a(:, 1), a(:, 2)) + dot_product(a(:, 1), a(:, 3)) + dot_product(a(:, 2), a(:, 3))
         y = abs(dot_product(a(:, 1), cross_product(a(:, 2), a(:, 3))))
-        I_S_m3_h = 2*atan2(y, x)
+
+        ! This expression is for the absolute value of Omega, need the sign from h
+        I_S_m3_h = 2*atan2(y, x)*sign(1.0, h)
 
         I_S_m1 = -h*I_S_m3_h - sum(t*I_L_m1) 
         I_S_1 = h**2/3.0*I_S_m1 -sum(t*I_L_1)/3.0
