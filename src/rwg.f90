@@ -679,7 +679,7 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
         ! This term has no singularity problems
         forall (uu=1:3, vv=1:3) Z_NMFIE(2, uu, vv) = Z_NMFIE(2, uu, vv) + w_o*( &
             dot_product(r_o - nodes_o(uu, :), cross_product(normal_o, &
-            cross_product(r_o - nodes_s(vv, :), matmul(I_L_1, transpose(m_hat)) - h*n_hat*I_S_1))))
+            cross_product(r_o - nodes_s(vv, :), matmul(I_L_1, transpose(m_hat)) - h*n_hat*I_S_m1))))
 
     end do
     I_phi = I_phi/area_s_2
