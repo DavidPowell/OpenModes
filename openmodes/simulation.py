@@ -173,7 +173,8 @@ class Simulation(Identified):
         parent = parent or self.parts
         return self.operator.impedance(s, parent, parent)
 
-    def source_vector(self, source_field, s, parent=None):
+    def source_vector(self, source_field, s, parent=None, which_field=None,
+                      n_cross = None):
         """Evaluate the source vectors due to an incident field, returning
         separate vectors for each part.
 
@@ -189,6 +190,11 @@ class Simulation(Identified):
         parent : Part, optional
             If specified, then only this part and its sub-parts will be
             calculated
+        which_field : string, optional
+            "electric_field" or "magnetic_field". If specified, override the
+            default field used for this simulation's operator.
+        n_cross : boolean, optional
+            Override whether to take the cross-product of normal with the field
 
         Returns
         -------
@@ -201,7 +207,13 @@ class Simulation(Identified):
 
         V = self.empty_vector(parent)
 
-        field_function = getattr(source_field, self.operator.source_field)
+        # If parameters aren't specified, use the operator's defaults
+        if which_field is None:
+            which_field = self.operator.source_field
+        if n_cross is None:
+            n_cross = self.operator.source_cross
+
+        field_function = getattr(source_field, which_field)
 
         for part in parent.iter_single():
             field = lambda r: field_function(s, r)
@@ -209,8 +221,7 @@ class Simulation(Identified):
             basis = self.basis_container[part]
 
             V[part] = basis.weight_function(field, self.integration_rule,
-                                            part.nodes,
-                                            self.operator.source_cross)
+                                            part.nodes, n_cross)
 
         return V
 
