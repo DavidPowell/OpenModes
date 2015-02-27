@@ -144,6 +144,21 @@ module core_for
         end subroutine
 
 
+        subroutine hanninen_inner(nodes_s, r_o, n_hat, h, m_hat, I_L_m1, I_L_1, I_L_3, I_S_m3_h, I_S_m1, I_S_1)
+            ! Apply recursive formulae of Hanninen for a fixed observer point
+            use constants
+            implicit none
+        
+            real(WP), dimension(3, 3), intent(in) :: nodes_s 
+            real(WP), dimension(3), intent(in) :: r_o, n_hat
+        
+            real(WP), intent(out) :: h
+            real(WP), dimension(3, 3), intent(out) :: m_hat
+            real(WP), intent(out), dimension(3) :: I_L_m1, I_L_1, I_L_3
+            real(WP), intent(out) :: I_S_m3_h, I_S_m1, I_S_1
+        end subroutine
+
+
 
     end interface
 
@@ -545,6 +560,74 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
 
 end subroutine Z_EFIE_faces_self
 
+subroutine hanninen_inner(nodes_s, r_o, n_hat, h, m_hat, I_L_m1, I_L_1, I_L_3, I_S_m3_h, I_S_m1, I_S_1)
+    ! Apply recursive formulae of Hanninen for a fixed observer point
+    use constants
+    use vectors
+    implicit none
+
+    real(WP), dimension(3, 3), intent(in) :: nodes_s 
+    real(WP), dimension(3), intent(in) :: r_o, n_hat
+
+    real(WP), intent(out) :: h
+    real(WP), dimension(3, 3), intent(out) :: m_hat
+    real(WP), intent(out), dimension(3) :: I_L_m1, I_L_1, I_L_3
+    real(WP), intent(out) :: I_S_m3_h, I_S_m1, I_S_1
+    
+    real(WP) :: R_m, R_p, s_m, s_p, R0_sq, x, y
+    real(WP), dimension(3, 3) :: a
+
+    real(WP), dimension(3) :: p1, p2, s_hat, t !, rho_o
+
+    integer :: count_s
+
+    ! Out of plane coordinate of observer
+    h = dot_product(r_o-nodes_s(1, :), n_hat)
+
+    ! iterate over all source edges (which are numbered by their opposite node) 
+    do count_s = 1,3
+
+        ! select the nodes on the edge opposite the current node
+        p1 = nodes_s(mod(count_s, 3)+1, :)
+        p2 = nodes_s(mod(count_s+1, 3)+1, :)
+
+        R_m = mag(r_o-p1)
+        R_p = mag(r_o-p2)
+
+        s_hat = (p2 - p1)/mag(p2 - p1)
+        s_m = dot_product(p1 - r_o, s_hat)
+        s_p = dot_product(p2 - r_o, s_hat)
+
+        !t(count_s) = dot_product(r_o-p1, 1.0-n_hat-s_hat)
+        m_hat(:, count_s) = cross_product(s_hat, n_hat)
+        t(count_s) = dot_product(r_o-p1, m_hat(:, count_s)) ! sign of t ???
+
+        if (abs(R_m + s_m) > abs(R_p - s_p)) then
+            I_L_m1(count_s) = log((R_p + s_p)/(R_m + s_m))
+        else
+            I_L_m1(count_s) = log((R_m - s_m)/(R_p - s_p))
+        end if
+
+        ! apply recursion formula for the line integrals
+        ! using the expression for R_0^2
+        R0_sq = (t(count_s)**2 + h**2)
+        I_L_1(count_s) = 0.5*(R0_sq*I_L_m1(count_s) + s_p*R_p - s_m*R_m)
+        I_L_3(count_s) = 3.0/4.0*R0_sq*I_L_1(count_s) + 1/4.0*(s_p*R_p**3 - s_m*R_m**3)
+    end do
+
+    ! Find the initial area integral (zero for h=0)
+    !a = (nodes_s-r_o)/mag(nodes_s-r_o) ! nodes need to be listed in a specific order?????
+    forall (count_s=1:3) a(:, count_s) = (nodes_s(count_s, :)-r_o)/mag(nodes_s(count_s, :)-r_o)
+    x = 1 + dot_product(a(:, 1), a(:, 2)) + dot_product(a(:, 1), a(:, 3)) + dot_product(a(:, 2), a(:, 3))
+    y = abs(dot_product(a(:, 1), cross_product(a(:, 2), a(:, 3))))
+
+    ! This expression is for the absolute value of Omega, need the sign from h
+    I_S_m3_h = 2*atan2(y, x)*sign(1.0, h)
+
+    I_S_m1 = -h*I_S_m3_h - sum(t*I_L_m1) 
+    I_S_1 = h**2/3.0*I_S_m1 -sum(t*I_L_1)/3.0
+
+end subroutine hanninen_inner
 
 subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
                                    nodes_o, normal_o, I_A, I_phi, Z_NMFIE)
@@ -575,13 +658,13 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
 
     real(WP) :: xi_o, eta_o, zeta_o, w_o
     real(WP), dimension(3) :: r_o, rho_o
-    real(WP), dimension(3, 3) :: m_hat, a
-    integer :: count_s, count_o, uu, vv
+    real(WP), dimension(3, 3) :: m_hat
+    integer :: count_o, uu, vv !, count_line
     real(WP), dimension(3) :: I_L_m1, I_L_1, I_L_3
-    real(WP) :: I_S_m3_h, I_S_m1, I_S_1, x, y
+    real(WP) :: I_S_m3_h, I_S_m1, I_S_1
 
-    real(WP), dimension(3) :: p1, p2, s_hat, n_hat, t
-    real(WP) :: R_m, R_p, s_m, s_p, h, area_s_2, R0_sq
+    real(WP), dimension(3) :: n_hat
+    real(WP) :: area_s_2, h
     
     I_A = 0.0
     I_phi = 0.0
@@ -604,56 +687,11 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
         ! Cartesian coordinates of the observer
         r_o = xi_o*nodes_o(1, :) + eta_o*nodes_o(2, :) + zeta_o*nodes_o(3, :)
 
-        ! Out of plane coordinate of observer
-        h = dot_product(r_o-nodes_s(1, :), n_hat)
-
         ! Confusing Notation - this is projection of observer onto the plane of the source triangle
         rho_o = r_o-n_hat*dot_product(r_o, n_hat)
 
-        ! Apply recursive formulae of Hanninen
-
-        ! iterate over all source edges (which are numbered by their opposite node)
-        do count_s = 1,3
-
-            ! select the nodes on the edge opposite the current node
-            p1 = nodes_s(mod(count_s, 3)+1, :)
-            p2 = nodes_s(mod(count_s+1, 3)+1, :)
-
-            R_m = mag(r_o-p1)
-            R_p = mag(r_o-p2)
-
-            s_hat = (p2 - p1)/mag(p2 - p1)
-            s_m = dot_product(p1 - r_o, s_hat)
-            s_p = dot_product(p2 - r_o, s_hat)
-
-            !t(count_s) = dot_product(r_o-p1, 1.0-n_hat-s_hat)
-            m_hat(:, count_s) = cross_product(s_hat, n_hat)
-            t(count_s) = dot_product(r_o-p1, m_hat(:, count_s)) ! sign of t ???
-
-            if (abs(R_m + s_m) > abs(R_p - s_p)) then
-                I_L_m1(count_s) = log((R_p + s_p)/(R_m + s_m))
-            else
-                I_L_m1(count_s) = log((R_m - s_m)/(R_p - s_p))
-            end if
-
-            ! apply recursion formula for the line
-            ! using the expression for R_0^2
-            R0_sq = (t(count_s)**2 + h**2)
-            I_L_1(count_s) = 0.5*(R0_sq*I_L_m1(count_s) + s_p*R_p - s_m*R_m)
-            I_L_3(count_s) = 3.0/4.0*R0_sq*I_L_1(count_s) + 1/4.0*(s_p*R_p**3 - s_m*R_m**3)
-        end do
-
-        ! Find the initial area integral (zero for h=0)
-        !a = (nodes_s-r_o)/mag(nodes_s-r_o) ! nodes need to be listed in a specific order?????
-        forall (uu=1:3) a(:, uu) = (nodes_s(uu, :)-r_o)/mag(nodes_s(uu, :)-r_o)
-        x = 1 + dot_product(a(:, 1), a(:, 2)) + dot_product(a(:, 1), a(:, 3)) + dot_product(a(:, 2), a(:, 3))
-        y = abs(dot_product(a(:, 1), cross_product(a(:, 2), a(:, 3))))
-
-        ! This expression is for the absolute value of Omega, need the sign from h
-        I_S_m3_h = 2*atan2(y, x)*sign(1.0, h)
-
-        I_S_m1 = -h*I_S_m3_h - sum(t*I_L_m1) 
-        I_S_1 = h**2/3.0*I_S_m1 -sum(t*I_L_1)/3.0
+        ! The inner recursion for a given observer point
+        call hanninen_inner(nodes_s, r_o, n_hat, h, m_hat, I_L_m1, I_L_1, I_L_3, I_S_m3_h, I_S_m1, I_S_1)
 
         ! Final results do not have explicit h dependance
         I_phi(1) = I_phi(1) + w_o*(I_S_m1) ! eq (65), 1/R term, q=-1
