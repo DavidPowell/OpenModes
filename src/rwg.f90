@@ -661,7 +661,7 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
 
     real(WP) :: xi_o, eta_o, zeta_o, w_o, w_s
     real(WP), dimension(3) :: r_o, r_s, rho_o, rho_s, n_hat_o
-    real(WP), dimension(3, 3) :: m_hat, m_hat_o
+    real(WP), dimension(3, 3) :: m_hat_s, m_hat_o
     integer :: count_o, uu, vv, count_line, count_s
     real(WP), dimension(3) :: I_L_m1, I_L_1, I_L_3
     real(WP) :: I_S_m3_h, I_S_m1, I_S_1
@@ -709,7 +709,7 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
         rho_o = r_o-n_hat*dot_product(r_o, n_hat)
 
         ! The inner recursion for a given observer point
-        call hanninen_inner(nodes_s, r_o, n_hat, h, m_hat, I_L_m1, I_L_1, I_L_3, I_S_m3_h, I_S_m1, I_S_1)
+        call hanninen_inner(nodes_s, r_o, n_hat, h, m_hat_s, I_L_m1, I_L_1, I_L_3, I_S_m3_h, I_S_m1, I_S_1)
 
         ! Final results do not have explicit h dependance
         I_phi(1) = I_phi(1) + w_o*(I_S_m1) ! eq (65), 1/R term, q=-1
@@ -717,19 +717,19 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
 
         ! eq (70) 1/R term, q=-1
         forall (uu=1:3, vv=1:3) I_A(1, uu, vv) = I_A(1, uu, vv) + w_o*( &
-            dot_product(matmul(I_L_1, transpose(m_hat)) + (rho_o-nodes_s(vv, :))*I_S_m1, &
+            dot_product(matmul(I_L_1, transpose(m_hat_s)) + (rho_o-nodes_s(vv, :))*I_S_m1, &
                         (r_o - nodes_o(uu, :))))
 
         ! eq (70) R term, q=1
         forall (uu=1:3, vv=1:3) I_A(2, uu, vv) = I_A(2, uu, vv) + w_o*( &
-            dot_product(matmul(I_L_3, transpose(m_hat))/3 + (rho_o-nodes_s(vv, :))*I_S_1, &
+            dot_product(matmul(I_L_3, transpose(m_hat_s))/3 + (rho_o-nodes_s(vv, :))*I_S_1, &
                         (r_o - nodes_o(uu, :))))
 
         ! eqs (74, 77) R term, n x testing, q=1
         ! This term has no singularity problems
         forall (uu=1:3, vv=1:3) Z_NMFIE(2, uu, vv) = Z_NMFIE(2, uu, vv) + w_o*( &
             dot_product(r_o - nodes_o(uu, :), cross_product(normal_o, &
-            cross_product(r_o - nodes_s(vv, :), matmul(I_L_1, transpose(m_hat)) - h*n_hat*I_S_m1))))
+            cross_product(r_o - nodes_s(vv, :), matmul(I_L_1, transpose(m_hat_s)) - h*n_hat*I_S_m1))))
 
 !        ! eqs (74, 77) 1/R term, n x testing, q=-1
 !        ! Note that this term suffers from a logarithmic singularity
@@ -775,13 +775,11 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
             forall (uu=1:3, vv=1:3) Z_NMFIE_o(uu, vv) = Z_NMFIE_o(uu, vv) &
                 ! first term in eq (A12), which uses eq (70) with reversed source-observer terms and q=-1
                 + w_s*( &
-                dot_product(cross_product(nodes_o(uu, :) - nodes_s(vv, :), m_hat(:, count_s)),  &
+                dot_product(cross_product(nodes_o(uu, :) - nodes_s(vv, :), m_hat_s(:, count_s)),  &
                 cross_product(normal_o, K_2_m1_o(uu, :)))) &
-                !matmul(I_L_1_o, transpose(m_hat_o)) + (rho_s-nodes_o(uu, :))*I_S_m1_o)))
 
                 ! second term in (A12), only depends on the observer node, same for all source nodes
-                !forall (uu=1:3) Z_NMFIE(1, uu, :) = Z_NMFIE(1, uu, :)
-                - w_s*(dot_product(m_hat(:, count_s), normal_o)*( &
+                - w_s*(dot_product(m_hat_s(:, count_s), normal_o)*( &
                 ! R term = K_1_1
                 I_S_1_o + &
                 ! (r-p_m) term ~ K_2_m1, given by eq (70) again
