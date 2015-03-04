@@ -96,6 +96,24 @@ python module core ! in
             integer dimension(num_triangles + 1),intent(in),depend(num_triangles) :: indptr_precalc
             complex(kind=wp) dimension(num_triangles,3,num_triangles,3),intent(out),depend(num_triangles,num_triangles) :: z_face
         end subroutine z_mfie_faces_self
+        subroutine z_mfie_faces_mutual(num_nodes_o,num_triangles_o,num_nodes_s,num_triangles_s,num_integration,nodes_o,triangles_o,nodes_s,triangles_s,s,xi_eta,weights,normals_o,t_form,z_face) ! in :core:src/rwg.f90
+            use core_for
+            integer, optional,intent(in),check(shape(nodes_o,0)==num_nodes_o),depend(nodes_o) :: num_nodes_o=shape(nodes_o,0)
+            integer, optional,intent(in),check(shape(triangles_o,0)==num_triangles_o),depend(triangles_o) :: num_triangles_o=shape(triangles_o,0)
+            integer, optional,intent(in),check(shape(nodes_s,0)==num_nodes_s),depend(nodes_s) :: num_nodes_s=shape(nodes_s,0)
+            integer, optional,intent(in),check(shape(triangles_s,0)==num_triangles_s),depend(triangles_s) :: num_triangles_s=shape(triangles_s,0)
+            integer, optional,intent(in),check(shape(xi_eta,0)==num_integration),depend(xi_eta) :: num_integration=shape(xi_eta,0)
+            real(kind=wp) dimension(num_nodes_o,3),intent(in) :: nodes_o
+            integer dimension(num_triangles_o,3),intent(in) :: triangles_o
+            real(kind=wp) dimension(num_nodes_s,3),intent(in) :: nodes_s
+            integer dimension(num_triangles_s,3),intent(in) :: triangles_s
+            complex(kind=wp) intent(in) :: s
+            real(kind=wp) dimension(num_integration,2),intent(in) :: xi_eta
+            real(kind=wp) dimension(num_integration),intent(in),depend(num_integration) :: weights
+            real(kind=wp) dimension(num_triangles_o,3),intent(in),depend(num_triangles_o) :: normals_o
+            logical intent(in) :: t_form
+            complex(kind=wp) dimension(num_triangles_o,3,num_triangles_s,3),intent(out),depend(num_triangles_o,num_triangles_s) :: z_face
+        end subroutine z_mfie_faces_mutual
         module constants ! in :core:src/common.f90
             integer, parameter,optional :: sp=4
             integer, parameter,optional :: dp=8

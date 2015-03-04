@@ -1,2 +1,2 @@
-f2py -m core -h src/core.pyf src/rwg.f90 src/common.f90 --overwrite-signature only:  set_threads get_threads face_integrals_hanninen z_efie_faces_self z_efie_faces_mutual arcioni_singular z_mfie_faces_self :
+f2py -m core -h src/core.pyf src/rwg.f90 src/common.f90 --overwrite-signature only:  set_threads get_threads face_integrals_hanninen z_efie_faces_self z_efie_faces_mutual arcioni_singular z_mfie_faces_self z_mfie_faces_mutual :
 f2py -m dunavant -h src/dunavant.pyf src/dunavant.f90 --overwrite-signature only: dunavant_order_num dunavant_rule :
