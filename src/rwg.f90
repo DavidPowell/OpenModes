@@ -1246,6 +1246,8 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
 
     jk_0 = s/c
 
+    !$OMP PARALLEL DO SCHEDULE(DYNAMIC) DEFAULT(SHARED) &
+    !$OMP PRIVATE (p, q, nodes_p, nodes_q, I_Z, index_singular)
     ! calculate all the integrations for each face pair
     do p = 0,num_triangles-1 ! p is the index of the observer face:
         nodes_p = nodes(triangle_nodes(p, :), :)
@@ -1266,7 +1268,7 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
 
 
                 if (degree_singular > 0) then
-                    I_Z = I_Z - Z_precalc(index_singular, 0, :, :) !*0.9
+                    I_Z = I_Z - Z_precalc(index_singular, 0, :, :)
                 end if
 
 !                ! The R term
@@ -1290,5 +1292,6 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
 
         end do
     end do
+    !$OMP END PARALLEL DO
 
 end subroutine Z_MFIE_faces_self
