@@ -517,7 +517,7 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
 
     ! calculate all the integrations for each face pair
     !$OMP PARALLEL DO SCHEDULE(DYNAMIC) DEFAULT(SHARED) &
-    !$OMP PRIVATE (p, q, nodes_p, nodes_q, I_A, I_phi)
+    !$OMP PRIVATE (p, q, nodes_p, nodes_q, I_A, I_phi, index_singular)
     do p = 0,num_triangles-1 ! p is the index of the observer face:
         nodes_p = nodes(triangle_nodes(p, :), :)
         do q = 0,p ! q is the index of the source face, need for elements below diagonal
