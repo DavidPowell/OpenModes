@@ -669,12 +669,8 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
     ! required for changing order of integration
     real(WP), dimension(3) :: I_L_m1_o, I_L_1_o, I_L_3_o
     real(WP) :: I_S_m3_h_o, I_S_m1_o, I_S_1_o
-    real(WP), dimension(3, 3) :: Z_NMFIE_o
-
-
+    real(WP), dimension(3, 3) :: Z_NMFIE_o, Z_TMFIE_o
     real(WP), dimension(3, 3) :: K_2_m1_o
-
-
     real(WP), dimension(3) :: n_hat, p1, p2
     real(WP) :: area_s_2, h, area_o_2
     
@@ -726,11 +722,11 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
             dot_product(matmul(I_L_3, transpose(m_hat_s))/3 + (rho_o-nodes_s(vv, :))*I_S_1, &
                         (r_o - nodes_o(uu, :))))
 
-        ! eqs (74, 77) 1/R term, tangential testing, q=-1
-        ! Note that this term suffers from a logarithmic singularity
-        forall (uu=1:3, vv=1:3) Z_TMFIE(1, uu, vv) = Z_TMFIE(1, uu, vv) + w_o*( &
-            dot_product(r_o - nodes_o(uu, :),  &
-            cross_product(r_o - nodes_s(vv, :), matmul(I_L_m1, transpose(m_hat_s)) + n_hat*I_S_m3_h)))
+!        ! eqs (74, 77) 1/R term, tangential testing, q=-1
+!        ! Note that this term suffers from a logarithmic singularity
+!        forall (uu=1:3, vv=1:3) Z_TMFIE(1, uu, vv) = Z_TMFIE(1, uu, vv) + w_o*( &
+!            dot_product(r_o - nodes_o(uu, :),  &
+!            cross_product(r_o - nodes_s(vv, :), matmul(I_L_m1, transpose(m_hat_s)) + n_hat*I_S_m3_h)))
 
         ! eqs (74, 77) R term, tangential testing, q=1
         ! This term has no singularity problems
@@ -738,6 +734,12 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
             dot_product(r_o - nodes_o(uu, :), &
             cross_product(r_o - nodes_s(vv, :), matmul(I_L_1, transpose(m_hat_s)) - h*n_hat*I_S_m1)))
 
+        ! eq (A4), normal term
+        ! n_hat is needed because this is a vector, -ve sign is needed to
+        ! compensate for 44
+        forall (uu=1:3, vv=1:3) Z_TMFIE(1, uu, vv) = Z_TMFIE(1, uu, vv) + w_o*( &
+            dot_product(r_o - nodes_o(uu, :),  &
+            cross_product(nodes_o(uu, :) - nodes_s(vv, :), n_hat*I_S_m3_h)))
 
         ! eqs (74, 77) R term, n x testing, q=1
         ! This term has no singularity problems
@@ -765,7 +767,7 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
 
 
     Z_NMFIE_o = 0.0
-    ! 1/R term, n x testing, q=-1
+    Z_TMFIE_o = 0.0
     ! Handle logarithmic singularity by breaking up integral, 
     ! The other two terms, which involve line integrals over the source triangle's edges
     do count_s =1,3
@@ -785,6 +787,12 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
 
             ! eq (70)
             forall (uu=1:3) K_2_m1_o(uu, :) = matmul(I_L_1_o, transpose(m_hat_o)) + (rho_s-nodes_o(uu, :))*I_S_m1_o
+
+            ! eq (A6), tangential testing, normal component
+            forall (uu=1:3, vv=1:3) Z_TMFIE_o(uu, vv) = Z_TMFIE_o(uu, vv) &
+                + w_s*dot_product(cross_product(nodes_o(uu, :)-nodes_s(vv, :), m_hat_s(:, count_s)), K_2_m1_o(uu, :))
+
+            ! 1/R term, n x testing, q=-1
 
             forall (uu=1:3, vv=1:3) Z_NMFIE_o(uu, vv) = Z_NMFIE_o(uu, vv) &
                 ! first term in eq (A12), which uses eq (70) with reversed source-observer terms and q=-1
@@ -809,6 +817,7 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
     Z_NMFIE = Z_NMFIE/area_s_2
     Z_NMFIE(1, :, :) = Z_NMFIE(1, :, :) + Z_NMFIE_o/area_o_2/area_s_2
     Z_TMFIE = Z_TMFIE/area_s_2
+    Z_TMFIE(1, :, :) = Z_TMFIE(1, :, :) + Z_TMFIE_o/area_o_2/area_s_2
 
 end subroutine face_integrals_hanninen
 
