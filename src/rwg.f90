@@ -815,7 +815,7 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
     I_phi = I_phi/area_s_2
     I_A = I_A/area_s_2
     Z_NMFIE = Z_NMFIE/area_s_2
-    Z_NMFIE(1, :, :) = Z_NMFIE(1, :, :) + Z_NMFIE_o/area_o_2/area_s_2
+    Z_NMFIE(1, :, :) = Z_NMFIE(1, :, :) - Z_NMFIE_o/area_o_2/area_s_2
     Z_TMFIE = Z_TMFIE/area_s_2
     Z_TMFIE(1, :, :) = Z_TMFIE(1, :, :) + Z_TMFIE_o/area_o_2/area_s_2
 
