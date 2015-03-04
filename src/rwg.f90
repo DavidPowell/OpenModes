@@ -630,7 +630,8 @@ subroutine hanninen_inner(nodes_s, r_o, n_hat, h, m_hat, I_L_m1, I_L_1, I_L_3, I
 end subroutine hanninen_inner
 
 subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
-                                   nodes_o, normal_o, I_A, I_phi, Z_NMFIE)
+                                   nodes_o, normal_o, n_gauss, gauss_points, gauss_weights, &
+                                   I_A, I_phi, Z_NMFIE)
     ! Fully integrated over source and observer the singular part of the MOM 
     ! for RWG basis functions
     ! NB: includes the 1/4A**2 prefactor
@@ -645,32 +646,49 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
     use vectors
     implicit none
 
-    integer, intent(in) :: n_o
+    integer, intent(in) :: n_o, n_gauss
     ! f2py intent(hide) :: n_o
     real(WP), dimension(3, 3), intent(in) :: nodes_s, nodes_o
     real(WP), intent(in), dimension(0:n_o-1, 2) :: xi_eta_o
     real(WP), intent(in), dimension(0:n_o-1) :: weights_o
     real(WP), intent(in), dimension(3) :: normal_o
 
+    real(WP), intent(in), dimension(n_gauss) :: gauss_points, gauss_weights
+
     real(WP), intent(out), dimension(2, 3, 3) :: I_A
     real(WP), intent(out), dimension(2) :: I_phi
     real(WP), intent(out), dimension(2, 3, 3) :: Z_NMFIE
 
-    real(WP) :: xi_o, eta_o, zeta_o, w_o
-    real(WP), dimension(3) :: r_o, rho_o
-    real(WP), dimension(3, 3) :: m_hat
-    integer :: count_o, uu, vv !, count_line
+    real(WP) :: xi_o, eta_o, zeta_o, w_o, w_s
+    real(WP), dimension(3) :: r_o, r_s, rho_o, rho_s, n_hat_o
+    real(WP), dimension(3, 3) :: m_hat, m_hat_o
+    integer :: count_o, uu, vv, count_line, count_s
     real(WP), dimension(3) :: I_L_m1, I_L_1, I_L_3
     real(WP) :: I_S_m3_h, I_S_m1, I_S_1
 
-    real(WP), dimension(3) :: n_hat
-    real(WP) :: area_s_2, h
+    ! required for changing order of integration
+    real(WP), dimension(3) :: I_L_m1_o, I_L_1_o, I_L_3_o
+    real(WP) :: I_S_m3_h_o, I_S_m1_o, I_S_1_o
+    real(WP), dimension(2, 3, 3) :: Z_NMFIE_o
+
+
+    real(WP), dimension(3, 3) :: K_2_m1_o
+
+
+    real(WP), dimension(3) :: n_hat, p1, p2
+    real(WP) :: area_s_2, h, area_o_2
     
     I_A = 0.0
     I_phi = 0.0
     Z_NMFIE = 0.0
 
-    ! The sign of this normal does not matter?
+    ! Normal of observer triangle, recalculated according to node numbering
+    ! convention. May not be equal to normal_o used in n x testing
+    n_hat_o = cross_product(nodes_o(2, :) - nodes_o(1, :), nodes_o(3, :)-nodes_o(1,:))
+    area_o_2 = mag(n_hat_o)
+    n_hat_o = n_hat_o/area_o_2
+
+    ! Normal of source triangle
     n_hat = cross_product(nodes_s(2, :) - nodes_s(1, :), nodes_s(3, :)-nodes_s(1,:))
     area_s_2 = mag(n_hat)
     n_hat = n_hat/area_s_2
@@ -707,22 +725,75 @@ subroutine face_integrals_hanninen(nodes_s, n_o, xi_eta_o, weights_o, &
             dot_product(matmul(I_L_3, transpose(m_hat))/3 + (rho_o-nodes_s(vv, :))*I_S_1, &
                         (r_o - nodes_o(uu, :))))
 
-        ! eqs (74, 77) 1/R term, n x testing, q=-1
-        ! Note that this term suffers from a logarithmic singularity
-        forall (uu=1:3, vv=1:3) Z_NMFIE(1, uu, vv) = Z_NMFIE(1, uu, vv) + w_o*( &
-            dot_product(r_o - nodes_o(uu, :), cross_product(normal_o, &
-            cross_product(r_o - nodes_s(vv, :), matmul(I_L_m1, transpose(m_hat)) + n_hat*I_S_m3_h))))
-
         ! eqs (74, 77) R term, n x testing, q=1
         ! This term has no singularity problems
         forall (uu=1:3, vv=1:3) Z_NMFIE(2, uu, vv) = Z_NMFIE(2, uu, vv) + w_o*( &
             dot_product(r_o - nodes_o(uu, :), cross_product(normal_o, &
             cross_product(r_o - nodes_s(vv, :), matmul(I_L_1, transpose(m_hat)) - h*n_hat*I_S_m1))))
 
+!        ! eqs (74, 77) 1/R term, n x testing, q=-1
+!        ! Note that this term suffers from a logarithmic singularity
+!        forall (uu=1:3, vv=1:3) Z_NMFIE(1, uu, vv) = Z_NMFIE(1, uu, vv) + w_o*( &
+!            dot_product(r_o - nodes_o(uu, :), cross_product(normal_o, &
+!            cross_product(r_o - nodes_s(vv, :), matmul(I_L_m1, transpose(m_hat)) + n_hat*I_S_m3_h))))
+
+        ! 1/R term, n x testing, q=-1
+        ! Handle logarithmic singularity by breaking up integral, 
+
+        ! eq (A9), normal term
+        ! n_hat is needed because this is a vector, -ve sign is needed to
+        ! compensate for 44
+        forall (uu=1:3, vv=1:3) Z_NMFIE(1, uu, vv) = Z_NMFIE(1, uu, vv) + w_o*( &
+            dot_product(cross_product(normal_o, r_o - nodes_o(uu, :)),  &
+            cross_product(r_o - nodes_s(vv, :), -n_hat*I_S_m3_h)))
+
+    end do
+
+
+    Z_NMFIE_o = 0.0
+    ! 1/R term, n x testing, q=-1
+    ! Handle logarithmic singularity by breaking up integral, 
+    ! The other two terms, which involve line integrals over the source triangle's edges
+    do count_s =1,3
+        ! select the nodes for the edge
+        p1 = nodes_s(mod(count_s, 3)+1, :)
+        p2 = nodes_s(mod(count_s+1, 3)+1, :)
+
+        do count_line = 1,n_gauss
+            r_s = gauss_points(count_line)*(p2-p1)+p1
+            w_s = gauss_weights(count_line)*mag(p2-p1)
+
+            ! h is not required, so it's okay to overwrite the old value
+            call hanninen_inner(nodes_o, r_s, n_hat_o, h, m_hat_o, I_L_m1_o, &
+                                I_L_1_o, I_L_3_o, I_S_m3_h_o, I_S_m1_o, I_S_1_o)
+
+            rho_s = r_s-n_hat_o*dot_product(r_s, n_hat_o)
+
+            ! eq (70)
+            forall (uu=1:3) K_2_m1_o(uu, :) = matmul(I_L_1_o, transpose(m_hat_o)) + (rho_s-nodes_o(uu, :))*I_S_m1_o
+
+            ! first term in eq (A12), which uses eq (70) with reversed source-observer terms and q=-1
+            forall (uu=1:3, vv=1:3) Z_NMFIE_o(1, uu, vv) = Z_NMFIE(1, uu, vv) + w_s*( &
+                dot_product(cross_product(nodes_o(uu, :) - nodes_s(vv, :), m_hat(:, count_s)),  &
+                cross_product(normal_o, K_2_m1_o(uu, :)))) &
+                !matmul(I_L_1_o, transpose(m_hat_o)) + (rho_s-nodes_o(uu, :))*I_S_m1_o)))
+            ! second term in (A12), only depends on the observer node, same for all source nodes
+            !forall (uu=1:3) Z_NMFIE(1, uu, :) = Z_NMFIE(1, uu, :)
+            - w_s*( &
+                dot_product(m_hat(:, count_s), normal_o)*( &
+                ! R term = K_1_1
+                I_S_1_o + &
+                ! (r-p_m) term ~ K_2_m1, given by eq (70) again
+                2*dot_product(r_s - nodes_o(uu, :), K_2_m1_o(uu, :)) &
+                ! 1/R term ~ K_1_m1, also by eq (65)
+                -mag(r_s - nodes_o(uu, :))**2 *I_s_m1_o &
+                ))
+            
+        end do
     end do
     I_phi = I_phi/area_s_2
     I_A = I_A/area_s_2
-    Z_NMFIE = Z_NMFIE/area_s_2
+    Z_NMFIE = Z_NMFIE/area_s_2 + Z_NMFIE_o/area_o_2
 
 end subroutine face_integrals_hanninen
 
@@ -1165,19 +1236,19 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
             elseif (any(triangle_nodes(p, :) == triangle_nodes(q, :))) then
                 ! triangles have one or two common nodes, perform singularity extraction
                 call face_integral_MFIE(num_integration, xi_eta, weights, nodes_q, &
-                                    num_integration, xi_eta, weights, nodes_p, jk_0, normals(p, :), T_form, degree_singular, I_Z)
+                                    num_integration, xi_eta, weights, nodes_p, jk_0, normals(p, :), T_form, 1, I_Z)
                 ! the singular components are pre-calculated
                 index_singular = scr_index(p, q, indices_precalc, indptr_precalc)
 
 
                 if (degree_singular > 0) then
-                    I_Z = I_Z - Z_precalc(index_singular, 0, :, :)
+                    I_Z = I_Z - Z_precalc(index_singular, 0, :, :) !*0.9
                 end if
 
-                ! The R term
-                if (degree_singular > 1) then
-                    I_Z = I_Z - Z_precalc(index_singular, 1, :, :)*jk_0**2/2
-                end if
+!                ! The R term
+!                if (degree_singular > 1) then
+!                    I_Z = I_Z - Z_precalc(index_singular, 1, :, :)*jk_0**2/2
+!                end if
 
                 I_Z = I_Z/4.0/pi
         
