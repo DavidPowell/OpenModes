@@ -1315,6 +1315,8 @@ subroutine Z_MFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
 
     jk_0 = s/c
 
+    !$OMP PARALLEL DO SCHEDULE(DYNAMIC) DEFAULT(SHARED) &
+    !$OMP PRIVATE (p, q, nodes_p, nodes_q, I_Z)
     ! calculate all the integrations for each face pair
     do p = 0,num_triangles_o-1 ! p is the index of the observer face:
         nodes_p = nodes_o(triangles_o(p, :), :)
@@ -1332,5 +1334,6 @@ subroutine Z_MFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
 
         end do
     end do
+    !$OMP END PARALLEL DO
 
 end subroutine Z_MFIE_faces_mutual
