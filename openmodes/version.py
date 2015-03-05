@@ -38,7 +38,7 @@ RELEASE_VERSION = "0.0.4"
 def version_git():
     try:
         p = Popen(['git', 'describe', '--abbrev=%d' % 4], stdout=PIPE,
-                  stderr=PIPE)
+                  stderr=PIPE, universal_newlines=True)
         p.stderr.close()
         line = p.stdout.readlines()[0]
         return line.strip()

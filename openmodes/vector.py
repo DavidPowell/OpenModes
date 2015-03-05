@@ -272,4 +272,4 @@ if __name__ == "__main__":
     V[part2] = 7
 
     #a = V[part1]
-    print V[part][part2]
+    print(V[part][part2])

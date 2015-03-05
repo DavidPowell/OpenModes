@@ -114,7 +114,7 @@ def memoize(obj):
     def memoizer(*args, **kwargs):
         key_arg = tuple(get_key(arg) for arg in args)
         key_kwarg = tuple((kw, get_key(arg)) for (kw, arg)
-                          in kwargs.iteritems())
+                          in kwargs.items())
         key = (key_arg, key_kwarg)
 
         if key not in cache:
@@ -161,14 +161,14 @@ def equivalence(relations):
             classes[j] = k
 
     # The final sweep
-    for j in classes.iterkeys():
+    for j in classes.keys():
         while classes[j] != classes[classes[j]]:
             classes[j] = classes[classes[j]]
 
     # Now reverse the storage arrangement, so that all items of the same
     # class are grouped together into a set
     classes_reverse = defaultdict(set)
-    for item, item_class in classes.iteritems():
+    for item, item_class in classes.items():
         classes_reverse[item_class].add(item)
 
     # the class names are arbitrary, so just return the list of sets

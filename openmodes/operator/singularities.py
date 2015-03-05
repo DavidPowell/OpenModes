@@ -59,12 +59,12 @@ class MultiSparse(object):
         return self.rows[index[0]][index[1]]
 
     def __len__(self):
-        return sum(len(row_dict) for row, row_dict in self.rows.iteritems())
+        return sum(len(row_dict) for row, row_dict in self.rows.items())
 
-    def iteritems(self):
+    def items(self):
         "Iterate through all items"
-        for row, row_dict in self.rows.iteritems():
-            for col, item in row_dict.iteritems():
+        for row, row_dict in self.rows.items():
+            for col, item in row_dict.items():
                 yield ((row, col), item)
 
     def to_csr(self, order='C'):
@@ -107,7 +107,7 @@ class MultiSparse(object):
         for row in xrange(num_rows):
             if row in self.rows:
                 # the row exists, so process it
-                for col, item in self.rows[row].iteritems():
+                for col, item in self.rows[row].items():
                     for sub_count, sub_item in enumerate(item):
                         data_arrays[sub_count][data_index] = sub_item
 

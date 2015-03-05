@@ -133,14 +133,14 @@ class compiler_dependent_build_ext(build_ext):
         for extension in self.extensions:
             try:
                 modification = ccompiler_dependent_options[ccompiler]
-                for key, val in modification.iteritems():
+                for key, val in modification.items():
                     getattr(extension, key).extend(val)
             except (KeyError, AttributeError):
                 pass
 
             try:
                 modification = fcompiler_dependent_options[fcompiler]
-                for key, val in modification.iteritems():
+                for key, val in modification.items():
                     getattr(extension, key).extend(val)
             except (KeyError, AttributeError):
                 pass
@@ -159,7 +159,7 @@ with open('README.rst') as description_file:
     long_description = description_file.read()
 
 # run the script to find the version
-execfile(osp.join("openmodes", "version.py"))
+exec(open(osp.join("openmodes", "version.py")).read())
 
 setup(name='OpenModes',
       description="An eigenmode solver for open electromagnetic resonantors",
