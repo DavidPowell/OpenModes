@@ -21,7 +21,7 @@
 import numpy as np
 
 from openmodes.constants import epsilon_0, mu_0, pi, c
-from openmodes.core import z_mfie_faces_self
+from openmodes.core import z_mfie_faces_self, z_mfie_faces_mutual
 from openmodes.basis import LinearTriangleBasis
 from openmodes.impedance import ImpedanceMatrix
 import logging
@@ -62,11 +62,15 @@ def impedance_rwg_mfie_free_space(s, integration_rule, basis_o, nodes_o,
 
     else:
         # calculate mutual impedance
-        raise NotImplementedError
-
         num_faces_s = len(basis_s.mesh.polygons)
 
-        transform_Z_s, _ = basis_s.transformation_matrices
+        Z_faces = z_mfie_faces_mutual(nodes_o, basis_o.mesh.polygons,
+                                      nodes_s, basis_s.mesh.polygons,
+                                      s, integration_rule.xi_eta,
+                                      integration_rule.weights, normals,
+                                      tangential_form)
+
+        transform_s, _ = basis_s.transformation_matrices
 
     if np.any(np.isnan(Z_faces)):
         raise ValueError("NaN returned in impedance matrix")
