@@ -41,32 +41,6 @@ module core_for
             integer :: scr_index
         end function
 
-
-        subroutine source_integral_plane_wave(n_o, xi_eta_o, weights_o, nodes_o, jk_inc, e_inc, I)
-            ! Inner product of source field with testing function to give source "voltage"
-            !
-            ! xi_eta_s/o - list of coordinate pairs in source/observer triangle
-            ! weights_s/o - the integration weights of the source and observer
-            ! nodes_s/o - the nodes of the source and observer triangles
-            ! k_0 - free space wavenumber
-            ! nodes - the position of the triangle nodes
-
-            use constants
-            implicit none
-
-            integer, intent(in) :: n_o
-            ! f2py intent(hide) :: n_o
-            real(WP), dimension(3, 3), intent(in) :: nodes_o
-
-            real(WP), intent(in), dimension(0:n_o-1, 2) :: xi_eta_o
-            real(WP), intent(in), dimension(0:n_o-1) :: weights_o
-            complex(WP), intent(in), dimension(3) :: jk_inc
-            complex(WP), intent(in), dimension(3) :: e_inc
-
-            complex(WP), intent(out), dimension(:) :: I
-
-        end subroutine
-
         pure subroutine face_integral_EFIE(n_s, n_s2, xi_eta_s, weights_s, &
                         nodes_s, n_o, xi_eta_o, weights_o, nodes_o, jk_0, I_A, I_phi)
             use constants

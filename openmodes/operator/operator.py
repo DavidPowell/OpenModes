@@ -85,32 +85,6 @@ class Operator(object):
 
         return ImpedanceParts(s, parent_o, parent_s, matrices, type(res))
 
-    def source_plane_wave(self, e_inc, jk_inc, parent):
-        """Evaluate the source vectors due to an incident plane wave, returning
-        separate vectors for each part.
-
-        Parameters
-        ----------
-        e_inc: ndarray
-            incident field polarisation in free space
-        jk_inc: ndarray
-            incident wave vector in free space
-        parent: Part
-            The part for which to calculate the source vector
-
-        Returns
-        -------
-        V : list of ndarray
-            the source vector for each part
-        """
-
-        vector = VectorParts(parent, self.basis_container, dtype=np.complex128)
-
-        for part in parent.iter_single():
-            vector[part] = self.source_plane_wave_single_part(part, e_inc, jk_inc)
-
-        return vector
-
     def singularities(self, s_start, modes, part, use_gram=True,
                       rel_tol=1e-6, max_iter=200):
         """Find the singularities of a part or of the whole system
