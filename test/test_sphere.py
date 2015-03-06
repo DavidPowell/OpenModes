@@ -128,7 +128,7 @@ def test_extinction_efie(plot_extinction=False, skip_asserts=False,
     radius = 5e-3
     # this call is to generate and save the reference mesh
 #    sphere = sim.load_mesh(osp.join(openmodes.geometry_dir, 'sphere.geo'),
-#                           parameters={'radius': radius, 'mesh_tol': 1.5e-3},
+#                           parameters={'radius': radius, 'mesh_tol': 2e-3},
 #                           mesh_dir=mesh_dir)
     sphere = sim.load_mesh(osp.join(mesh_dir, 'sphere.msh'))
     sim.place_part(sphere)
@@ -179,5 +179,5 @@ def test_extinction_efie(plot_extinction=False, skip_asserts=False,
 
 
 if __name__ == "__main__":
-    test_extinction_mfie(plot_extinction=True, write_reference=True)
-    #test_extinction_efie(plot_extinction=True, skip_asserts=True)
+    test_extinction_mfie(plot_extinction=True, skip_asserts=True)
+    test_extinction_efie(plot_extinction=True, skip_asserts=True)
