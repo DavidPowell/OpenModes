@@ -27,7 +27,6 @@ Gmsh 2.8.4 is required, as it introduced the `setnumber` command line parameter
 from __future__ import print_function
 
 import subprocess
-import tempfile
 import os.path as osp
 import struct
 import numpy as np
@@ -40,7 +39,7 @@ from openmodes.helpers import MeshError
 MIN_VERSION = (2, 8, 4)
 
 
-def mesh_geometry(filename, mesh_tol=None, binary=True, dirname=None,
+def mesh_geometry(filename, dirname, mesh_tol=None, binary=True,
                   parameters={}):
     """Call gmsh to surface mesh a geometry file with a specified maximum
     tolerance
@@ -49,13 +48,12 @@ def mesh_geometry(filename, mesh_tol=None, binary=True, dirname=None,
     ----------
     filename : string
         the name of the file to be meshed
+    dirname : string, optional
+        The location in which to create the mesh file
     mesh_tol : number, optional
         override the maximum mesh tolerance distance of all edges
     binary : boolean, optional
         (default True) output a binary file
-    dirname : string, optional
-        The location in which to create the mesh file. If unspecified a
-        temporary directory will be created
     parameters : dictionary, optional
         A dictionary containing the values of geometric parameters to be
         modified within the gmsh geometry before meshing. Note that the
@@ -75,9 +73,6 @@ def mesh_geometry(filename, mesh_tol=None, binary=True, dirname=None,
 
     if not osp.exists(filename):
         raise MeshError("Geometry file %s not found" % filename)
-
-    if dirname is None:
-        dirname = tempfile.mkdtemp()
 
     meshname = osp.join(dirname, osp.splitext(osp.basename(filename))[0]
                         + ".msh")
@@ -213,7 +208,7 @@ def read_physical_names(file_handle):
     return physical_names
 
 
-def read_mesh(filename, returned_elements = ("edges", "triangles")):
+def read_mesh(filename, returned_elements=("edges", "triangles")):
     """Read a gmsh binary mesh file
 
     Parameters

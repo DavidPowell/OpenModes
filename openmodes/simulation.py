@@ -24,6 +24,8 @@ from __future__ import division
 import numpy as np
 import os.path as osp
 import logging
+import tempfile
+import shutil
 
 from openmodes import gmsh
 from openmodes.integration import DunavantRule
@@ -174,7 +176,7 @@ class Simulation(Identified):
         return self.operator.impedance(s, parent, parent)
 
     def source_vector(self, source_field, s, parent=None, which_field=None,
-                      n_cross = None):
+                      n_cross=None):
         """Evaluate the source vectors due to an incident field, returning
         separate vectors for each part.
 
@@ -366,7 +368,7 @@ class Simulation(Identified):
             raise ValueError("Unknown output format")
 
     def load_mesh(self, filename, mesh_tol=None, force_tuple=False, scale=None,
-                  parameters={}):
+                  parameters={}, mesh_dir=None):
         """
         Open a geometry file and mesh it (or directly open a mesh file), then
         convert it into a mesh object. Note that the mesh is _not_ added to
@@ -390,6 +392,12 @@ class Simulation(Identified):
         parameters : dictionary, optional
             A dictionary containing geometric parameters to be overridden in
             a geometry file, before meshing
+        mesh_dir : string, optional
+            If specified, then the mesh will be created in this directory,
+            and it will be preserved after creation. Otherwise a temporary
+            directory will be created, which will be deleted after the mesh
+            has been loaded. This parameter is only used if a geometry file is
+            given which needs to be meshed
 
         Returns
         -------
@@ -400,6 +408,7 @@ class Simulation(Identified):
         Currently only `TriangularSurfaceMesh` objects are created
         """
 
+        delete_dir = False
         if osp.splitext(osp.basename(filename))[1] == ".msh":
             # assume that this is a binary mesh already generate by gmsh
             meshed_name = filename
@@ -407,13 +416,20 @@ class Simulation(Identified):
                 raise ValueError("Cannot modify parameters of existing mesh")
         else:
             # assume that this is a gmsh geometry file, so mesh it first
-            logging.info("Meshing geometry %s with parameters %s"
-                         % (filename, str(parameters)))
-            meshed_name = gmsh.mesh_geometry(filename, mesh_tol,
+            if mesh_dir is None:
+                mesh_dir = tempfile.mkdtemp()
+                delete_dir = True
+
+            logging.info("Meshing geometry %s with parameters %s in dir %s"
+                         % (filename, str(parameters), mesh_dir))
+            meshed_name = gmsh.mesh_geometry(filename, mesh_dir, mesh_tol,
                                              parameters=parameters)
 
         logging.info("Loading mesh %s" % meshed_name)
         raw_mesh = gmsh.read_mesh(meshed_name)
+
+        if delete_dir:
+            shutil.rmtree(mesh_dir)
 
         parts = tuple(TriangularSurfaceMesh(sub_mesh, scale=scale)
                       for sub_mesh in raw_mesh)
