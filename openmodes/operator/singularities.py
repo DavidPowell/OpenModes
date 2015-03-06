@@ -104,7 +104,7 @@ class MultiSparse(object):
         data_index = 0
         num_rows = max(self.rows.keys())+1
 
-        for row in xrange(num_rows):
+        for row in range(num_rows):
             if row in self.rows:
                 # the row exists, so process it
                 for col, item in self.rows[row].items():
@@ -199,7 +199,7 @@ def singular_impedance_rwg(basis, operator, tangential_form, num_terms,
 
     # find the neighbouring triangles (including self terms) to integrate
     # singular part
-    for p in xrange(0, num_faces):  # observer
+    for p in range(0, num_faces):  # observer
         sharing_triangles = set()
         for node in polygons[p]:
             sharing_triangles = sharing_triangles.union(sharing_nodes[node])

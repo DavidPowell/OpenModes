@@ -141,7 +141,7 @@ class Operator(object):
 
         # Note that mode refers to the position in the array modes, which
         # at this point need not correspond to the original mode numbering
-        for mode in xrange(num_modes):
+        for mode in range(num_modes):
             res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode],
                              weight='max element', lambda_tol=rel_tol,
                              max_iter=max_iter)

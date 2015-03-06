@@ -66,7 +66,7 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, integration_rule,
 
             scalar_func[tri_count, point_count] = sum(tri_func[tri_count])
 
-            for node_count in xrange(3):
+            for node_count in range(3):
                 # Vector rho within the observer triangle
                 rho = r[tri_count, point_count] - nodes[node_nums][node_count]
 
@@ -200,7 +200,7 @@ class LinearTriangleBasis(AbstractBasis):
                                              eta*nodes[node_nums[1]] +
                                              zeta*nodes[node_nums[2]])
 
-                for node_count in xrange(3):
+                for node_count in range(3):
                     # Vector rho within the observer triangle
                     rho[tri_count, node_count, point_count] = r[tri_count, point_count] - nodes[node_nums][node_count]
 
@@ -373,10 +373,10 @@ def construct_stars(mesh, edges, triangles_shared_by_edges, sharing_count):
 
     shared_edge_indices = np.where(sharing_count == 2)[0]
 
-    tri_p = [list() for _ in xrange(num_tri)]
-    tri_m = [list() for _ in xrange(num_tri)]
-    node_p = [list() for _ in xrange(num_tri)]
-    node_m = [list() for _ in xrange(num_tri)]
+    tri_p = [list() for _ in range(num_tri)]
+    tri_m = [list() for _ in range(num_tri)]
+    node_p = [list() for _ in range(num_tri)]
+    node_m = [list() for _ in range(num_tri)]
 
     # Go through shared edges, and update both star-basis functions
     # to add the influence of this shared edge.
@@ -499,7 +499,7 @@ class LoopStarBasis(LinearTriangleBasis):
             outer_nodes.add(edge[1])
 
         # find the nodes which don't belong to any shared edge
-        inner_nodes = set(xrange(num_nodes)) - outer_nodes
+        inner_nodes = set(range(num_nodes)) - outer_nodes
 
         triangles_sharing_nodes = mesh.triangles_sharing_nodes()
 
@@ -540,7 +540,7 @@ class LoopStarBasis(LinearTriangleBasis):
 
             # For each additional loop needed, find the set of triangles which
             # loop around one of the edges
-            for loop_number in xrange(num_loops-len(inner_nodes)):
+            for loop_number in range(num_loops-len(inner_nodes)):
                 needed_nodes = node_sets[loop_number]
                 loop_triangles = set()
                 for node_number in needed_nodes:

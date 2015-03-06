@@ -89,7 +89,8 @@ def mesh_geometry(filename, dirname, mesh_tol=None, binary=True,
 
     if binary:
         call_options += ['-bin']
-    proc = subprocess.Popen(call_options, stdout=subprocess.PIPE)
+    proc = subprocess.Popen(call_options, stdout=subprocess.PIPE,
+                            universal_newlines=True)
 
     # run the process and read in stderr and stdout streams
     stdouttxt, stderrtxt = proc.communicate()
@@ -117,7 +118,7 @@ def read_nodes(file_handle):
     num_nodes = int(file_handle.readline())
 
     nodes = np.empty((num_nodes, 3), np.float32)
-    for node_count in xrange(num_nodes):
+    for node_count in range(num_nodes):
         this_node = struct.unpack('=iddd', file_handle.read(28))
         if this_node[0] != node_count+1:
             raise MeshError("Inconsistent node numbering")
@@ -132,7 +133,7 @@ def read_nodes(file_handle):
 def check_format(file_handle):
     "Check that the format of a gmsh file"
     # check the header version
-    if file_handle.readline().split() != ['2.2', '1', '8']:
+    if file_handle.readline().decode('ascii').split() != ['2.2', '1', '8']:
         raise MeshError("gmsh file has incorrect version format")
 
     # check the endianness of the file
@@ -151,7 +152,7 @@ def read_elements(file_handle, wanted_element_types):
 
     # currently we are only interested in the triangle elements
     # so skip over all others
-    for _ in xrange(num_elements):
+    for _ in range(num_elements):
         element_type, num_elem_in_group, num_tags = struct.unpack('=iii',
                                                       file_handle.read(12))
 
@@ -171,7 +172,7 @@ def read_elements(file_handle, wanted_element_types):
             continue
 
         # iterate over all elements within the same header block
-        for these_elements_count in xrange(num_elem_in_group):
+        for these_elements_count in range(num_elem_in_group):
             this_element = struct.unpack(elem_format,
                 element_data[these_elements_count*element_bytes:
                                 (these_elements_count+1)*element_bytes])
@@ -200,8 +201,8 @@ def read_physical_names(file_handle):
 
     names_regex = re.compile(r'(\d*)\s(\d*)\s"([^"]*)"')
 
-    for _ in xrange(num_physical_names):
-        names_match = names_regex.match(file_handle.readline())
+    for _ in range(num_physical_names):
+        names_match = names_regex.match(file_handle.readline().decode('ascii'))
         dimension, num, name = names_match.groups()
         physical_names[int(num)] = name
 
@@ -243,7 +244,7 @@ def read_mesh(filename, returned_elements=("edges", "triangles")):
     with open(filename, "rb") as file_handle:
         header = "Nothing"
         while True:
-            header = file_handle.readline().strip()
+            header = file_handle.readline().decode('ascii').strip()
             if header == "":
                 # should be at the end of the file
                 break
@@ -262,7 +263,7 @@ def read_mesh(filename, returned_elements=("edges", "triangles")):
                 raise MeshError("Unkown header type " + header)
 
             end_header = "$End"+header[1:]
-            if file_handle.readline().strip() != end_header:
+            if file_handle.readline().decode('ascii').strip() != end_header:
                 raise MeshError("Header %s with no matching %s" % (header, end_header))
 
     return_vals = []
@@ -303,7 +304,8 @@ def check_installed():
     call_options = ['gmsh', '--version']
 
     try:
-        proc = subprocess.Popen(call_options, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(call_options, stderr=subprocess.PIPE,
+                                universal_newlines=True)
     except OSError:
         raise MeshError("gmsh not found")
 

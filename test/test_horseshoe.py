@@ -208,7 +208,7 @@ def horseshoe_extinction_modes():
         z_eem_direct[freq_count], _ = Z.eigenmodes(num_modes, use_gram=False)
 
         z_eem[freq_count], j_eem = Z.eigenmodes(start_j = mode_j[0], use_gram=True)
-        extinction_eem[freq_count] = [np.vdot(V, j_eem[:, mode])*np.dot(V, j_eem[:, mode])/z_eem[freq_count, mode] for mode in xrange(num_modes)]
+        extinction_eem[freq_count] = [np.vdot(V, j_eem[:, mode])*np.dot(V, j_eem[:, mode])/z_eem[freq_count, mode] for mode in range(num_modes)]
 
     plt.figure(figsize=(10, 5))
     plt.subplot(121)

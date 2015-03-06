@@ -176,7 +176,7 @@ class TriangularSurfaceMesh(Identified):
     def triangles_sharing_nodes(self):
         """Return a set of all the triangles which share each node"""
 
-        polygons = [set() for _ in xrange(len(self.nodes))]
+        polygons = [set() for _ in range(len(self.nodes))]
 
         for count, t_nodes in enumerate(self.polygons):
             # tell each node that it is a part of this triangle

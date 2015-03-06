@@ -233,9 +233,9 @@ class MutualPolyModel(object):
         self.models = []
         # For each mode, perform the polynomial fit. Note that this is a
         # fairly ill-conditioned process, so only low-order should be used.
-        for mode_o in xrange(self.num_modes_o):
+        for mode_o in range(self.num_modes_o):
             model_row = []
-            for mode_s in xrange(self.num_modes_s):
+            for mode_s in range(self.num_modes_s):
                 matrix = s_range[:, None]**orders[None, :]
                 matrix = np.vstack((matrix.real, matrix.imag))
 
@@ -266,8 +266,8 @@ class MutualPolyModel(object):
     def block_impedance(self, s):
         "Calculate the impedance block matrix at the specified frequency"
         matrix = np.empty((self.num_modes_o, self.num_modes_s), np.complex128)
-        for mode_o in xrange(self.num_modes_o):
-            for mode_s in xrange(self.num_modes_s):
+        for mode_o in range(self.num_modes_o):
+            for mode_s in range(self.num_modes_s):
                 L, S = self.LS(s, mode_o, mode_s)
                 matrix[mode_o, mode_s] = s*L + S/s
         return matrix

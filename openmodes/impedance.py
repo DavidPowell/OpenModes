@@ -124,7 +124,7 @@ class ImpedanceMatrix(object):
             start_j /= np.sqrt(np.diag(start_j.T.dot(G.dot(start_j))))
 
             Z = self[:]
-            for mode in xrange(num_modes):
+            for mode in range(num_modes):
                 start_z = start_j[:, mode].dot(Z.dot(start_j[:, mode]))
                 res = eig_newton_bordered(Z, start_z, start_j[:, mode], G=G)
                 eigencurrent[:, mode] = res['eigvec']
@@ -198,7 +198,7 @@ class ImpedanceMatrix(object):
 
         # calculate separately
         V_red = np.zeros(num_modes, np.complex128)
-        for i in xrange(num_modes):
+        for i in range(num_modes):
             V_red[i] = mode_currents[:, i].dot(V)
 
         return V_red

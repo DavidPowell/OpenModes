@@ -53,7 +53,7 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
     mode_s, mode_j = sim.singularities(s_start, num_modes, part)
 
     if plot_currents:
-        for mode in xrange(num_modes):
+        for mode in range(num_modes):
             current = sim.empty_vector()
             current[:] = mode_j[:, mode]
             sim.plot_3d(solution=current, output_format='mayavi',
@@ -93,7 +93,7 @@ def geometry_extinction_modes(name, freqs, num_modes, mesh_tol,
         z_eem[freq_count], j_eem = Z.eigenmodes(start_j=mode_j, use_gram=True)
         extinction_eem[freq_count] = [np.vdot(V, j_eem[:, mode]) *
                                       V.dot(j_eem[:, mode]) / z_eem[freq_count, mode]
-                                      for mode in xrange(num_modes)]
+                                      for mode in range(num_modes)]
 
     plt.figure(figsize=(10, 5))
     plt.subplot(121)

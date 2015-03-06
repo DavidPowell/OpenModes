@@ -127,8 +127,8 @@ def cartesian_multipoles(points, charge, current, s, electric_order=1,
     # electric quadrupole moment
     if electric_order >= 2:
         quad = np.empty((3, 3), np.complex128)
-        for i in xrange(3):
-            for j in xrange(3):
+        for i in range(3):
+            for j in range(3):
                 quad[i, j] = np.sum(points[:, i]*points[:, j]*charge[:])
         electric_moments.append(quad/s)
 

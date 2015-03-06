@@ -154,7 +154,7 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
         #lambda_sm = lambda_0*(1+10j*lambda_tol)
         T_sm = func(lambda_sm, *args)
 
-    for iter_count in xrange(max_iter):
+    for iter_count in range(max_iter):
         if func_gives_der:
             T_s, T_ds = func(lambda_s, *args)
         else:
@@ -259,7 +259,7 @@ def eig_newton_linear(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
 
     converged = False
 
-    for iter_count in xrange(max_iter):
+    for iter_count in range(max_iter):
         if G is not None:
             u = la.solve(Z-lambda_s*G, -G.dot(x_s))
         else:
@@ -368,7 +368,7 @@ def eig_newton_bordered(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
     rhs = np.zeros(N+1, Z.dtype)
     rhs[-1] = 1
 
-    for iter_count in xrange(max_iter):
+    for iter_count in range(max_iter):
         # Fill the augmented matrix with the impedance, and the previous
         # estimate of the eigenvector
         augmented[:N, :N] = Z-lambda_s*G
@@ -481,7 +481,7 @@ def eig_newton_bordered_nonlinear(func, lambda_0, x_0, lambda_tol=1e-8,
         #lambda_sm = lambda_0*lambda_tol
         T_sm = func(lambda_sm, *args)
 
-    for iter_count in xrange(max_iter):
+    for iter_count in range(max_iter):
         if func_gives_der:
             T_s, T_ds = func(lambda_s, *args)
         else:

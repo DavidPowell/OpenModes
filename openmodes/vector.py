@@ -43,7 +43,7 @@ def build_index_arrays(parent_part, basis_container):
 
     num_sections = len(sections[0])
     # insert zeros at the start to be the offset of the first part
-    sections.insert(0, [0 for n in xrange(num_sections)])
+    sections.insert(0, [0 for n in range(num_sections)])
 
     # first index is section, second is the part
     sections = np.array(sections).T
@@ -65,7 +65,7 @@ def build_index_arrays(parent_part, basis_container):
         else:
             part_index = []
             # Is a SinglePart, so generate its index array from the sections
-            for sec_num in xrange(num_sections):
+            for sec_num in range(num_sections):
                 part_index.append(np.arange(offsets[sec_num, single_part_num],
                                             offsets[sec_num, single_part_num+1]))
             index_arrays[part] = np.hstack(part_index)
