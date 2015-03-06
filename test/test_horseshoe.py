@@ -32,6 +32,15 @@ from openmodes.constants import c
 from openmodes.integration import triangle_centres
 
 tests_location = osp.split(__file__)[0]
+mesh_dir = osp.join(tests_location, 'input', 'test_horseshoe')
+reference_dir = osp.join(tests_location, 'reference', 'test_horseshoe')
+
+
+def assert_allclose_sign(a, b, rtol):
+    """Compare two arrays which should be equal, to within a sign ambiguity
+    of the whole array (not of each element)"""
+    assert(np.all(np.abs(a-b) < rtol*abs(a)) or
+           np.all(np.abs(a+b) < rtol*abs(a)))
 
 
 def test_horseshoe_modes(plot=False, skip_asserts=False,
@@ -39,8 +48,7 @@ def test_horseshoe_modes(plot=False, skip_asserts=False,
     "Modes of horseshoe"
     sim = openmodes.Simulation(name='horseshoe_modes',
                                basis_class=openmodes.basis.LoopStarBasis)
-    shoe = sim.load_mesh(osp.join(tests_location, 'input', 'test_horseshoe',
-                                  'horseshoe_rect.msh'))
+    shoe = sim.load_mesh(osp.join(mesh_dir, 'horseshoe_rect.msh'))
     sim.place_part(shoe)
 
     s_start = 2j*np.pi*10e9
@@ -49,34 +57,28 @@ def test_horseshoe_modes(plot=False, skip_asserts=False,
     print("Singularities found at", mode_s)
 
     if write_reference:
-        np.savetxt(osp.join(tests_location, 'reference', 'test_horseshoe',
-                            'eigenvector_0.txt'), mode_j[:, 0],
+        np.savetxt(osp.join(reference_dir, 'eigenvector_0.txt'), mode_j[:, 0],
                    fmt="%.8e%+.8ej")
-        np.savetxt(osp.join(tests_location, 'reference', 'test_horseshoe',
-                            'eigenvector_1.txt'), mode_j[:, 1],
+        np.savetxt(osp.join(reference_dir, 'eigenvector_1.txt'), mode_j[:, 1],
                    fmt="%.8e%+.8ej")
-        np.savetxt(osp.join(tests_location, 'reference', 'test_horseshoe',
-                            'eigenvector_2.txt'), mode_j[:, 2],
+        np.savetxt(osp.join(reference_dir, 'eigenvector_2.txt'), mode_j[:, 2],
                    fmt="%.8e%+.8ej")
 
-    j_0_ref = np.loadtxt(osp.join(tests_location, 'reference',
-                                  'test_horseshoe', 'eigenvector_0.txt'),
+    j_0_ref = np.loadtxt(osp.join(reference_dir, 'eigenvector_0.txt'),
                          dtype=np.complex128)
-    j_1_ref = np.loadtxt(osp.join(tests_location, 'reference',
-                                  'test_horseshoe', 'eigenvector_1.txt'),
+    j_1_ref = np.loadtxt(osp.join(reference_dir, 'eigenvector_1.txt'),
                          dtype=np.complex128)
-    j_2_ref = np.loadtxt(osp.join(tests_location, 'reference',
-                                  'test_horseshoe', 'eigenvector_2.txt'),
+    j_2_ref = np.loadtxt(osp.join(reference_dir, 'eigenvector_2.txt'),
                          dtype=np.complex128)
 
     if not skip_asserts:
         assert_allclose(mode_s, [-2.585729e+09 + 3.156438e+10j,
                                  -1.887518e+10 + 4.500579e+10j,
                                  -1.991163e+10 + 6.846221e+10j],
-                                 rtol=1e-3)
-        assert_allclose(mode_j[:, 0], j_0_ref, rtol=1e-2)
-        assert_allclose(mode_j[:, 1], j_1_ref, rtol=1e-2)
-        assert_allclose(mode_j[:, 2], j_2_ref, rtol=1e-2)
+                        rtol=1e-3)
+        assert_allclose_sign(mode_j[:, 0], j_0_ref, rtol=1e-2)
+        assert_allclose_sign(mode_j[:, 1], j_1_ref, rtol=1e-2)
+        assert_allclose_sign(mode_j[:, 2], j_2_ref, rtol=1e-2)
 
     if plot:
         sim.plot_3d(solution=mode_j[:, 0], output_format='mayavi',
@@ -91,8 +93,7 @@ def test_surface_normals(plot=False, skip_asserts=False,
                          write_reference=False):
     "Test the surface normals of a horseshoe mesh"
     sim = openmodes.Simulation()
-    mesh = sim.load_mesh(osp.join(tests_location, 'input', 'test_horseshoe',
-                                  'horseshoe_rect.msh'))
+    mesh = sim.load_mesh(osp.join(mesh_dir, 'horseshoe_rect.msh'))
     part = sim.place_part(mesh)
     basis = sim.basis_container[part]
 
@@ -101,15 +102,12 @@ def test_surface_normals(plot=False, skip_asserts=False,
     r = r.reshape((-1, 3))
 
     if write_reference:
-        np.savetxt(osp.join(tests_location, 'reference', 'test_horseshoe',
-                            'surface_r.txt'), r, fmt="%.8e")
-        np.savetxt(osp.join(tests_location, 'reference', 'test_horseshoe',
-                            'surface_normals.txt'), normals, fmt="%.8e")
+        np.savetxt(osp.join(reference_dir, 'surface_r.txt'), r, fmt="%.8e")
+        np.savetxt(osp.join(reference_dir, 'surface_normals.txt'), normals,
+                   fmt="%.8e")
 
-    r_ref = np.loadtxt(osp.join(tests_location, 'reference', 'test_horseshoe',
-                                'surface_r.txt'))
-    normals_ref = np.loadtxt(osp.join(tests_location, 'reference',
-                                      'test_horseshoe', 'surface_normals.txt'))
+    r_ref = np.loadtxt(osp.join(reference_dir, 'surface_r.txt'))
+    normals_ref = np.loadtxt(osp.join(reference_dir, 'surface_normals.txt'))
 
     if not skip_asserts:
         assert_allclose(r, r_ref)
@@ -131,8 +129,7 @@ def test_extinction(plot_extinction=False, skip_asserts=False,
     sim = openmodes.Simulation(name='horseshoe_extinction',
                                basis_class=openmodes.basis.LoopStarBasis)
 
-    shoe = sim.load_mesh(osp.join(tests_location, 'input', 'test_horseshoe',
-                                  'horseshoe_rect.msh'))
+    shoe = sim.load_mesh(osp.join(mesh_dir, 'horseshoe_rect.msh'))
     sim.place_part(shoe)
 
     num_freqs = 101
@@ -151,11 +148,10 @@ def test_extinction(plot_extinction=False, skip_asserts=False,
 
     if write_reference:
         # generate the reference extinction solution
-        np.savetxt(osp.join(tests_location, 'reference', 'test_horseshoe',
-                            'extinction.txt'), extinction, fmt="%.8e%+.8ej")
+        np.savetxt(osp.join(reference_dir, 'extinction.txt'), extinction,
+                   fmt="%.8e%+.8ej")
 
-    extinction_ref = np.loadtxt(osp.join(tests_location, 'reference',
-                                         'test_horseshoe', 'extinction.txt'),
+    extinction_ref = np.loadtxt(osp.join(reference_dir, 'extinction.txt'),
                                 dtype=np.complex128)
 
     if not skip_asserts:
