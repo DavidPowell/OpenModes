@@ -23,6 +23,7 @@ import weakref
 import numpy as np
 import numbers
 from collections import defaultdict
+import six
 
 
 def inc_slice(s, inc):
@@ -101,7 +102,7 @@ def memoize(obj):
     cache = obj.cache = {}
 
     def get_key(item):
-        if isinstance(item, (basestring, numbers.Number)):
+        if isinstance(item, (six.string_types, numbers.Number)):
             return item
         elif isinstance(item, Identified):
             return str(item.id)

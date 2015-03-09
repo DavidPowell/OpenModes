@@ -18,7 +18,7 @@
 #-----------------------------------------------------------------------------
 """Routines which are specific to operation within the IPython notebook"""
 
-from StringIO import StringIO
+from six.moves import StringIO
 import os.path as osp
 from IPython.display import HTML, display
 import numpy as np
