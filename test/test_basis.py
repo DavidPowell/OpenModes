@@ -28,18 +28,21 @@ from openmodes.integration import DunavantRule
 from openmodes import Simulation
 from openmodes.visualise import write_vtk
 
+from helpers import read_2d_real, write_2d_real
+
 from numpy.testing import assert_allclose
 
 tests_location = osp.split(__file__)[0]
+mesh_dir = osp.join(tests_location, 'input', 'test_basis')
+reference_dir = osp.join(tests_location, 'reference', 'test_basis')
 
 
-def test_interpolate_rwg(plot=False):
+def test_interpolate_rwg(plot=False, write_reference=False, skip_asserts=False):
     "Interpolate an RWG basis function over a triangle"
 
     sim = Simulation()
     mesh_tol = 0.5e-3
-    srr = sim.load_mesh(osp.join(tests_location, 'input', 'test_basis',
-                                 'SRR.msh'))
+    srr = sim.load_mesh(osp.join(mesh_dir, 'SRR.msh'))
 
     basis = DivRwgBasis(srr)
 
@@ -50,18 +53,19 @@ def test_interpolate_rwg(plot=False):
 
     r, basis_func = basis.interpolate_function(rwg_function, rule)
 
-    # save reference data
-    # np.savetxt(osp.join(tests_location, 'reference', 'test_basis',
-    #                     'rwg_r.txt'), r, fmt="%.8e")
-    # np.savetxt(osp.join(tests_location, 'reference', 'test_basis',
-    #                    'rwg_basis_func.txt'), basis_func, fmt="%.8e")
+    if write_reference:
+        # save reference data
+        write_2d_real(osp.join(reference_dir, 'rwg_r.txt'), r)
+        write_2d_real(osp.join(reference_dir, 'rwg_basis_func.txt'),
+                      basis_func)
 
-    r_ref = np.loadtxt(osp.join(tests_location, 'reference',
-                                'test_basis', 'rwg_r.txt'))
-    basis_func_ref = np.loadtxt(osp.join(tests_location, 'reference',
-                                         'test_basis', 'rwg_basis_func.txt'))
-    assert_allclose(r, r_ref)
-    assert_allclose(basis_func, basis_func_ref)
+    r_ref = read_2d_real(osp.join(reference_dir, 'rwg_r.txt'))
+    basis_func_ref = read_2d_real(osp.join(reference_dir,
+                                           'rwg_basis_func.txt'))
+
+    if not skip_asserts:
+        assert_allclose(r, r_ref)
+        assert_allclose(basis_func, basis_func_ref)
 
     if plot:
         plt.figure(figsize=(6, 6))
@@ -70,7 +74,8 @@ def test_interpolate_rwg(plot=False):
         plt.show()
 
 
-def test_interpolate_loop_star(plot=False):
+def test_interpolate_loop_star(plot=False, write_reference=False,
+                               skip_asserts=False):
     "Interpolate loop and star basis functions"
 
     sim = Simulation()
@@ -98,19 +103,19 @@ def test_interpolate_loop_star(plot=False):
     minus_nodes = mesh.nodes[basis.mesh.polygons[the_basis.tri_m,
                                                  the_basis.node_m]]
 
-    # save reference data
-    # np.savetxt(osp.join(tests_location, 'reference', 'test_basis',
-    #                     'loop_star_r.txt'), r, fmt="%.8e")
-    # np.savetxt(osp.join(tests_location, 'reference', 'test_basis',
-    #                     'loop_star_basis_func.txt'), basis_func, fmt="%.8e")
+    if write_reference:
+        # save reference data
+        write_2d_real(osp.join(reference_dir, 'loop_star_r.txt'), r)
+        write_2d_real(osp.join(reference_dir, 'loop_star_basis_func.txt'),
+                      basis_func)
 
-    r_ref = np.loadtxt(osp.join(tests_location, 'reference',
-                                'test_basis', 'loop_star_r.txt'))
-    basis_func_ref = np.loadtxt(osp.join(tests_location, 'reference',
-                                         'test_basis',
-                                         'loop_star_basis_func.txt'))
-    assert_allclose(r, r_ref)
-    assert_allclose(basis_func, basis_func_ref)
+    r_ref = read_2d_real(osp.join(reference_dir, 'loop_star_r.txt'))
+    basis_func_ref = read_2d_real(osp.join(reference_dir,
+                                           'loop_star_basis_func.txt'))
+
+    if not skip_asserts:
+        assert_allclose(r, r_ref)
+        assert_allclose(basis_func, basis_func_ref)
 
     if plot:
         plt.figure(figsize=(6, 6))
@@ -122,5 +127,5 @@ def test_interpolate_loop_star(plot=False):
 
 
 if __name__ == "__main__":
-    test_interpolate_rwg(plot=True)
-    test_interpolate_loop_star(plot=True)
+    test_interpolate_rwg(plot=True, skip_asserts=True)
+    test_interpolate_loop_star(plot=True, skip_asserts=True)

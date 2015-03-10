@@ -31,6 +31,9 @@ from openmodes.sources import PlaneWaveSource
 from openmodes.constants import c
 from openmodes.integration import triangle_centres
 
+from helpers import (read_1d_complex, write_1d_complex,
+                     read_2d_real, write_2d_real)
+
 tests_location = osp.split(__file__)[0]
 mesh_dir = osp.join(tests_location, 'input', 'test_horseshoe')
 reference_dir = osp.join(tests_location, 'reference', 'test_horseshoe')
@@ -57,19 +60,16 @@ def test_horseshoe_modes(plot=False, skip_asserts=False,
     print("Singularities found at", mode_s)
 
     if write_reference:
-        np.savetxt(osp.join(reference_dir, 'eigenvector_0.txt'), mode_j[:, 0],
-                   fmt="%.8e%+.8ej")
-        np.savetxt(osp.join(reference_dir, 'eigenvector_1.txt'), mode_j[:, 1],
-                   fmt="%.8e%+.8ej")
-        np.savetxt(osp.join(reference_dir, 'eigenvector_2.txt'), mode_j[:, 2],
-                   fmt="%.8e%+.8ej")
+        write_1d_complex(osp.join(reference_dir, 'eigenvector_0.txt'),
+                         mode_j[:, 0])
+        write_1d_complex(osp.join(reference_dir, 'eigenvector_1.txt'),
+                         mode_j[:, 1])
+        write_1d_complex(osp.join(reference_dir, 'eigenvector_2.txt'),
+                         mode_j[:, 2])
 
-    j_0_ref = np.loadtxt(osp.join(reference_dir, 'eigenvector_0.txt'),
-                         dtype=np.complex128)
-    j_1_ref = np.loadtxt(osp.join(reference_dir, 'eigenvector_1.txt'),
-                         dtype=np.complex128)
-    j_2_ref = np.loadtxt(osp.join(reference_dir, 'eigenvector_2.txt'),
-                         dtype=np.complex128)
+    j_0_ref = read_1d_complex(osp.join(reference_dir, 'eigenvector_0.txt'))
+    j_1_ref = read_1d_complex(osp.join(reference_dir, 'eigenvector_1.txt'))
+    j_2_ref = read_1d_complex(osp.join(reference_dir, 'eigenvector_2.txt'))
 
     if not skip_asserts:
         assert_allclose(mode_s, [-2.585729e+09 + 3.156438e+10j,
@@ -81,11 +81,11 @@ def test_horseshoe_modes(plot=False, skip_asserts=False,
         assert_allclose_sign(mode_j[:, 2], j_2_ref, rtol=1e-2)
 
     if plot:
-        sim.plot_3d(solution=mode_j[:, 0], output_format='mayavi',
+        sim.plot_3d(solution=mode_j[:, 0], #output_format='mayavi',
                     compress_scalars=3)
-        sim.plot_3d(solution=mode_j[:, 1], output_format='mayavi',
+        sim.plot_3d(solution=mode_j[:, 1], #output_format='mayavi',
                     compress_scalars=3)
-        sim.plot_3d(solution=mode_j[:, 2], output_format='mayavi',
+        sim.plot_3d(solution=mode_j[:, 2], #output_format='mayavi',
                     compress_scalars=3)
 
 
@@ -102,12 +102,11 @@ def test_surface_normals(plot=False, skip_asserts=False,
     r = r.reshape((-1, 3))
 
     if write_reference:
-        np.savetxt(osp.join(reference_dir, 'surface_r.txt'), r, fmt="%.8e")
-        np.savetxt(osp.join(reference_dir, 'surface_normals.txt'), normals,
-                   fmt="%.8e")
+        write_2d_real(osp.join(reference_dir, 'surface_r.txt'), r)
+        write_2d_real(osp.join(reference_dir, 'surface_normals.txt'), normals)
 
-    r_ref = np.loadtxt(osp.join(reference_dir, 'surface_r.txt'))
-    normals_ref = np.loadtxt(osp.join(reference_dir, 'surface_normals.txt'))
+    r_ref = read_2d_real(osp.join(reference_dir, 'surface_r.txt'))
+    normals_ref = read_2d_real(osp.join(reference_dir, 'surface_normals.txt'))
 
     if not skip_asserts:
         assert_allclose(r, r_ref)
@@ -148,11 +147,9 @@ def test_extinction(plot_extinction=False, skip_asserts=False,
 
     if write_reference:
         # generate the reference extinction solution
-        np.savetxt(osp.join(reference_dir, 'extinction.txt'), extinction,
-                   fmt="%.8e%+.8ej")
+        write_1d_complex(osp.join(reference_dir, 'extinction.txt'), extinction)
 
-    extinction_ref = np.loadtxt(osp.join(reference_dir, 'extinction.txt'),
-                                dtype=np.complex128)
+    extinction_ref = read_1d_complex(osp.join(reference_dir, 'extinction.txt'))
 
     if not skip_asserts:
         assert_allclose(extinction, extinction_ref, rtol=1e-3)

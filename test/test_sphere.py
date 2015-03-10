@@ -13,6 +13,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 import matplotlib.pyplot as plt
 import scipy.linalg as la
+import pickle
 
 import openmodes
 from openmodes.basis import DivRwgBasis
@@ -20,6 +21,8 @@ from openmodes.sources import PlaneWaveSource
 from openmodes.constants import c, eta_0
 from openmodes.integration import triangle_centres
 from openmodes.operator import MfieOperator, EfieOperator
+
+from helpers import read_1d_complex, write_1d_complex
 
 tests_location = osp.split(__file__)[0]
 mesh_dir = osp.join(tests_location, 'input', 'test_sphere')
@@ -90,9 +93,9 @@ def test_extinction_mfie(plot_extinction=False, skip_asserts=False,
 
     if write_reference:
         # generate the reference extinction solution
-        np.save(extinction_filename, extinction)
+        write_1d_complex(extinction_filename, extinction)
 
-    extinction_ref = np.load(extinction_filename)
+    extinction_ref = read_1d_complex(extinction_filename)
 
     if not skip_asserts:
         assert_allclose(extinction, extinction_ref, rtol=1e-3)
@@ -151,9 +154,9 @@ def test_extinction_efie(plot_extinction=False, skip_asserts=False,
 
     if write_reference:
         # generate the reference extinction solution
-        np.save(extinction_filename, extinction)
+        write_1d_complex(extinction_filename, extinction)
 
-    extinction_ref = np.load(extinction_filename)
+    extinction_ref = read_1d_complex(extinction_filename)
 
     if not skip_asserts:
         assert_allclose(extinction, extinction_ref, rtol=1e-3)

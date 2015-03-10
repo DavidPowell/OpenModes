@@ -49,7 +49,7 @@ def test_pickling_references():
         return file_name, parents_dict
 
     def load(file_name):
-        with open(file_name, "rt") as infile:
+        with open(file_name, "rb") as infile:
             V = pickle.load(infile)
 
         parents_dict = {}
