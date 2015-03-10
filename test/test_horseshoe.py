@@ -81,11 +81,11 @@ def test_horseshoe_modes(plot=False, skip_asserts=False,
         assert_allclose_sign(mode_j[:, 2], j_2_ref, rtol=1e-2)
 
     if plot:
-        sim.plot_3d(solution=mode_j[:, 0], #output_format='mayavi',
+        sim.plot_3d(solution=mode_j[:, 0], output_format='mayavi',
                     compress_scalars=3)
-        sim.plot_3d(solution=mode_j[:, 1], #output_format='mayavi',
+        sim.plot_3d(solution=mode_j[:, 1], output_format='mayavi',
                     compress_scalars=3)
-        sim.plot_3d(solution=mode_j[:, 2], #output_format='mayavi',
+        sim.plot_3d(solution=mode_j[:, 2], output_format='mayavi',
                     compress_scalars=3)
 
 
