@@ -239,6 +239,16 @@ class TriangularSurfaceMesh(Identified):
         return np.sqrt(np.sum((np.roll(vertices, 1, axis=1) -
                        np.roll(vertices, 2, axis=1))**2, axis=2))
 
+    @cached_property
+    def closed_surface(self):
+        """Whether the mesh represents a closed surface corresponding to a
+        solid object"""
+        edges, triangles_shared_by_edges = self.get_edges(True)
+
+        sharing_count = np.array([len(n) for n in triangles_shared_by_edges])
+
+        return np.all(sharing_count == 2)
+
 
 def combine_mesh(meshes, nodes=None):
     """Combine several meshes into one, optionally overriding their node
