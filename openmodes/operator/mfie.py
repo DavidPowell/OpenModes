@@ -140,6 +140,9 @@ class MfieOperator(Operator):
         basis_o = self.basis_container[part_o]
         basis_s = self.basis_container[part_s]
 
+        if not (basis_o.mesh.closed_surface and basis_s.mesh.closed_surface):
+            raise ValueError("MFIE can only be solved for closed objects")
+
         normals = basis_o.mesh.surface_normals
 
         if isinstance(self.greens_function, FreeSpaceGreensFunction):
