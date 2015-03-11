@@ -13,6 +13,8 @@ Quick Install Instructions
   
    You can install Anaconda without administrator access, and
    it is available for Windows, Linux and Mac OSX.
+   
+   You can choose either Python 2.7 or 3.4 installation.
 
 2. Install `gmsh`_ **version 2.8.4 or later**
 
@@ -23,17 +25,14 @@ Quick Install Instructions
 
    ``pip install openmodes``.
 
-5. (Optional) To view 3D plots of currents in an external program, install the python package
-   `mayavi`_ via 
-
-   ``conda install mayavi``.
-
-   This will enable you to write VTK files, which can be viewed with programs such as `Paraview`_
-
 If installation was successful, the next step is to try the examples, see the :doc:`getting started <gettingstarted>` section.
 
 Upgrading to a Newer Version
 ----------------------------
+
+It's usually a good idea to update all your other Python packages first with
+
+    ``conda update anaconda``
 
 You can upgrade your installed version from the command-line, using the command
 
@@ -43,7 +42,7 @@ Detailed Requirements
 ---------------------
 The following software packages are the absolute minimum to run OpenModes:
 
-- python 2.7 (3.x not currently supported)
+- python 2.7, or any version after 3.3
 - numpy (1.6.2 or later)
 - scipy
 - `gmsh`_ (2.8.4 or later)
@@ -96,6 +95,11 @@ If you don't have root access to your Linux machine, then use the command
 ``pip install --user OpenModes``
 
 Alternatively, the `Anaconda`_ distribution can be used just as under Windows
+
+Note that due to a bug in numpy, compilation may fail under Python 3.x. This is fixed
+in numpy's master repository, but your Linux distribution probably has an older release of numpy.
+The fix is relatively simple to apply to your own local copy of numpy, see the 
+`github pull request <https://github.com/numpy/numpy/pull/5638>`_.
 
 Mac OSX
 -------

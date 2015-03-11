@@ -1,6 +1,18 @@
 What's new in OpenModes
 =======================
 
+**Release 0.0.5**
+
+March 2015
+
+- In addition to the usual EFIE (electric field integral equation), it is now possible to solve
+  the MFIE (magnetic field integral equation). This code is not yet as well tested as the EFIE,
+  and does not yet support all the same functionality.
+- Improved handling of singular integrals
+- Automated tests added
+- In addition to Python 2.7, OpenModes is now compatible with Python 3.3+.
+- Fixed missing static files, so 3D plotting in the browser should now work correctly
+
 **Release 0.0.4**
 
 December, 2014
