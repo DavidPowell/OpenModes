@@ -42,8 +42,18 @@ def interpolate_triangle_mesh(mesh, tri_func, num_tri, integration_rule,
 
     Parameters
     ----------
+    mesh : LinearTriangleMesh
+        The mesh which the triangle belong to
+    tri_func : array
+        The function to interpolate, one coefficient per triangle
+    num_tri : integer
+        The number of triangles
+    integration_rule : object
+        The integration over the triangle, in barycentric coordinates
     flatten : boolean, optional
         Return a 2D array, instead of a 3D array
+    nodes : array(num_nodes, 3), optional
+        Override the nodes positions defined in the mesh
     """
 
     if nodes is None:
