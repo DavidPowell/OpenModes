@@ -659,7 +659,7 @@ class BasisContainer(object):
     """A container to hold the basis functions for a simulation, constructing
     them on the fly as they are required"""
 
-    def __init__(self, basis_class, default_args=tuple()):
+    def __init__(self, basis_class, default_args=dict()):
         """Set the class of the basis functions, and the default arguments to
         pass when constructing them"""
         self.basis_class = basis_class
@@ -669,23 +669,22 @@ class BasisContainer(object):
 
     def set_args(self, part, args):
         "Override the default basis function arguments for a particular part"
-        self.args[part] = tuple(args)
+        self.args[part] = dict(args)
         pass
 
     def __getitem__(self, part):
         """Return the basis functions for a particular part, constructing them
         if they do not already exist"""
         args = self.args.get(part, self.default_args)
-        unique_key = (part.mesh.id, self.basis_class, args)
+        unique_key = (part.mesh.id, self.basis_class, frozenset(args.items()))
 
         try:
             return self.cached_basis[unique_key]
         except KeyError:
             logging.debug("Constructing basis functions of class %s for "
                           "mesh %s with args %s"
-                          % (self.basis_class, part.mesh,
-                             " ".join(str(x) for x in args)))
-            result = self.basis_class(part.mesh, *args)
+                          % (self.basis_class, part.mesh, args))
+            result = self.basis_class(part.mesh, **args)
             self.cached_basis[unique_key] = result
             return result
 

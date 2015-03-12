@@ -49,7 +49,7 @@ class Simulation(Identified):
                  basis_class=LoopStarBasis,
                  operator_class=EfieOperator,
                  greens_function=FreeSpaceGreensFunction(), name=None,
-                 basis_args=tuple()):
+                 basis_args=dict()):
         """
         Parameters
         ----------
