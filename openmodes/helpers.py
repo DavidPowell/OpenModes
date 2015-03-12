@@ -55,7 +55,10 @@ class MeshError(Exception):
 
 
 class Identified(object):
-    "An object which can be uniquely identified by an id number"
+    """An object which can be uniquely identified by an id number. It is
+    assumed that any object which subclasses Identified is immutable, so that
+    its id can be used for caching complex results which depend on this object.
+    """
 
     def __init__(self):
         self.id = uuid.uuid4()
