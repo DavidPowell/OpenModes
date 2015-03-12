@@ -253,17 +253,7 @@ class LinearTriangleBasis(AbstractBasis):
         vector_transform, _ = self.transformation_matrices
         return vector_transform.dot(func_tri.flatten())
 
-    def gram_matrix_faces(self):
-        "Return the gram matrix defined between faces"
-        num_tri = len(self.mesh.polygons)
-        G = np.zeros((num_tri, 3, num_tri, 3), dtype=np.float64)
-        for tri_count, (tri, area) in enumerate(zip(self.mesh.polygons,
-                                                    self.mesh.polygon_areas)):
-            nodes = self.mesh.nodes[tri]
-            G[tri_count, :, tri_count, :] = inner_product_triangle_face(nodes)/(2*area)
-            # factor of 1/(2*area) is for second integration
 
-        return G
 
     @cached_property
     def gram_matrix(self):
@@ -276,8 +266,13 @@ class LinearTriangleBasis(AbstractBasis):
             The Gram matrix, giving the inner product between each basis
             function
         """
-        G = self.gram_matrix_faces()
         num_tri = len(self.mesh.polygons)
+        G = np.zeros((num_tri, 3, num_tri, 3), dtype=np.float64)
+        for tri_count, (tri, area) in enumerate(zip(self.mesh.polygons,
+                                                    self.mesh.polygon_areas)):
+            nodes = self.mesh.nodes[tri]
+            G[tri_count, :, tri_count, :] = inner_product_triangle_face(nodes)/(2*area)
+            # factor of 1/(2*area) is for second integration
 
         # convert from faces to the appropriate basis functions
         vector_transform, _ = self.transformation_matrices
