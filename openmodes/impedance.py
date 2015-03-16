@@ -142,7 +142,7 @@ class ImpedanceMatrix(object):
                 z_all, v_all = la.eig(self[:])
 
             if start_j is None:
-                which_z = np.argsort(abs(z_all.imag))[:num_modes]
+                which_z = np.argsort(abs(z_all))[:num_modes]
             else:
                 which_z = np.dot(start_j.T, v_all).argmax(1)
 
