@@ -89,7 +89,7 @@ class ImpedanceMatrix(object):
         The modes with the smallest imaginary part of their impedance will be
         returned.
 
-        Note that the impedance matrix can easily be *ill-conditioned*.
+        Note that the EFIE impedance matrix can easily be *ill-conditioned*.
         Therefore this routine can return junk results, particularly if the
         mesh is dense.
 
@@ -113,6 +113,8 @@ class ImpedanceMatrix(object):
         """
 
         if start_j is not None:
+        symmetric = self.operator.reciprocal
+
             # An iterative solution will be performed, based on the given
             # current distribution. In this case the Gram matrix is used and
             # the use_gram parameter is ignored
@@ -135,26 +137,31 @@ class ImpedanceMatrix(object):
         else:
             # The direct solution, which may or may not use the Gram matrix
 
-            if use_gram:
-                G = self.basis_o.gram_matrix
-                z_all, v_all = la.eig(self[:], G)
+            G = self.basis_o.gram_matrix
+            if symmetric:
+                z_all, v_r_all = la.eig(self[:], G)
             else:
-                z_all, v_all = la.eig(self[:])
+                z_all, v_r_all, v_l_all = la.eig(self[:], G, left=True)
 
-            if start_j is None:
-                which_z = np.argsort(abs(z_all))[:num_modes]
+            which_z = np.argsort(abs(z_all))[:num_modes]
+
+            z = z_all[which_z]
+            v_r = v_r_all[:, which_z]
+
+            if symmetric:
+                # Normalisation for symmetric system ensures that projector
+                # applied multiple times has no additional effect.
+                v_r /= np.sqrt(np.diag(v_r.T.dot(G.dot(v_r))))
+                return z, v_r
             else:
-                which_z = np.dot(start_j.T, v_all).argmax(1)
+                v_r = v_r_all[:, which_z]
+                v_l = v_l_all[:, which_z].conjugate()
 
-            eigenimpedance = z_all[which_z]
-            v = v_all[:, which_z]
+                # First scale the left eigenvectors so that dyadic is correct
+                v_l /= np.diag(v_l.T.dot(G.dot(v_r)))
+                #eigencurrent = v/np.sqrt(np.sum(v**2, axis=0))
+                return z, v_r, v_l
 
-            if use_gram:
-                eigencurrent = v/np.sqrt(np.diag(v.T.dot(G.dot(v))))
-            else:
-                eigencurrent = v/np.sqrt(np.sum(v**2, axis=0))
-
-        return eigenimpedance, eigencurrent
 
     def weight(self, modes_o, modes_s=None, return_arrays=False):
         """Calculate a reduced impedance matrix based on the scalar impedance
@@ -548,8 +555,7 @@ class ImpedanceParts(object):
                 part = self.parent_part_o
         return self[part, part].solve(V, cache=cache)
 
-    def eigenmodes(self, part=None, num_modes=None, use_gram=None,
-                   start_j=None):
+    def eigenmodes(self, part=None, **kwargs):
         """Calculate the eigenimpedance and eigencurrents of each part's modes
 
         The modes with the smallest imaginary part of their impedance will be
@@ -586,7 +592,7 @@ class ImpedanceParts(object):
                                  "impedance matrix")
             else:
                 part = self.parent_part_o
-        return self[part, part].eigenmodes(num_modes, use_gram, start_j)
+        return self[part, part].eigenmodes(**kwargs)
 
     def weight(self, part_modes):
         """Calculate a reduced impedance matrix based on the scalar impedance

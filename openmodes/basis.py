@@ -253,8 +253,6 @@ class LinearTriangleBasis(AbstractBasis):
         vector_transform, _ = self.transformation_matrices
         return vector_transform.dot(func_tri.flatten())
 
-
-
     @cached_property
     def gram_matrix(self):
         """Calculate the Gram matrix which is the inner product between each
