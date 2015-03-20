@@ -88,7 +88,7 @@ def eig_linearised(Z, modes):
 
 def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
                func_gives_der=False, G=None, args=[],
-               weight='rayleigh symmetric'):
+               weight='rayleigh symmetric', y_0=None):
     """Solve a nonlinear eigenvalue problem by Newton iteration
 
     Parameters
@@ -119,6 +119,12 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
         'rayleigh symmetric' : Rayleigh iteration for complex symmetric
         (i.e. non-Hermitian) matrices will be used
 
+        'rayleigh asymmetric' : Rayleigh iteration for general matrices
+
+    y_0 : ndarray, optional
+        For 'rayleigh asymmetric weighting', this is required as the initial
+        guess for the left eigenvector
+
     Returns
     -------
     res : dictionary
@@ -145,6 +151,12 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
     x_s = x_0
     lambda_s = lambda_0
 
+    if weight.lower == 'rayleigh asymmetric':
+        if y_0 is None:
+            raise ValueError("Parameter y_0 must be supplied for asymmetric "
+                             "case")
+        y_s = y_0
+
     converged = False
 
     if not func_gives_der:
@@ -161,7 +173,8 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
             T_s = func(lambda_s, *args)
             T_ds = (T_s - T_sm)/(lambda_s - lambda_sm)
 
-        u = la.solve(T_s, np.dot(T_ds, x_s))
+        T_s_lu = la.lu_factor(T_s)
+        u = la.lu_solve(T_s_lu, np.dot(T_ds, x_s))
 
         # if known_vects is supplied, we should take this into account when
         # finding v
@@ -172,6 +185,12 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
             v_s = np.dot(T_s.T, x_s.conj())
         elif weight.lower() == 'rayleigh symmetric':
             v_s = np.dot(T_s.T, x_s)
+        elif weight.lower == 'rayleigh asymmetric':
+            y_s = la.lu_solve(T_s_lu, np.dot(T_ds, y_s), trans=1)
+            y_s /= np.sqrt(num.sum(abs(y_s)**2))
+            v_s = np.dot(T_s.T, y_s)
+        else:
+            raise ValueError("Unknown weighting method %s" % weight)
 
         delta_lambda_abs = np.dot(v_s, x_s)/(np.dot(v_s, u))
 
@@ -198,6 +217,9 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
 
     res = {'eigval': lambda_s, 'eigvec': x_s, 'iter_count': iter_count+1,
            'delta_lambda': delta_lambda}
+
+    if weight.lower == 'rayleigh asymmetric':
+        res['eigvec_left'] = y_s
 
     return res
 
