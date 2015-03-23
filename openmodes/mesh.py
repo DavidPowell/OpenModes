@@ -24,6 +24,8 @@ derived quantities
 import logging
 import numpy as np
 from openmodes.helpers import Identified, cached_property
+from openmodes.external.ordered_set import OrderedSet
+from collections import OrderedDict
 
 
 def nodes_not_in_edge(nodes, edge):
@@ -143,9 +145,9 @@ class TriangularSurfaceMesh(Identified):
             the triangles that share each edge, indexed by the edges
         """
 
-        all_edges = set()
+        all_edges = OrderedSet()
         shared_edges = []
-        triangles_shared_by_edges = dict()
+        triangles_shared_by_edges = OrderedDict()
 
         for count, t_nodes in enumerate(self.polygons):
 
@@ -176,7 +178,7 @@ class TriangularSurfaceMesh(Identified):
     def triangles_sharing_nodes(self):
         """Return a set of all the triangles which share each node"""
 
-        polygons = [set() for _ in range(len(self.nodes))]
+        polygons = [OrderedSet() for _ in range(len(self.nodes))]
 
         for count, t_nodes in enumerate(self.polygons):
             # tell each node that it is a part of this triangle

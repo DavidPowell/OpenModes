@@ -29,6 +29,7 @@ from openmodes.mesh import nodes_not_in_edge, shared_nodes
 from openmodes.helpers import (cached_property, inc_slice, Identified, memoize,
                                equivalence, MeshError)
 from openmodes.integration import triangle_centres
+from openmodes.external.ordered_set import OrderedSet
 
 # A named tuple for holding the positive and negative triangles and nodes
 # which are used by both RWG and loop-star basis functions
@@ -495,14 +496,14 @@ class LoopStarBasis(LinearTriangleBasis):
         unshared_edges = edges[np.where(sharing_count == 1)[0]]
 
         # then find all the boundary nodes
-        outer_nodes = set()
+        outer_nodes = OrderedSet()
         for edge in unshared_edges:
             # TODO: check correct datatype of edge
             outer_nodes.add(edge[0])
             outer_nodes.add(edge[1])
 
         # find the nodes which don't belong to any shared edge
-        inner_nodes = set(range(num_nodes)) - outer_nodes
+        inner_nodes = OrderedSet(range(num_nodes)) - outer_nodes
 
         triangles_sharing_nodes = mesh.triangles_sharing_nodes()
 
@@ -545,7 +546,7 @@ class LoopStarBasis(LinearTriangleBasis):
             # loop around one of the edges
             for loop_number in range(num_loops-len(inner_nodes)):
                 needed_nodes = node_sets[loop_number]
-                loop_triangles = set()
+                loop_triangles = OrderedSet()
                 for node_number in needed_nodes:
                     loop_triangles.update(triangles_sharing_nodes[node_number])
 

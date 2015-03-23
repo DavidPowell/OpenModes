@@ -26,3 +26,6 @@ Incorporated Software
 
 * Three-dimensional plots within the IPython notebook are enabled by the use of the `three.js <http://threejs.org/>`_
   library, which is partly incorporated into this project.
+
+* Code for an `ordered set <https://github.com/LuminosoInsight/ordered-set>`_ originally written by
+  Raymond Hettiger is incorporated under the MIT license.
