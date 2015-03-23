@@ -327,23 +327,32 @@ def eig_newton_linear(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
     return res
 
 
-def eig_newton_bordered(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
-                        G=None):
+def eig_newton_bordered(A, w_0, vr_0, vl_0=None, w_tol=1e-8,
+                        max_iter=20, B=None):
     """Solve a linear (generalised) eigenvalue problem by Newton iteration
+    
+    A.vr = w B.vr
+    
+    and optionally also
+    
+    vl.A = w vl.B
 
     Parameters
     ----------
-    Z : ndarray
+    A : ndarray
         The matrix
-    lambda_0 : complex
+    w_0 : complex
         The starting guess for the eigenvalue
-    x_0 : ndarray
-        The starting guess for the eigenvector
-    lambda_tol : float
+    vr_0 : ndarray
+        The starting guess for the right eigenvector
+    vl_0 : ndarray, optional
+        The starting guess for the left eigenvector. If not supplied, vr_0
+        will be used, which is only accurate when A = A^T and B = B^T.
+    w_tol : float, optional
         The relative tolerance in the eigenvalue for convergence
-    max_iter : int
+    max_iter : int, optional
         The maximum number of iterations to perform
-    G : ndarray, optional
+    B : ndarray, optional
         The RHS matrix for the generalised problem. If omitted, the identity
         matrix will be used
 
@@ -352,10 +361,11 @@ def eig_newton_bordered(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
     res : dictionary
         A dictionary containing the following members:
 
-        'eigval' : the eigenvalue
-        'eigvect' : the eigenvector
+        'w' : the eigenvalue
+        'vr' : the right eigenvector
+        'vl' : the left eigenvector
         'iter_count' : the number of iterations performed
-        'delta_lambda' : the change in the eigenvalue on the final iteration
+        'delta_w' : the change in the eigenvalue on the final iteration
 
     See:
     1.  P. Lancaster, Lambda Matrices and Vibrating Systems.
@@ -369,50 +379,71 @@ def eig_newton_bordered(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
         pp. 91–111, Jun. 1995.
     """
 
-    N = Z.shape[0]
+    N = A.shape[0]
 
-    if G is None:
-        G = np.eye(N)
-    elif hasattr(G, 'toarray'):
+    if B is None:
+        B = np.eye(N)
+    elif hasattr(B, 'toarray'):
         # handle the sparse case
-        G = G.toarray()
+        B = B.toarray()
     else:
-        G = np.asarray(G)
+        B = np.asarray(B)
 
-    x_s = x_0/np.sqrt(np.sum(x_0.dot(G.dot(x_0))))
-    lambda_s = lambda_0
+    vr_s = vr_0/np.sqrt(np.sum(vr_0.dot(B.dot(vr_0))))
 
+    # If left eigenvalue is not passed, assume complex-symmetric matrix
+    if vl_0 is None:
+        vl_0 = vr_0
+        vl_s = vr_s
+        symmetric = True
+    else:
+        vl_s = vl_0/np.sum(vl_0.dot(B.dot(vr_0)))
+        symmetric = False
+
+    vr_0 /= np.sqrt(np.sum(np.abs(vr_0)**2))
+    vl_0 /= np.sqrt(np.sum(np.abs(vl_0)**2))
+
+    w_s = w_0
     converged = False
 
-    augmented = np.empty((N+1, N+1), dtype=Z.dtype)
+    augmented = np.empty((N+1, N+1), dtype=np.complex128)
     augmented[N, N] = 0.0
+    augmented[N, :N] = vr_0.conjugate()  # vector c in Andrew notation
+    augmented[:N, N] = vl_0.conjugate()  # vector b in Andrew notation
 
-    rhs = np.zeros(N+1, Z.dtype)
+    rhs = np.zeros(N+1, A.dtype)
     rhs[-1] = 1
 
     for iter_count in range(max_iter):
         # Fill the augmented matrix with the impedance, and the previous
         # estimate of the eigenvector
-        augmented[:N, :N] = Z-lambda_s*G
-        augmented[N, :N] = x_s
-        augmented[:N, N] = x_s
+        augmented[:N, :N] = A-w_s*B
 
-        sg = la.solve(augmented, rhs)
-        u = sg[:N]
+        aug_lu = la.lu_factor(augmented)
 
+        sg = la.lu_solve(aug_lu, rhs)
+        vr_s1 = sg[:N]
+        
         # the improved eigenvector estimate scaled appropriately
-        x_s1 = u/np.sqrt(np.sum(u.dot(G.dot(u))))
+        vr_s1 /= np.sqrt(np.sum(vr_s1.dot(B.dot(vr_s1))))
 
-        # determine the Rayleigh quotient, assuming complex-symmetric form
-        #quot = x_s.dot(np.dot(np.array(Z-lambda_s*G).T, x_s))/x_s.dot(G.dot(x_s))
+        if symmetric:
+            vl_s1 = vr_s1
+        else:
+            sg2 = la.lu_solve(aug_lu, rhs, trans=1)
+            vl_s1 = sg2[:N]
+            vl_s1 /= np.sum(vl_s1.dot(B.dot(vr_s1)))
 
-        lambda_s1 = x_s.dot(Z.dot(x_s))
+        # at this stage vr_s.B.vl_s = 1
+        w_s1 = vl_s.dot(A.dot(vr_s))
 
-        delta_lambda = abs((lambda_s1 - lambda_s)/lambda_s)
-        converged = delta_lambda < lambda_tol
+        delta_w = abs((w_s1 - w_s)/w_s)
+        converged = delta_w < w_tol
 
-        lambda_s = lambda_s1
-        x_s = x_s1
+        # update values for next iteration
+        w_s = w_s1
+        vr_s = vr_s1
+        vl_s = vl_s1
 
         if converged:
             break
@@ -420,8 +451,8 @@ def eig_newton_bordered(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
     if not converged:
         raise ValueError("maximum iterations reached, no convergence")
 
-    return {'eigval': lambda_s, 'eigvec': x_s, 'iter_count': iter_count+1,
-            'delta_lambda': delta_lambda}
+    return {'w': w_s, 'vr': vr_s, 'iter_count': iter_count+1,
+            'delta_w': delta_w, 'vl': vl_s}
 
 
 def eig_newton_bordered_nonlinear(func, lambda_0, x_0, lambda_tol=1e-8,
