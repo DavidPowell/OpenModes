@@ -87,7 +87,7 @@ def test_interpolate_loop_star(plot=False, write_reference=False,
 
     ls_function = np.zeros(len(basis), np.float64)
     # chose one loop and one star
-    star_basis = 22
+    star_basis = 28
     loop_basis = 4
 
     ls_function[star_basis] = 1
