@@ -83,7 +83,8 @@ class ImpedanceMatrix(object):
         vector[:] = la.lu_solve(lu, V)
         return vector
 
-    def eigenmodes(self, num_modes=None, use_gram=None, start_j=None):
+    def eigenmodes(self, num_modes=None, use_gram=None, start_vec=None,
+                   start_l_vec=None):
         """Calculate the eigenimpedance and eigencurrents of each part's modes
 
         The modes with the smallest imaginary part of their impedance will be
@@ -112,28 +113,44 @@ class ImpedanceMatrix(object):
             A vector containing the eigencurrents of each mode in its columns
         """
 
-        if start_j is not None:
         symmetric = self.operator.reciprocal
+        if start_vec is not None:
+
+            if (not symmetric) and start_l_vec is None:
+                raise ValueError("For non-symmetric operator, must give"
+                                 "initial estimates for both left and right"
+                                 "eigenvectors")
 
             # An iterative solution will be performed, based on the given
             # current distribution. In this case the Gram matrix is used and
             # the use_gram parameter is ignored
-            eigencurrent = np.empty_like(start_j)
-            num_modes = start_j.shape[1]
-            eigenimpedance = np.empty(num_modes, np.complex128)
+            v_r = np.empty_like(start_vec)
+            num_modes = start_vec.shape[1]
+            z = np.empty(num_modes, np.complex128)
 
             G = self.basis_o.gram_matrix
-            start_j /= np.sqrt(np.diag(start_j.T.dot(G.dot(start_j))))
+
+            if symmetric:
+                start_vec /= np.sqrt(np.diag(start_vec.T.dot(G.dot(start_vec))))
+                start_l_vec = None
+            else:
+                start_vec /= np.diag(start_l_vec.T.dot(G.dot(start_vec)))
+                v_l = np.empty_like(v_r)
 
             Z = self[:]
             for mode in range(num_modes):
-                start_z = start_j[:, mode].dot(Z.dot(start_j[:, mode]))
-                res = eig_newton_bordered(Z, start_z, start_j[:, mode], G=G)
-                eigencurrent[:, mode] = res['eigvec']
-                eigenimpedance[mode] = res['eigval']
+                if symmetric:
+                    start_z = start_vec[:, mode].dot(Z.dot(start_vec[:, mode]))
+                    res = eig_newton_bordered(Z, start_z, start_vec[:, mode],
+                                              B=G)
+                else:
+                    start_z = start_l_vec[:, mode].dot(Z.dot(start_vec[:, mode]))
+                    res = eig_newton_bordered(Z, start_z, start_vec[:, mode], B=G,
+                                              vl_0=start_l_vec[:, mode], w_tol=1e-13)
+                    v_l[:, mode] = res['vl']
 
-            eigencurrent /= np.sqrt(np.diag(eigencurrent.T.dot(G.dot(eigencurrent))))
-
+                v_r[:, mode] = res['vr']
+                z[mode] = res['w']
         else:
             # The direct solution, which may or may not use the Gram matrix
 
@@ -152,15 +169,18 @@ class ImpedanceMatrix(object):
                 # Normalisation for symmetric system ensures that projector
                 # applied multiple times has no additional effect.
                 v_r /= np.sqrt(np.diag(v_r.T.dot(G.dot(v_r))))
-                return z, v_r
             else:
                 v_r = v_r_all[:, which_z]
                 v_l = v_l_all[:, which_z].conjugate()
 
                 # First scale the left eigenvectors so that dyadic is correct
                 v_l /= np.diag(v_l.T.dot(G.dot(v_r)))
-                #eigencurrent = v/np.sqrt(np.sum(v**2, axis=0))
-                return z, v_r, v_l
+
+        # results should already be scaled
+        if symmetric:
+            return z, v_r
+        else:
+            return z, v_r, v_l
 
 
     def weight(self, modes_o, modes_s=None, return_arrays=False):
