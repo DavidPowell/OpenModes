@@ -92,8 +92,6 @@ class EfieOperator(Operator):
     used, such that the testing functions are the same as the basis functions.
     """
     reciprocal = True
-    source_field = "electric_field"
-    source_cross = False
 
     def __init__(self, integration_rule, basis_container,
                  greens_function=FreeSpaceGreensFunction(),
@@ -159,6 +157,14 @@ class EfieOperator(Operator):
         else:
             return EfieImpedanceMatrix.build(s, L, S, basis_o, basis_s, self,
                                              part_o, part_s, symmetric)
+
+    def source_single_part(self, source_field, s, part,
+                           extinction_field):
+        "Since the EFIE is symmetric, extinction_field is the same field"
+        field = lambda r: source_field.electric_field(s, r)
+        basis = self.basis_container[part]
+        return basis.weight_function(field, self.integration_rule,
+                                     part.nodes, self.source_cross)
 
     def far_field_radiation(self, s, part, current_vec, direction):
         """Calculate the far-field radiation in a given direction. Note that

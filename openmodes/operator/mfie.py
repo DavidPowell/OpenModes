@@ -120,6 +120,17 @@ class MfieOperator(Operator):
         logging.info("Creating MFIE operator, tangential form: %s"
                      % str(tangential_form))
 
+    def source_single_part(self, source_field, s, part, extinction_field):
+        if extinction_field:
+            field = lambda r: source_field.electric_field(s, r)
+            source_cross = False
+        else:
+            field = lambda r: source_field.magnetic_field(s, r)
+            source_cross = self.source_cross
+        basis = self.basis_container[part]
+        return basis.weight_function(field, self.integration_rule,
+                                     part.nodes, source_cross)
+
     def impedance_single_parts(self, s, part_o, part_s=None):
         """Calculate a self or mutual impedance matrix at a given complex
         frequency

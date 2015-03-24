@@ -165,3 +165,14 @@ class Operator(object):
             mode_j[:, mode] = j_calc
 
         return mode_s, mode_j
+
+    def source_vector(self, source_field, s, parent, extinction_field):
+        "Calculate the relevant source vector for this operator"
+
+        V = VectorParts(parent, self.basis_container, dtype=np.complex128)
+
+        for part in parent.iter_single():
+            V[part] = self.source_single_part(source_field, s, part,
+                                              extinction_field)
+
+        return V
