@@ -33,23 +33,29 @@ from openmodes.vector import VectorParts
 class AbstractImpedanceMatrix(object):
     """An abstract base class for impedance matrices of a single part. The
     sub-matrices are stored in the `matrices` element.
-    
+
     At minimum, a subclass must override __getitem__, in order to evaulate the
     combination of matrices.
     """
 
-    def __init__(self, s, matrices, basis_o, basis_s, operator, part_o, part_s,
-                 symmetric):
-        self.s = s
+    def __init__(self, matrices, metadata):
+        """
+        Parameters
+        ----------
+        matrices : dict
+            The component matrices which are held, with their names as keys
+        metadata : dict
+            The metadata for this element. At minimum, it must contain the
+            elements 's', 'operator', 'part_o', 'part_s', 'basis_o', 'basis_s'
+            'symmetric'
+        """
         self.matrices = matrices
+        self.md = metadata
 
-        self.operator = operator
-        self.part_o = part_o
-        self.part_s = part_s
-
-        self.basis_o = basis_o
-        self.basis_s = basis_s
-        self.symmetric = symmetric
+        if not all(x in metadata for x in ('s', 'operator', 'part_o', 'part_s',
+                                           'basis_o', 'basis_s', 'symmetric')):
+            raise ValueError("Incomplete metadata for impedance matrix: %s" %
+                             metadata)
 
         self.shape = None
         # prevent external modification, to allow caching
@@ -77,11 +83,12 @@ class AbstractImpedanceMatrix(object):
             if cache:
                 self.factored_matrix = lu
 
-        if self.part_s is None:
+        if self.md['part_s'] is None:
             # e.g. if this is the result of a projection onto modes
             vector = np.empty_like(V)
         else:
-            vector = VectorParts(self.part_s, self.operator.basis_container,
+            vector = VectorParts(self.md['part_s'],
+                                 self.md['operator'].basis_container,
                                  dtype=np.complex128)
 
         vector[:] = la.lu_solve(lu, V)
@@ -117,7 +124,7 @@ class AbstractImpedanceMatrix(object):
             A vector containing the eigencurrents of each mode in its columns
         """
 
-        symmetric = self.operator.reciprocal
+        symmetric = self.md['symmetric']
         if start_vec is not None:
 
             if (not symmetric) and start_l_vec is None:
@@ -132,7 +139,7 @@ class AbstractImpedanceMatrix(object):
             num_modes = start_vec.shape[1]
             z = np.empty(num_modes, np.complex128)
 
-            G = self.basis_o.gram_matrix
+            G = self.md['basis_o'].gram_matrix
 
             if symmetric:
                 start_vec /= np.sqrt(np.diag(start_vec.T.dot(G.dot(start_vec))))
@@ -158,7 +165,7 @@ class AbstractImpedanceMatrix(object):
         else:
             # The direct solution, which may or may not use the Gram matrix
 
-            G = self.basis_o.gram_matrix
+            G = self.md['basis_o'].gram_matrix
             if symmetric:
                 z_all, v_r_all = la.eig(self[:], G)
             else:
@@ -212,9 +219,7 @@ class AbstractImpedanceMatrix(object):
         for key, val in self.matrices.items():
             matrices_red[key] = modes_o.T.dot(val.dot(modes_s))
 
-        return self.__class__(s=self.s, basis_s=None, basis_o=None,
-                              operator=self.operator, part_o=None,
-                              part_s=None, **matrices_red)
+        return self.__class__(matrices_red, self.metadata)
 
     def source_modes(self, V, num_modes, mode_currents):
         "Take a source field, and project it onto the modes of the system"
@@ -231,10 +236,7 @@ class AbstractImpedanceMatrix(object):
         "A transposed version of the impedance matrix"
         # note interchange of source and observer basis functions
         matrices_T = {key: val.T for key, val in self.matrices.items}
-        return self.__class__(s=self.s, basis_s=self.basis_s,
-                              basis_o=self.basis_o, operator=self.operator,
-                              part_s=self.part_s, part_o=self.part_o,
-                              **matrices_T)
+        return self.__class__(matrices_T, self.metadata)
 
     @staticmethod
     def combine_parts(matrices, s, part_o, part_s):
@@ -258,10 +260,11 @@ class AbstractImpedanceMatrix(object):
 
         total_rows = sum(M[0].shape[0] for M in matrices)
         total_cols = sum(M.shape[1] for M in matrices[0])
-        
+
         matrices_tot = {}
         for key in matrices[0][0].matrices:
-            matrices_tot[key] = np.empty((total_rows, total_cols), np.complex128)
+            matrices_tot[key] = np.empty((total_rows, total_cols),
+                                         np.complex128)
 
         row_offset = 0
         for row in matrices:
@@ -270,7 +273,7 @@ class AbstractImpedanceMatrix(object):
 
             for matrix in row:
                 col_size = matrix.shape[1]
-                
+
                 for key, val in matrix.matrices:
                     matrices_tot[key][row_offset:row_offset+row_size,
                                  col_offset:col_offset+col_size] = matrix[key]
@@ -278,21 +281,32 @@ class AbstractImpedanceMatrix(object):
             row_offset += row_size
 
         basis = get_combined_basis(basis_list=[m.basis_o for m in row])
-        return matrix.__class__(s=s, basis_o=basis, basis_s=basis,
-                                operator=matrix.operator, part_o=part_o,
-                                part_s=part_s, **matrices_tot)
+
+        metadata = matrix.metadata.copy()
+        metadata['basis_o'] = basis
+        metadata['basis_s'] = basis
+        metadata['part_s'] = part_s
+        metadata['part_o'] = part_o
+        return matrix.__class__(matrices_tot, metadata)
 
 
 class SimpleImpedanceMatrix(AbstractImpedanceMatrix):
     "The simplest form of impedance matrix which has only a single member"
-    
-    def __init__(self, s, Z, basis_o, basis_s, operator, part_o, part_s,
-                 symmetric):
+
+    @classmethod
+    def build(cls, s, Z, basis_o, basis_s, operator, part_o, part_s,
+              symmetric):
         matrices = {'Z': Z}
-        super(SimpleImpedanceMatrix, self).__init__(s, matrices, basis_o,
-                                                    basis_s, operator, part_o,
-                                                    part_s, symmetric)
-    
+        metadata = {'basis_o': basis_o, 'basis_s': basis_s, 's': s,
+                    'operator': operator, 'part_o': part_o, 'part_s': part_s,
+                    'symmetric': symmetric}
+        return cls(matrices, metadata)
+
+    def __init__(self, matrices, metadata):
+        if 'Z' not in matrices:
+            raise ValueError("Simple impedance matrix must have matrix 'Z'")
+        super(SimpleImpedanceMatrix, self).__init__(matrices, metadata)
+
     def __getitem__(self, index):
         """Evaluates all or part of the impedance matrix, and returns it as
         an array.
@@ -309,18 +323,27 @@ class EfieImpedanceMatrix(AbstractImpedanceMatrix):
     of the matrix should not be modified after being added to this object.
     """
 
-    def __init__(self, s, L, S, basis_o, basis_s, operator, part_o, part_s,
-                 symmetric):
-        matrices = {'S':S, 'L':L}
-        super(EfieImpedanceMatrix, self).__init__(s, matrices, basis_o, basis_s,
-                                                  operator, part_o, part_s,
-                                                  symmetric)
+    @classmethod
+    def build(cls, s, L, S, basis_o, basis_s, operator, part_o, part_s,
+              symmetric):
+        matrices = {'L': L, 'S': S}
+        metadata = {'basis_o': basis_o, 'basis_s': basis_s, 's': s,
+                    'operator': operator, 'part_o': part_o, 'part_s': part_s,
+                    'symmetric': symmetric}
+        return cls(matrices, metadata)
+
+    def __init__(self, matrices, metadata):
+        if 'L' not in matrices and 'S' in matrices:
+            raise ValueError("EFIE impedance matrix must have matrices"
+                             "'L' and 'S'")
+        super(EfieImpedanceMatrix, self).__init__(matrices, metadata)
 
     def __getitem__(self, index):
         """Evaluates all or part of the impedance matrix, and returns it as
         an array.
         """
-        return self.s*self.matrices['L'][index] + self.matrices['S'][index]/self.s
+        return (self.md['s']*self.matrices['L'][index] +
+                self.matrices['S'][index]/self.md['s'])
 
 
 class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
@@ -331,19 +354,19 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
 
     @property
     def loop_range_o(self):
-        return slice(0, self.basis_o.num_loops)
+        return slice(0, self.md['basis_o'].num_loops)
 
     @property
     def loop_range_s(self):
-        return slice(0, self.basis_s.num_loops)
+        return slice(0, self.md['basis_s'].num_loops)
 
     @property
     def star_range_o(self):
-        return slice(self.basis_o.num_loops, self.shape[0])
+        return slice(self.md['basis_o'].num_loops, self.shape[0])
 
     @property
     def star_range_s(self):
-        return slice(self.basis_s.num_loops, self.shape[1])
+        return slice(self.md['basis_s'].num_loops, self.shape[1])
 
     @staticmethod
     def combine_parts(matrices, s, part_o, part_s):
@@ -368,7 +391,7 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
         L_tot = np.empty((total_rows, total_cols), np.complex128)
         S_tot = np.zeros_like(L_tot)
 
-        basis = get_combined_basis(basis_list=[row[0].basis_o
+        basis = get_combined_basis(basis_list=[row[0].md['basis_o']
                                                for row in matrices])
 
         loop_range_o = slice(0, 0)
@@ -376,8 +399,8 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
 
         for col_count, row in enumerate(matrices):
             m = row[0]
-            loop_range_o = inc_slice(loop_range_o, m.basis_o.num_loops)
-            star_range_o = inc_slice(star_range_o, m.basis_o.num_stars)
+            loop_range_o = inc_slice(loop_range_o, m.md['basis_o'].num_loops)
+            star_range_o = inc_slice(star_range_o, m.md['basis_o'].num_stars)
 
             loop_range_s = slice(0, 0)
             star_range_s = slice(basis.num_loops, basis.num_loops)
@@ -385,8 +408,8 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
             for row_count, m in enumerate(row):
                 S = m.matrices['S']
                 L = m.matrices['L']
-                loop_range_s = inc_slice(loop_range_s, m.basis_s.num_loops)
-                star_range_s = inc_slice(star_range_s, m.basis_s.num_stars)
+                loop_range_s = inc_slice(loop_range_s, m.md['basis_s'].num_loops)
+                star_range_s = inc_slice(star_range_s, m.md['basis_s'].num_stars)
 
                 # S only has stars
                 S_tot[star_range_o, star_range_s] = S[m.star_range_o, m.star_range_s]
@@ -399,8 +422,9 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
                 L_tot[star_range_o, star_range_s] = L[m.star_range_o, m.star_range_s]
 
         # TODO: check symmetric
-        return EfieImpedanceMatrixLoopStar(s, L_tot, S_tot, basis, basis,
-                                           m.operator, part_o, part_s, True)
+        return EfieImpedanceMatrixLoopStar.build(s, L_tot, S_tot, basis, basis,
+                                                 m.md['operator'], part_o,
+                                                 part_s, True)
 
 
 class ImpedanceParts(object):

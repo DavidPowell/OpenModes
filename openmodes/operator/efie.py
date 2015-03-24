@@ -153,11 +153,12 @@ class EfieOperator(Operator):
             raise NotImplementedError
 
         if issubclass(self.basis_container.basis_class, LoopStarBasis):
-            return EfieImpedanceMatrixLoopStar(s, L, S, basis_o, basis_s, self,
-                                               part_o, part_s, symmetric)
+            return EfieImpedanceMatrixLoopStar.build(s, L, S, basis_o, basis_s,
+                                                     self, part_o, part_s,
+                                                     symmetric)
         else:
-            return EfieImpedanceMatrix(s, L, S, basis_o, basis_s, self, part_o,
-                                       part_s, symmetric)
+            return EfieImpedanceMatrix.build(s, L, S, basis_o, basis_s, self,
+                                             part_o, part_s, symmetric)
 
     def far_field_radiation(self, s, part, current_vec, direction):
         """Calculate the far-field radiation in a given direction. Note that

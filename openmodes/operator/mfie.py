@@ -160,8 +160,8 @@ class MfieOperator(Operator):
         else:
             raise NotImplementedError
 
-        return SimpleImpedanceMatrix(s, Z, basis_o, basis_s, self, part_o,
-                                     part_s, symmetric=False)
+        return SimpleImpedanceMatrix.build(s, Z, basis_o, basis_s, self,
+                                           part_o, part_s, symmetric=False)
 
 
 class TMfieOperator(MfieOperator):

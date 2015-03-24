@@ -51,8 +51,8 @@ def eig_linearised(Z, modes):
     modes = np.asarray(modes)
 
     # check whether the operator has a null-space to be eliminated
-    has_nullspace = (hasattr(Z.basis_o, 'num_loops')
-                     and Z.basis_o.num_loops != 0)
+    has_nullspace = (hasattr(Z.md['basis_o'], 'num_loops')
+                     and Z.md['basis_o'].num_loops != 0)
 
     L = Z.matrices['L']
     S = Z.matrices['S']

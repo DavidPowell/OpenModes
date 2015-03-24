@@ -137,7 +137,7 @@ class Operator(object):
         Z_func = lambda s: self.impedance(s, part, part)[part, part][:]
 
         if use_gram:
-            G = Z.basis_s.gram_matrix
+            G = Z.md['basis_s'].gram_matrix
 
         # Note that mode refers to the position in the array modes, which
         # at this point need not correspond to the original mode numbering
