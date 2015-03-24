@@ -48,7 +48,7 @@ class Simulation(Identified):
     def __init__(self, integration_rule=DunavantRule(5),
                  basis_class=LoopStarBasis,
                  operator_class=EfieOperator,
-                 greens_function=FreeSpaceGreensFunction(), name=None,
+                 name=None,
                  basis_args=dict()):
         """
         Parameters
@@ -60,8 +60,6 @@ class Simulation(Identified):
             used
         operator_class : type
             The class representing the operator equation to be solved
-        greens_function : object, optional
-            The Green's function (currently unused)
         name : string, optional
             A name for this simulation
         """
@@ -78,8 +76,7 @@ class Simulation(Identified):
         self.basis_class = basis_class
         self.basis_container = BasisContainer(basis_class, basis_args)
         self.operator = operator_class(integration_rule=integration_rule,
-                                       basis_container=self.basis_container,
-                                       greens_function=greens_function)
+                                       basis_container=self.basis_container)
 
         logging.info('Creating simulation %s\nQuadrature order %d\n'
                      'Basis function class %s'
