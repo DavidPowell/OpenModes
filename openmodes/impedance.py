@@ -193,7 +193,6 @@ class AbstractImpedanceMatrix(object):
         else:
             return z, v_r, v_l
 
-
     def weight(self, modes_o, modes_s=None):
         """Calculate a reduced impedance matrix based on the scalar impedance
         of the modes of each part, and the scalar coupling coefficients.
@@ -344,6 +343,42 @@ class EfieImpedanceMatrix(AbstractImpedanceMatrix):
         """
         return (self.md['s']*self.matrices['L'][index] +
                 self.matrices['S'][index]/self.md['s'])
+
+
+class CfieImpedanceMatrix(AbstractImpedanceMatrix):
+    """Holds an impedance matrix from the combined field integral equation,
+    which contains separate parts corresponding to the vector and scalar
+    potential of the EFIE, and another matrix for the MFIE .
+
+    This is a single impedance matrix for the whole system. Note that elements
+    of the matrix should not be modified after being added to this object.
+    """
+
+    @classmethod
+    def build(cls, s, L, S, M, alpha, basis_o, basis_s, operator, part_o,
+              part_s, symmetric):
+        matrices = {'L': L, 'S': S, 'M': M}
+        metadata = {'basis_o': basis_o, 'basis_s': basis_s, 's': s,
+                    'operator': operator, 'part_o': part_o, 'part_s': part_s,
+                    'symmetric': symmetric, 'alpha': alpha}
+        return cls(matrices, metadata)
+
+    def __init__(self, matrices, metadata):
+        if not all(x in matrices for x in ('L', 'S', 'M')):
+            raise ValueError("CFIE impedance matrix must have matrices"
+                             "'L', 'S' and 'M'")
+        if 'alpha' not in metadata:
+            raise ValueError("CFIE alpha parameter missing")
+
+        super(CfieImpedanceMatrix, self).__init__(matrices, metadata)
+
+    def __getitem__(self, index):
+        """Evaluates all or part of the impedance matrix, and returns it as
+        an array.
+        """
+        return (self.md['alpha']*(self.md['s']*self.matrices['L'][index] +
+                                  self.matrices['S'][index]/self.md['s']) +
+                (1.0-self.md['alpha'])*self.matrices['M'])
 
 
 class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
