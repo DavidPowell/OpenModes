@@ -12,14 +12,11 @@ import os.path as osp
 import numpy as np
 from numpy.testing import assert_allclose
 import matplotlib.pyplot as plt
-import scipy.linalg as la
-import pickle
 
 import openmodes
 from openmodes.basis import DivRwgBasis
 from openmodes.sources import PlaneWaveSource
 from openmodes.constants import c, eta_0
-from openmodes.integration import triangle_centres
 from openmodes.operator import MfieOperator, EfieOperator
 
 from helpers import read_1d_complex, write_1d_complex
@@ -61,126 +58,66 @@ def sphere_extinction_analytical(freqs, r):
     return ecs_kerker*r**2/eta_0
 
 
-def test_extinction_mfie(plot_extinction=False, skip_asserts=False,
-                         write_reference=False):
-    "Extinction of a PEC sphere with MFIE"
+def test_extinction_all(plot_extinction=False, skip_asserts=False,
+                        write_reference=False):
+    "Extinction of a PEC sphere with EFIE, MFIE, CFIE"
 
-    sim = openmodes.Simulation(name='horseshoe_extinction',
-                               basis_class=DivRwgBasis,
-                               operator_class=MfieOperator)
+    tests = (("EFIE", EfieOperator, 'extinction_efie.npy'),
+             ("MFIE", MfieOperator, 'extinction_mfie.npy'))
 
-    radius = 5e-3
-    sphere = sim.load_mesh(osp.join(mesh_dir, 'sphere.msh'))
-    sim.place_part(sphere)
+    for operator_name, operator_class, reference_filename in tests:
 
-    num_freqs = 101
-    freqs = np.linspace(1e8, 20e9, num_freqs)
+        sim = openmodes.Simulation(name='horseshoe_extinction',
+                                   basis_class=DivRwgBasis,
+                                   operator_class=operator_class)
 
-    extinction = np.empty(num_freqs, np.complex128)
+        radius = 5e-3
+        sphere = sim.load_mesh(osp.join(mesh_dir, 'sphere.msh'))
+        sim.place_part(sphere)
 
-    e_inc = np.array([1, 0, 0], dtype=np.complex128)
-    k_hat = np.array([0, 0, 1], dtype=np.complex128)
-    pw = PlaneWaveSource(e_inc, k_hat)
+        num_freqs = 101
+        freqs = np.linspace(1e8, 20e9, num_freqs)
 
-    for freq_count, s in sim.iter_freqs(freqs):
-        Z = sim.impedance(s)
-        V = sim.source_vector(pw, s)
-        V_E = sim.source_vector(pw, s, which_field="electric_field",
-                                n_cross=False)
-        extinction[freq_count] = np.vdot(V_E, Z.solve(V))
+        extinction = np.empty(num_freqs, np.complex128)
 
-    extinction_filename = osp.join(reference_dir, 'extinction_mfie.npy')
+        e_inc = np.array([1, 0, 0], dtype=np.complex128)
+        k_hat = np.array([0, 0, 1], dtype=np.complex128)
+        pw = PlaneWaveSource(e_inc, k_hat)
 
-    if write_reference:
-        # generate the reference extinction solution
-        write_1d_complex(extinction_filename, extinction)
+        for freq_count, s in sim.iter_freqs(freqs):
+            Z = sim.impedance(s)
+            V = sim.source_vector(pw, s)
+            V_E = sim.source_vector(pw, s, extinction_field=True)
+            extinction[freq_count] = np.vdot(V_E, Z.solve(V))
 
-    extinction_ref = read_1d_complex(extinction_filename)
+        extinction_filename = osp.join(reference_dir, reference_filename)
 
-    if not skip_asserts:
-        assert_allclose(extinction, extinction_ref, rtol=1e-3)
+        if write_reference:
+            # generate the reference extinction solution
+            write_1d_complex(extinction_filename, extinction)
 
-    if plot_extinction:
-        # to plot the generated and reference solutions
+        extinction_ref = read_1d_complex(extinction_filename)
 
-        # calculate analytically
-        extinction_analytical = sphere_extinction_analytical(freqs, radius)
-        plt.figure(figsize=(8, 6))
-        plt.plot(freqs*1e-9, extinction.real)
-        plt.plot(freqs*1e-9, extinction_ref.real, '--')
-        plt.plot(freqs*1e-9, extinction_analytical, 'x')
-        plt.plot(freqs*1e-9, extinction.imag)
-        plt.plot(freqs*1e-9, extinction_ref.imag, '--')
-        plt.xlabel('f (GHz)')
-        plt.legend(('Calculated (Re)', 'Reference (Re)', 'Analytical (Re)',
-                    'Calculated (Im)', 'Reference (Im)'), loc='right')
-        plt.title('MFIE Extinction cross section of PEC sphere of radius %.2e'
-                  % radius)
-        plt.ylim(ymin=0)
-        plt.show()
+        if not skip_asserts:
+            assert_allclose(extinction, extinction_ref, rtol=1e-3)
 
+        if plot_extinction:
+            # to plot the generated and reference solutions
 
-def test_extinction_efie(plot_extinction=False, skip_asserts=False,
-                         write_reference=False):
-    "Extinction of a PEC sphere with EFIE"
-
-    sim = openmodes.Simulation(name='horseshoe_extinction',
-                               basis_class=DivRwgBasis,
-                               operator_class=EfieOperator)
-
-    radius = 5e-3
-    # this call is to generate and save the reference mesh
-#    sphere = sim.load_mesh(osp.join(openmodes.geometry_dir, 'sphere.geo'),
-#                           parameters={'radius': radius, 'mesh_tol': 2e-3},
-#                           mesh_dir=mesh_dir)
-    sphere = sim.load_mesh(osp.join(mesh_dir, 'sphere.msh'))
-    sim.place_part(sphere)
-
-    num_freqs = 101
-    freqs = np.linspace(1e8, 20e9, num_freqs)
-
-    extinction = np.empty(num_freqs, np.complex128)
-
-    e_inc = np.array([1, 0, 0], dtype=np.complex128)
-    k_hat = np.array([0, 0, 1], dtype=np.complex128)
-    pw = PlaneWaveSource(e_inc, k_hat)
-
-    for freq_count, s in sim.iter_freqs(freqs):
-        Z = sim.impedance(s)
-        V = sim.source_vector(pw, s)
-        extinction[freq_count] = np.vdot(V, Z.solve(V))
-
-    extinction_filename = osp.join(reference_dir, 'extinction_efie.npy')
-
-    if write_reference:
-        # generate the reference extinction solution
-        write_1d_complex(extinction_filename, extinction)
-
-    extinction_ref = read_1d_complex(extinction_filename)
-
-    if not skip_asserts:
-        assert_allclose(extinction, extinction_ref, rtol=1e-3)
-
-    if plot_extinction:
-        # to plot the generated and reference solutions
-
-        # calculate analytically
-        extinction_analytical = sphere_extinction_analytical(freqs, radius)
-        plt.figure(figsize=(8, 6))
-        plt.plot(freqs*1e-9, extinction.real)
-        plt.plot(freqs*1e-9, extinction_ref.real, '--')
-        plt.plot(freqs*1e-9, extinction_analytical, 'x')
-        plt.plot(freqs*1e-9, extinction.imag)
-        plt.plot(freqs*1e-9, extinction_ref.imag, '--')
-        plt.xlabel('f (GHz)')
-        plt.legend(('Calculated (Re)', 'Reference (Re)', 'Analytical (Re)',
-                    'Calculated (Im)', 'Reference (Im)'), loc='right')
-        plt.title('Extinction cross section of PEC sphere of radius %.2e'
-                  % radius)
-        plt.ylim(ymin=0)
-        plt.show()
-
+            # calculate analytically
+            extinction_analytical = sphere_extinction_analytical(freqs, radius)
+            plt.figure(figsize=(8, 6))
+            plt.plot(freqs*1e-9, extinction.real)
+            plt.plot(freqs*1e-9, extinction_ref.real, '--')
+            plt.plot(freqs*1e-9, extinction_analytical, 'x')
+            plt.plot(freqs*1e-9, extinction.imag)
+            plt.plot(freqs*1e-9, extinction_ref.imag, '--')
+            plt.xlabel('f (GHz)')
+            plt.legend(('Calculated (Re)', 'Reference (Re)', 'Analytical (Re)',
+                        'Calculated (Im)', 'Reference (Im)'), loc='right')
+            plt.title('Extinction with operator %s' % operator_name)
+            plt.ylim(ymin=0)
+            plt.show()
 
 if __name__ == "__main__":
-    test_extinction_mfie(plot_extinction=True, skip_asserts=True)
-    test_extinction_efie(plot_extinction=True, skip_asserts=True)
+    test_extinction_all(plot_extinction=True, skip_asserts=True)
