@@ -278,8 +278,10 @@ class MutualPolyModel(object):
         """
         Z = self.operator.impedance(s, self.part_o, self.part_s)[self.part_o,
                                                                  self.part_s]
-        return (self.current_o.T.dot(Z.L.dot(self.current_s)),
-                self.current_o.T.dot(Z.S.dot(self.current_s)))
+        L = Z.matrices['L']
+        S = Z.matrices['S']
+        return (self.current_o.T.dot(L.dot(self.current_s)),
+                self.current_o.T.dot(S.dot(self.current_s)))
 
 
 class SelfModel(object):

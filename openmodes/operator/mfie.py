@@ -23,7 +23,7 @@ import numpy as np
 from openmodes.constants import epsilon_0, mu_0, pi, c
 from openmodes.core import z_mfie_faces_self, z_mfie_faces_mutual
 from openmodes.basis import LinearTriangleBasis
-from openmodes.impedance import ImpedanceMatrix
+from openmodes.impedance import SimpleImpedanceMatrix
 import logging
 
 from openmodes.operator.operator import Operator, FreeSpaceGreensFunction
@@ -160,7 +160,8 @@ class MfieOperator(Operator):
         else:
             raise NotImplementedError
 
-        return ImpedanceMatrix(s, Z, basis_o, basis_s, self, part_o, part_s)
+        return SimpleImpedanceMatrix(s, Z, basis_o, basis_s, self, part_o,
+                                     part_s, symmetric=False)
 
 
 class TMfieOperator(MfieOperator):

@@ -30,15 +30,18 @@ from openmodes.eig import eig_newton_bordered
 from openmodes.vector import VectorParts
 
 
-class ImpedanceMatrix(object):
-    """Holds an impedance matrix as a single object
+class AbstractImpedanceMatrix(object):
+    """An abstract base class for impedance matrices of a single part. The
+    sub-matrices are stored in the `matrices` element.
+    
+    At minimum, a subclass must override __getitem__, in order to evaulate the
+    combination of matrices.
     """
 
-    reciprocal = False
-
-    def __init__(self, s, Z, basis_o, basis_s, operator, part_o, part_s):
+    def __init__(self, s, matrices, basis_o, basis_s, operator, part_o, part_s,
+                 symmetric):
         self.s = s
-        self.Z = Z
+        self.matrices = matrices
 
         self.operator = operator
         self.part_o = part_o
@@ -46,15 +49,16 @@ class ImpedanceMatrix(object):
 
         self.basis_o = basis_o
         self.basis_s = basis_s
+        self.symmetric = symmetric
 
+        self.shape = None
         # prevent external modification, to allow caching
-        Z.setflags(write=False)
-
-    def __getitem__(self, index):
-        """Evaluates all or part of the impedance matrix, and returns it as
-        an array.
-        """
-        return self.Z[index]
+        for matrix in self.matrices.values():
+            matrix.setflags(write=False)
+            if self.shape is None:
+                self.shape = matrix.shape
+            elif matrix.shape != self.shape:
+                raise ValueError("Matrices have inconsistent shapes")
 
     def solve(self, V, cache=True):
         """Solve for the current, given a voltage vector
@@ -183,7 +187,7 @@ class ImpedanceMatrix(object):
             return z, v_r, v_l
 
 
-    def weight(self, modes_o, modes_s=None, return_arrays=False):
+    def weight(self, modes_o, modes_s=None):
         """Calculate a reduced impedance matrix based on the scalar impedance
         of the modes of each part, and the scalar coupling coefficients.
 
@@ -193,32 +197,24 @@ class ImpedanceMatrix(object):
             The modal currents of the observer part
         modes_s : ndarray, optional
             The modal currents of the source part
-        return_arrays : boolean, optional
-            Return the impedance arrays directly, instead of constructing an
-            `ImpedanceMatrix` object
 
         Returns
         -------
-        L_red, S_red : ndarray
-            the reduced inductance and susceptance matrices
-
-        or,
-
         Z : ImpedanceMatrix
-            the reduced impedance matrix object
+            the reduced impedance matrix object of the same class
         """
         if modes_s is None:
             modes_s = modes_o
 
         # TODO: special handling of self terms to zero off-diagonal terms?
 
-        Z_red = modes_o.T.dot(self.Z.dot(modes_s))
+        matrices_red = {}
+        for key, val in self.matrices.items():
+            matrices_red[key] = modes_o.T.dot(val.dot(modes_s))
 
-        if return_arrays:
-            return Z_red
-        else:
-            return self.__class__(self.s, Z_red, None, None,
-                                  self.operator, None, None)
+        return self.__class__(s=self.s, basis_s=None, basis_o=None,
+                              operator=self.operator, part_o=None,
+                              part_s=None, **matrices_red)
 
     def source_modes(self, V, num_modes, mode_currents):
         "Take a source field, and project it onto the modes of the system"
@@ -231,17 +227,14 @@ class ImpedanceMatrix(object):
         return V_red
 
     @property
-    def shape(self):
-        "The shape of all matrices"
-        return self.Z.shape
-
-    @property
     def T(self):
         "A transposed version of the impedance matrix"
         # note interchange of source and observer basis functions
-        return self.__class__(self.s, self.Z.T, self.basis_s,
-                              self.basis_o, self.operator, self.part_s,
-                              self.part_o)
+        matrices_T = {key: val.T for key, val in self.matrices.items}
+        return self.__class__(s=self.s, basis_s=self.basis_s,
+                              basis_o=self.basis_o, operator=self.operator,
+                              part_s=self.part_s, part_o=self.part_o,
+                              **matrices_T)
 
     @staticmethod
     def combine_parts(matrices, s, part_o, part_s):
@@ -250,20 +243,25 @@ class ImpedanceMatrix(object):
 
         Parameters
         ----------
-        matrices : list of list of EfieImpedanceMatrix
-            The impedance matrices to be combined
+        matrices : list of list of impedance matrix objects
+            The impedance matrices to be combined, should all be of the same
+            class
         s : complex
             The frequency at which the impedance was evaluated
 
         Returns
         -------
-        impedance : EfieImpedanceMatrix
-            An object containing the combined impedance matrices
+        impedance : impedance matrix object
+            An object containing the combined impedance matrices, of the same
+            class as those provided
         """
 
         total_rows = sum(M[0].shape[0] for M in matrices)
         total_cols = sum(M.shape[1] for M in matrices[0])
-        Z_tot = np.empty((total_rows, total_cols), np.complex128)
+        
+        matrices_tot = {}
+        for key in matrices[0][0].matrices:
+            matrices_tot[key] = np.empty((total_rows, total_cols), np.complex128)
 
         row_offset = 0
         for row in matrices:
@@ -272,17 +270,37 @@ class ImpedanceMatrix(object):
 
             for matrix in row:
                 col_size = matrix.shape[1]
-                Z_tot[row_offset:row_offset+row_size,
-                      col_offset:col_offset+col_size] = matrix.Z
+                
+                for key, val in matrix.matrices:
+                    matrices_tot[key][row_offset:row_offset+row_size,
+                                 col_offset:col_offset+col_size] = matrix[key]
                 col_offset += col_size
             row_offset += row_size
 
         basis = get_combined_basis(basis_list=[m.basis_o for m in row])
-        return ImpedanceMatrix(s, Z_tot, basis, basis, matrix.operator,
-                               part_o, part_s)
+        return matrix.__class__(s=s, basis_o=basis, basis_s=basis,
+                                operator=matrix.operator, part_o=part_o,
+                                part_s=part_s, **matrices_tot)
 
 
-class EfieImpedanceMatrix(ImpedanceMatrix):
+class SimpleImpedanceMatrix(AbstractImpedanceMatrix):
+    "The simplest form of impedance matrix which has only a single member"
+    
+    def __init__(self, s, Z, basis_o, basis_s, operator, part_o, part_s,
+                 symmetric):
+        matrices = {'Z': Z}
+        super(SimpleImpedanceMatrix, self).__init__(s, matrices, basis_o,
+                                                    basis_s, operator, part_o,
+                                                    part_s, symmetric)
+    
+    def __getitem__(self, index):
+        """Evaluates all or part of the impedance matrix, and returns it as
+        an array.
+        """
+        return self.matrices['Z'][index]
+
+
+class EfieImpedanceMatrix(AbstractImpedanceMatrix):
     """Holds an impedance matrix from the electric field integral equation,
     which contains two separate parts corresponding to the vector and scalar
     potential.
@@ -291,122 +309,18 @@ class EfieImpedanceMatrix(ImpedanceMatrix):
     of the matrix should not be modified after being added to this object.
     """
 
-    reciprocal = True
-
-    def __init__(self, s, L, S, basis_o, basis_s, operator, part_o, part_s):
-        self.s = s
-        assert(L.shape == S.shape)
-        self.L = L
-        self.S = S
-
-        self.operator = operator
-        self.part_o = part_o
-        self.part_s = part_s
-
-        self.basis_o = basis_o
-        self.basis_s = basis_s
-
-        # prevent external modification, to allow caching
-        L.setflags(write=False)
-        S.setflags(write=False)
+    def __init__(self, s, L, S, basis_o, basis_s, operator, part_o, part_s,
+                 symmetric):
+        matrices = {'S':S, 'L':L}
+        super(EfieImpedanceMatrix, self).__init__(s, matrices, basis_o, basis_s,
+                                                  operator, part_o, part_s,
+                                                  symmetric)
 
     def __getitem__(self, index):
         """Evaluates all or part of the impedance matrix, and returns it as
         an array.
         """
-        return self.s*self.L[index] + self.S[index]/self.s
-
-    def weight(self, modes_o, modes_s=None, return_arrays=False):
-        """Calculate a reduced impedance matrix based on the scalar impedance
-        of the modes of each part, and the scalar coupling coefficients.
-
-        Parameters
-        ----------
-        modes_o : ndarray
-            The modal currents of the observer part
-        modes_s : ndarray, optional
-            The modal currents of the source part
-        return_arrays : boolean, optional
-            Return the impedance arrays directly, instead of constructing an
-            `ImpedanceMatrix` object
-
-        Returns
-        -------
-        L_red, S_red : ndarray
-            the reduced inductance and susceptance matrices
-
-        or,
-
-        Z : ImpedanceMatrix
-            the reduced impedance matrix object
-        """
-        if modes_s is None:
-            modes_s = modes_o
-
-        # TODO: special handling of self terms to zero off-diagonal terms?
-
-        L_red = modes_o.T.dot(self.L.dot(modes_s))
-        S_red = modes_o.T.dot(self.S.dot(modes_s))
-
-        if return_arrays:
-            return L_red, S_red
-        else:
-            return self.__class__(self.s, L_red, S_red, None, None,
-                                  self.operator, None, None)
-
-    @property
-    def shape(self):
-        "The shape of all matrices"
-        return self.L.shape
-
-    @property
-    def T(self):
-        "A transposed version of the impedance matrix"
-        # note interchange of source and observer basis functions
-        return self.__class__(self.s, self.L.T, self.S.T, self.basis_s,
-                              self.basis_o, self.operator, self.part_s,
-                              self.part_o)
-
-    @staticmethod
-    def combine_parts(matrices, s, part_o, part_s):
-        """Combine a set of impedance matrices for sub-parts for a single
-        matrix
-
-        Parameters
-        ----------
-        matrices : list of list of EfieImpedanceMatrix
-            The impedance matrices to be combined
-        s : complex
-            The frequency at which the impedance was evaluated
-
-        Returns
-        -------
-        impedance : EfieImpedanceMatrix
-            An object containing the combined impedance matrices
-        """
-
-        total_rows = sum(M[0].shape[0] for M in matrices)
-        total_cols = sum(M.shape[1] for M in matrices[0])
-        L_tot = np.empty((total_rows, total_cols), np.complex128)
-        S_tot = np.empty_like(L_tot)
-
-        row_offset = 0
-        for row in matrices:
-            row_size = row[0].shape[0]
-            col_offset = 0
-
-            for matrix in row:
-                col_size = matrix.shape[1]
-                L_tot[row_offset:row_offset+row_size,
-                      col_offset:col_offset+col_size] = matrix.L
-                S_tot[row_offset:row_offset+row_size,
-                      col_offset:col_offset+col_size] = matrix.S
-                col_offset += col_size
-            row_offset += row_size
-
-        basis = get_combined_basis(basis_list=[m.basis_o for m in row])
-        return EfieImpedanceMatrix(s, L_tot, S_tot, basis, basis,
-                                   matrix.operator, part_o, part_s)
+        return self.s*self.matrices['L'][index] + self.matrices['S'][index]/self.s
 
 
 class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
@@ -469,21 +383,24 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
             star_range_s = slice(basis.num_loops, basis.num_loops)
 
             for row_count, m in enumerate(row):
+                S = m.matrices['S']
+                L = m.matrices['L']
                 loop_range_s = inc_slice(loop_range_s, m.basis_s.num_loops)
                 star_range_s = inc_slice(star_range_s, m.basis_s.num_stars)
 
                 # S only has stars
-                S_tot[star_range_o, star_range_s] = m.S[m.star_range_o, m.star_range_s]
+                S_tot[star_range_o, star_range_s] = S[m.star_range_o, m.star_range_s]
 
                 # Some of these arrays may have one dimension of size zero if
                 # there are no loops, but this is handled automatically.
-                L_tot[loop_range_o, loop_range_s] = m.L[m.loop_range_o, m.loop_range_s]
-                L_tot[loop_range_o, star_range_s] = m.L[m.loop_range_o, m.star_range_s]
-                L_tot[star_range_o, loop_range_s] = m.L[m.star_range_o, m.loop_range_s]
-                L_tot[star_range_o, star_range_s] = m.L[m.star_range_o, m.star_range_s]
+                L_tot[loop_range_o, loop_range_s] = L[m.loop_range_o, m.loop_range_s]
+                L_tot[loop_range_o, star_range_s] = L[m.loop_range_o, m.star_range_s]
+                L_tot[star_range_o, loop_range_s] = L[m.star_range_o, m.loop_range_s]
+                L_tot[star_range_o, star_range_s] = L[m.star_range_o, m.star_range_s]
 
+        # TODO: check symmetric
         return EfieImpedanceMatrixLoopStar(s, L_tot, S_tot, basis, basis,
-                                           m.operator, part_o, part_s)
+                                           m.operator, part_o, part_s, True)
 
 
 class ImpedanceParts(object):
@@ -613,46 +530,3 @@ class ImpedanceParts(object):
             else:
                 part = self.parent_part_o
         return self[part, part].eigenmodes(**kwargs)
-
-    def weight(self, part_modes):
-        """Calculate a reduced impedance matrix based on the scalar impedance
-        of the modes of each part, and the scalar coupling coefficients. These
-        are determined by projecting segments of the impedance matrix onto
-        the provided modes.
-
-        Parameters
-        ----------
-        part_modes : sequence of tuples of (part, modes_vec)
-            For each part `modes_vec` will be used as modes in which to base
-            the reduced model. Multiple modes should be represented by mutiple
-            columns of `modes_vec`.
-
-        Returns
-        -------
-        Z : ImpedanceMatrix
-            the reduced impedance matrix object
-
-        Note that indirectly including a part more than once in part_modes
-        (e.g. by including it and its parent part) will yield invalid results.
-        """
-
-        # calculate modal impedances for each part separately, and include
-        # coupling between all modess of different parts
-        L_red = []
-        S_red = []
-
-        for part_o, modes_o in part_modes:
-            L_row = []
-            S_row = []
-            for part_s, modes_s in part_modes:
-                L, S = self[part_o, part_s].weight(modes_o, modes_s,
-                                                   return_arrays=True)
-                L_row.append(L)
-                S_row.append(S)
-            L_red.append(np.hstack(L_row))
-            S_red.append(np.hstack(S_row))
-
-        L_red = np.vstack(L_red)
-        S_red = np.vstack(S_red)
-        return self.impedance_class(self.s, L_red, S_red, None, None,
-                                    self[part_o, part_s].operator, None, None)

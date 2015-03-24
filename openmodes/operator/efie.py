@@ -130,7 +130,11 @@ class EfieOperator(Operator):
         """
 
         # if source part is not given, default to observer part
-        part_s = part_s or part_o
+        if part_s is None:
+            part_s = part_o
+            symmetric = self.reciprocal
+        else:
+            symmetric = False
 
         basis_o = self.basis_container[part_o]
         basis_s = self.basis_container[part_s]
@@ -150,10 +154,10 @@ class EfieOperator(Operator):
 
         if issubclass(self.basis_container.basis_class, LoopStarBasis):
             return EfieImpedanceMatrixLoopStar(s, L, S, basis_o, basis_s, self,
-                                               part_o, part_s)
+                                               part_o, part_s, symmetric)
         else:
             return EfieImpedanceMatrix(s, L, S, basis_o, basis_s, self, part_o,
-                                       part_s)
+                                       part_s, symmetric)
 
     def far_field_radiation(self, s, part, current_vec, direction):
         """Calculate the far-field radiation in a given direction. Note that

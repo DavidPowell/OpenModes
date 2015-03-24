@@ -54,21 +54,24 @@ def eig_linearised(Z, modes):
     has_nullspace = (hasattr(Z.basis_o, 'num_loops')
                      and Z.basis_o.num_loops != 0)
 
+    L = Z.matrices['L']
+    S = Z.matrices['S']
+
     if has_nullspace:
         star_range = Z.star_range_o
 
         loop_range = Z.loop_range_o
 
-        L_conv = la.solve(Z.L[loop_range, loop_range],
-                          Z.L[loop_range, star_range])
-        L_red = (Z.L[star_range, star_range] -
-                 np.dot(Z.L[star_range, loop_range], L_conv))
+        L_conv = la.solve(L[loop_range, loop_range],
+                          L[loop_range, star_range])
+        L_red = (L[star_range, star_range] -
+                 np.dot(L[star_range, loop_range], L_conv))
     else:
         star_range = slice(None)
-        L_red = Z.L
+        L_red = L
 
     # find eigenvalues, and star part of eigenvectors, for LS combined modes
-    w, v_s = la.eig(Z.S[star_range, star_range], -L_red)
+    w, v_s = la.eig(S[star_range, star_range], -L_red)
 
     if has_nullspace:
         v_l = -np.dot(L_conv, v_s)
