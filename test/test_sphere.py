@@ -17,7 +17,7 @@ import openmodes
 from openmodes.basis import DivRwgBasis
 from openmodes.sources import PlaneWaveSource
 from openmodes.constants import c, eta_0
-from openmodes.operator import MfieOperator, EfieOperator
+from openmodes.operator import MfieOperator, EfieOperator, CfieOperator
 
 from helpers import read_1d_complex, write_1d_complex
 
@@ -63,7 +63,8 @@ def test_extinction_all(plot_extinction=False, skip_asserts=False,
     "Extinction of a PEC sphere with EFIE, MFIE, CFIE"
 
     tests = (("EFIE", EfieOperator, 'extinction_efie.npy'),
-             ("MFIE", MfieOperator, 'extinction_mfie.npy'))
+             ("MFIE", MfieOperator, 'extinction_mfie.npy'),
+             ("CFIE", CfieOperator, 'extinction_cfie.npy'))
 
     for operator_name, operator_class, reference_filename in tests:
 
