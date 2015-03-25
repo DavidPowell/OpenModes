@@ -18,66 +18,12 @@
 #-----------------------------------------------------------------------------
 
 
-import numpy as np
-
-from openmodes.core import z_mfie_faces_self, z_mfie_faces_mutual
 from openmodes.basis import LinearTriangleBasis
 from openmodes.impedance import SimpleImpedanceMatrix
 import logging
 
 from openmodes.operator.operator import Operator
-from openmodes.operator.singularities import singular_impedance_rwg
-
-
-def impedance_rwg_mfie_free_space(s, integration_rule, basis_o, nodes_o,
-                                  basis_s, nodes_s, normals, self_impedance,
-                                  num_singular_terms, singularity_accuracy,
-                                  tangential_form):
-    """MFIE derived Impedance matrix for RWG or loop-star basis functions"""
-
-    transform_o, _ = basis_o.transformation_matrices
-    num_faces_o = len(basis_o.mesh.polygons)
-
-    if self_impedance:
-        # calculate self impedance
-
-        singular_terms = singular_impedance_rwg(basis_o, operator="MFIE",
-                                                tangential_form=tangential_form,
-                                                num_terms=num_singular_terms,
-                                                rel_tol=singularity_accuracy,
-                                                normals=normals)
-
-        if np.any(np.isnan(singular_terms[0])):
-            raise ValueError("NaN returned in singular impedance terms")
-
-        num_faces_s = num_faces_o
-        Z_faces = z_mfie_faces_self(nodes_o, basis_o.mesh.polygons,
-                                    basis_o.mesh.polygon_areas, s,
-                                    integration_rule.xi_eta,
-                                    integration_rule.weights, normals,
-                                    tangential_form, *singular_terms)
-
-        transform_s = transform_o
-
-    else:
-        # calculate mutual impedance
-        num_faces_s = len(basis_s.mesh.polygons)
-
-        Z_faces = z_mfie_faces_mutual(nodes_o, basis_o.mesh.polygons,
-                                      nodes_s, basis_s.mesh.polygons,
-                                      s, integration_rule.xi_eta,
-                                      integration_rule.weights, normals,
-                                      tangential_form)
-
-        transform_s, _ = basis_s.transformation_matrices
-
-    if np.any(np.isnan(Z_faces)):
-        raise ValueError("NaN returned in impedance matrix")
-
-    Z = transform_o.dot(transform_s.dot(Z_faces.reshape(num_faces_o*3,
-                                                        num_faces_s*3,
-                                                        order='C').T).T)
-    return Z
+from openmodes.operator import rwg
 
 
 class MfieOperator(Operator):
@@ -154,13 +100,12 @@ class MfieOperator(Operator):
         normals = basis_o.mesh.surface_normals
 
         if isinstance(basis_o, LinearTriangleBasis):
-            Z = impedance_rwg_mfie_free_space(s, self.integration_rule,
-                                              basis_o, part_o.nodes,
-                                              basis_s, part_s.nodes,
-                                              normals, part_o == part_s,
-                                              self.num_singular_terms,
-                                              self.singularity_accuracy,
-                                              self.tangential_form)
+            Z = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
+                                     part_o.nodes, basis_s, part_s.nodes,
+                                     normals, part_o == part_s,
+                                     self.num_singular_terms,
+                                     self.singularity_accuracy,
+                                     self.tangential_form)
         else:
             raise NotImplementedError
 

@@ -18,9 +18,9 @@
 #-----------------------------------------------------------------------------
 
 from openmodes.operator.operator import Operator
-from openmodes.operator.efie import EfieOperator
-from openmodes.operator.mfie import MfieOperator
+from openmodes.basis import LinearTriangleBasis
 from openmodes.impedance import CfieImpedanceMatrix
+from openmodes.operator import rwg
 
 
 class CfieOperator(Operator):
@@ -28,7 +28,7 @@ class CfieOperator(Operator):
     reciprocal = False
 
     def __init__(self, integration_rule, basis_container, alpha=0.5,
-                 num_singular_terms=2):
+                 num_singular_terms=2, singularity_accuracy=1e-5):
         """
         Parameters
         ----------
@@ -44,14 +44,8 @@ class CfieOperator(Operator):
         self.basis_container = basis_container
         self.integration_rule = integration_rule
         self.num_singular_terms = num_singular_terms
+        self.singularity_accuracy = singularity_accuracy
         self.alpha = alpha
-
-        self.efie = EfieOperator(integration_rule, basis_container,
-                                 tangential_form=True,
-                                 num_singular_terms=num_singular_terms)
-        self.mfie = MfieOperator(integration_rule, basis_container,
-                                 tangential_form=False,
-                                 num_singular_terms=num_singular_terms)
 
     def source_single_part(self, source_field, s, part, extinction_field):
         basis = self.basis_container[part]
@@ -87,13 +81,26 @@ class CfieOperator(Operator):
         basis_o = self.basis_container[part_o]
         basis_s = self.basis_container[part_s]
 
+        normals = basis_o.mesh.surface_normals
+
         if not (basis_o.mesh.closed_surface and basis_s.mesh.closed_surface):
             raise ValueError("MFIE can only be solved for closed objects")
 
-        Z_m = self.mfie.impedance_single_parts(s, part_o, part_s)
-        Z_e = self.efie.impedance_single_parts(s, part_o, part_s)
+        if isinstance(basis_o, LinearTriangleBasis):
+            L, S = rwg.impedance_G(s, self.integration_rule, basis_o,
+                                   part_o.nodes, basis_s, part_s.nodes,
+                                   part_o == part_s, self.num_singular_terms,
+                                   self.singularity_accuracy)
 
-        return CfieImpedanceMatrix.build(s, Z_e.matrices['L'],
-                                         Z_e.matrices['S'], Z_m.matrices['Z'],
-                                         self.alpha, basis_o, basis_s, self,
-                                         part_o, part_s, False)
+            M = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
+                                     part_o.nodes, basis_s, part_s.nodes,
+                                     normals, part_o == part_s,
+                                     self.num_singular_terms,
+                                     self.singularity_accuracy,
+                                     tangential_form=False)
+
+        else:
+            raise NotImplementedError
+
+        return CfieImpedanceMatrix.build(s, L, S, M, self.alpha, basis_o,
+                                         basis_s, self,  part_o, part_s, False)

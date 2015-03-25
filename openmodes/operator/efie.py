@@ -18,72 +18,14 @@
 #-----------------------------------------------------------------------------
 
 
-import numpy as np
 import logging
 
-from openmodes.constants import epsilon_0, mu_0, pi
-from openmodes.core import z_efie_faces_self, z_efie_faces_mutual
 from openmodes.basis import LinearTriangleBasis, LoopStarBasis
 from openmodes.impedance import (EfieImpedanceMatrix,
                                  EfieImpedanceMatrixLoopStar)
 
 from openmodes.operator.operator import Operator
-from openmodes.operator.singularities import singular_impedance_rwg
-
-
-def impedance_rwg_efie_free_space(s, integration_rule, basis_o, nodes_o,
-                                  basis_s, nodes_s, self_impedance,
-                                  num_singular_terms, singularity_accuracy):
-    """EFIE derived Impedance matrix for RWG or loop-star basis functions"""
-
-    transform_L_o, transform_S_o = basis_o.transformation_matrices
-    num_faces_o = len(basis_o.mesh.polygons)
-
-    if (self_impedance):
-        # calculate self impedance
-
-        singular_terms = singular_impedance_rwg(basis_o, operator="EFIE",
-                                                tangential_form=True,
-                                                num_terms=num_singular_terms,
-                                                rel_tol=singularity_accuracy)
-        if (np.any(np.isnan(singular_terms[0])) or
-                np.any(np.isnan(singular_terms[1]))):
-            raise ValueError("NaN returned in singular impedance terms")
-
-        num_faces_s = num_faces_o
-        A_faces, phi_faces = z_efie_faces_self(nodes_o,
-                                               basis_o.mesh.polygons, s,
-                                               integration_rule.xi_eta,
-                                               integration_rule.weights,
-                                               *singular_terms)
-
-        transform_L_s = transform_L_o
-        transform_S_s = transform_S_o
-
-    else:
-        # calculate mutual impedance
-
-        num_faces_s = len(basis_s.mesh.polygons)
-
-        A_faces, phi_faces = z_efie_faces_mutual(nodes_o,
-                                basis_o.mesh.polygons, nodes_s,
-                                basis_s.mesh.polygons, s,
-                                integration_rule.xi_eta,
-                                integration_rule.weights)
-
-        transform_L_s, transform_S_s = basis_s.transformation_matrices
-
-    if np.any(np.isnan(A_faces)) or np.any(np.isnan(phi_faces)):
-        raise ValueError("NaN returned in impedance matrix")
-
-    L = transform_L_o.dot(transform_L_s.dot(A_faces.reshape(num_faces_o*3,
-                                                            num_faces_s*3,
-                                                            order='C').T).T)
-    S = transform_S_o.dot(transform_S_s.dot(phi_faces.T).T)
-
-    L *= mu_0/(4*pi)
-    S *= 1/(pi*epsilon_0)
-    return L, S
+from openmodes.operator import rwg
 
 
 class EfieOperator(Operator):
@@ -91,7 +33,6 @@ class EfieOperator(Operator):
     respect to some set of basis functions. Assumes that Galerkin's method is
     used, such that the testing functions are the same as the basis functions.
     """
-    reciprocal = True
 
     def __init__(self, integration_rule, basis_container,
                  tangential_form=True, num_singular_terms=2,
@@ -99,14 +40,14 @@ class EfieOperator(Operator):
         self.basis_container = basis_container
         self.integration_rule = integration_rule
         self.num_singular_terms = num_singular_terms
-        self.singularities_accuracy = singularity_accuracy
+        self.singularity_accuracy = singularity_accuracy
 
         self.tangential_form = tangential_form
         if tangential_form:
-            self.reciprocal = False
+            self.reciprocal = True
             self.source_cross = False
         else:
-            raise NotImplementedError("Tangential EFIE")
+            raise NotImplementedError("n x EFIE")
 
         logging.info("Creating EFIE operator, tangential form: %s"
                      % str(tangential_form))
@@ -136,12 +77,10 @@ class EfieOperator(Operator):
         basis_s = self.basis_container[part_s]
 
         if isinstance(basis_o, LinearTriangleBasis):
-            L, S = impedance_rwg_efie_free_space(s, self.integration_rule,
-                                                 basis_o, part_o.nodes,
-                                                 basis_s, part_s.nodes,
-                                                 part_o == part_s,
-                                                 self.num_singular_terms,
-                                                 self.singularities_accuracy)
+            L, S = rwg.impedance_G(s, self.integration_rule, basis_o,
+                                   part_o.nodes, basis_s, part_s.nodes,
+                                   part_o == part_s, self.num_singular_terms,
+                                   self.singularity_accuracy)
         else:
             raise NotImplementedError
 
