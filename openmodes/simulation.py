@@ -37,6 +37,7 @@ from openmodes.model import ScalarModelLeastSq
 from openmodes.mesh import TriangularSurfaceMesh
 from openmodes.helpers import Identified
 from openmodes.vector import VectorParts
+from openmodes.material import FreeSpace, PecMaterial
 
 
 class Simulation(Identified):
@@ -49,7 +50,8 @@ class Simulation(Identified):
                  basis_class=LoopStarBasis,
                  operator_class=EfieOperator,
                  name=None,
-                 basis_args=dict()):
+                 basis_args=dict(),
+                 background_material=FreeSpace):
         """
         Parameters
         ----------
@@ -62,6 +64,10 @@ class Simulation(Identified):
             The class representing the operator equation to be solved
         name : string, optional
             A name for this simulation
+        basis_args: dictionary, optional
+            Arguments to be passed when constructing basis functions
+        background_material: IsotropicMaterial, optional
+            The material containing all simulation objects
         """
 
         super(Simulation, self).__init__()
@@ -74,15 +80,18 @@ class Simulation(Identified):
         self.parts = CompositePart()
 
         self.basis_class = basis_class
+        self.background_material = background_material
         self.basis_container = BasisContainer(basis_class, basis_args)
         self.operator = operator_class(integration_rule=integration_rule,
-                                       basis_container=self.basis_container)
+                                       basis_container=self.basis_container,
+                                       background_material=background_material)
 
         logging.info('Creating simulation %s\nQuadrature order %d\n'
                      'Basis function class %s'
                      % (name, integration_rule.order, basis_class))
 
-    def place_part(self, mesh=None, parent=None, location=None):
+    def place_part(self, mesh=None, parent=None, location=None,
+                   material=PecMaterial):
         """Add a part to the simulation domain
 
         Parameters
@@ -95,6 +104,8 @@ class Simulation(Identified):
         location : array, optional
             If specified, place the part at a given location, otherwise it will
             be placed at the origin
+        material : IsotropicMaterial, optional,
+            The material of this part. If not specified, will default to PEC
 
         Returns
         -------
@@ -108,7 +119,7 @@ class Simulation(Identified):
         if mesh is None:
             part = CompositePart(location)
         else:
-            part = SinglePart(mesh, location=location)
+            part = SinglePart(mesh, location=location, material=material)
 
         # if not parent specified, use the root part of the simulation
         parent = parent or self.parts

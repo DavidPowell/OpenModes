@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------------
-
+"Operators for PEC scatterers"
 
 import logging
 
@@ -35,10 +35,11 @@ class EfieOperator(Operator):
     used, such that the testing functions are the same as the basis functions.
     """
 
-    def __init__(self, integration_rule, basis_container,
+    def __init__(self, integration_rule, basis_container, background_material,
                  tangential_form=True, num_singular_terms=2,
                  singularity_accuracy=1e-5):
         self.basis_container = basis_container
+        self.background_material = background_material
         self.integration_rule = integration_rule
         self.num_singular_terms = num_singular_terms
         self.singularity_accuracy = singularity_accuracy
@@ -77,10 +78,14 @@ class EfieOperator(Operator):
         basis_o = self.basis_container[part_o]
         basis_s = self.basis_container[part_s]
 
+        eps = self.background_material.epsilon_r(s)
+        mu = self.background_material.epsilon_r(s)
+
         if isinstance(basis_o, LinearTriangleBasis):
             L, S = rwg.impedance_G(s, self.integration_rule, basis_o,
                                    part_o.nodes, basis_s, part_s.nodes,
-                                   part_o == part_s, self.num_singular_terms,
+                                   part_o == part_s, eps, mu,
+                                   self.num_singular_terms,
                                    self.singularity_accuracy)
         else:
             raise NotImplementedError
@@ -109,7 +114,7 @@ class MfieOperator(Operator):
     """
     source_field = "magnetic_field"
 
-    def __init__(self, integration_rule, basis_container,
+    def __init__(self, integration_rule, basis_container, background_material,
                  tangential_form=False, num_singular_terms=2,
                  singularity_accuracy=1e-5):
         """
@@ -124,6 +129,7 @@ class MfieOperator(Operator):
         If True, -n x n x K is solved, otherwise n x K form is used
         """
         self.basis_container = basis_container
+        self.background_material = background_material
         self.integration_rule = integration_rule
         self.num_singular_terms = num_singular_terms
         self.singularity_accuracy = singularity_accuracy
@@ -170,6 +176,9 @@ class MfieOperator(Operator):
         basis_o = self.basis_container[part_o]
         basis_s = self.basis_container[part_s]
 
+        eps = self.background_material.epsilon_r(s)
+        mu = self.background_material.epsilon_r(s)
+
         if not (basis_o.mesh.closed_surface and basis_s.mesh.closed_surface):
             raise ValueError("MFIE can only be solved for closed objects")
 
@@ -178,7 +187,7 @@ class MfieOperator(Operator):
         if isinstance(basis_o, LinearTriangleBasis):
             Z = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
                                      part_o.nodes, basis_s, part_s.nodes,
-                                     normals, part_o == part_s,
+                                     normals, part_o == part_s, eps, mu,
                                      self.num_singular_terms,
                                      self.singularity_accuracy,
                                      self.tangential_form)
@@ -198,8 +207,8 @@ class CfieOperator(Operator):
     "Combined field integral equation for PEC objects"
     reciprocal = False
 
-    def __init__(self, integration_rule, basis_container, alpha=0.5,
-                 num_singular_terms=2, singularity_accuracy=1e-5):
+    def __init__(self, integration_rule, basis_container, background_material,
+                 alpha=0.5, num_singular_terms=2, singularity_accuracy=1e-5):
         """
         Parameters
         ----------
@@ -213,6 +222,7 @@ class CfieOperator(Operator):
         """
 
         self.basis_container = basis_container
+        self.background_material = background_material
         self.integration_rule = integration_rule
         self.num_singular_terms = num_singular_terms
         self.singularity_accuracy = singularity_accuracy
@@ -252,6 +262,9 @@ class CfieOperator(Operator):
         basis_o = self.basis_container[part_o]
         basis_s = self.basis_container[part_s]
 
+        eps = self.background_material.epsilon_r(s)
+        mu = self.background_material.epsilon_r(s)
+
         normals = basis_o.mesh.surface_normals
 
         if not (basis_o.mesh.closed_surface and basis_s.mesh.closed_surface):
@@ -260,12 +273,13 @@ class CfieOperator(Operator):
         if isinstance(basis_o, LinearTriangleBasis):
             L, S = rwg.impedance_G(s, self.integration_rule, basis_o,
                                    part_o.nodes, basis_s, part_s.nodes,
-                                   part_o == part_s, self.num_singular_terms,
+                                   part_o == part_s, eps, mu,
+                                   self.num_singular_terms,
                                    self.singularity_accuracy)
 
             M = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
                                      part_o.nodes, basis_s, part_s.nodes,
-                                     normals, part_o == part_s,
+                                     normals, part_o == part_s, eps, mu,
                                      self.num_singular_terms,
                                      self.singularity_accuracy,
                                      tangential_form=False)

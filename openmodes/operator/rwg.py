@@ -24,11 +24,11 @@ import numpy as np
 from openmodes.operator.singularities import singular_impedance_rwg
 from openmodes.core import z_mfie_faces_self, z_mfie_faces_mutual
 from openmodes.core import z_efie_faces_self, z_efie_faces_mutual
-from openmodes.constants import epsilon_0, mu_0, pi
+from openmodes.constants import epsilon_0, mu_0, pi, c
 
 
 def impedance_curl_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
-                     normals, self_impedance, num_singular_terms,
+                     normals, self_impedance, epsilon, mu, num_singular_terms,
                      singularity_accuracy, tangential_form):
     """Calculates the impedance matrix corresponding to the equation:
     fm . curl(G) . fn
@@ -36,6 +36,8 @@ def impedance_curl_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
 
     transform_o, _ = basis_o.transformation_matrices
     num_faces_o = len(basis_o.mesh.polygons)
+
+    gamma_0 = s/c*np.sqrt(epsilon*mu)
 
     if self_impedance:
         # calculate self impedance
@@ -51,7 +53,7 @@ def impedance_curl_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
 
         num_faces_s = num_faces_o
         Z_faces = z_mfie_faces_self(nodes_o, basis_o.mesh.polygons,
-                                    basis_o.mesh.polygon_areas, s,
+                                    basis_o.mesh.polygon_areas, gamma_0,
                                     integration_rule.xi_eta,
                                     integration_rule.weights, normals,
                                     tangential_form, *singular_terms)
@@ -64,7 +66,7 @@ def impedance_curl_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
 
         Z_faces = z_mfie_faces_mutual(nodes_o, basis_o.mesh.polygons,
                                       nodes_s, basis_s.mesh.polygons,
-                                      s, integration_rule.xi_eta,
+                                      gamma_0, integration_rule.xi_eta,
                                       integration_rule.weights, normals,
                                       tangential_form)
 
@@ -80,13 +82,16 @@ def impedance_curl_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
 
 
 def impedance_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
-                self_impedance, num_singular_terms, singularity_accuracy):
+                self_impedance, epsilon, mu, num_singular_terms,
+                singularity_accuracy):
     """Calculates the impedance matrix corresponding to the equation:
     fm . (I + grad grad) G . fn
     for RWG or loop-star basis functions"""
 
     transform_L_o, transform_S_o = basis_o.transformation_matrices
     num_faces_o = len(basis_o.mesh.polygons)
+
+    gamma_0 = s/c*np.sqrt(epsilon*mu)
 
     if (self_impedance):
         # calculate self impedance
@@ -101,7 +106,7 @@ def impedance_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
 
         num_faces_s = num_faces_o
         A_faces, phi_faces = z_efie_faces_self(nodes_o,
-                                               basis_o.mesh.polygons, s,
+                                               basis_o.mesh.polygons, gamma_0,
                                                integration_rule.xi_eta,
                                                integration_rule.weights,
                                                *singular_terms)
@@ -117,7 +122,8 @@ def impedance_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
         A_faces, phi_faces = z_efie_faces_mutual(nodes_o,
                                                  basis_o.mesh.polygons,
                                                  nodes_s,
-                                                 basis_s.mesh.polygons, s,
+                                                 basis_s.mesh.polygons,
+                                                 gamma_0,
                                                  integration_rule.xi_eta,
                                                  integration_rule.weights)
 
@@ -131,6 +137,6 @@ def impedance_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
                                                             order='C').T).T)
     S = transform_S_o.dot(transform_S_s.dot(phi_faces.T).T)
 
-    L *= mu_0/(4*pi)
-    S *= 1/(pi*epsilon_0)
+    L *= mu*mu_0/(4*pi)
+    S *= 1/(pi*epsilon*epsilon_0)
     return L, S

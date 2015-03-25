@@ -42,14 +42,14 @@ module core_for
         end function
 
         pure subroutine face_integral_EFIE(n_s, n_s2, xi_eta_s, weights_s, &
-                        nodes_s, n_o, xi_eta_o, weights_o, nodes_o, jk_0, I_A, I_phi)
+                        nodes_s, n_o, xi_eta_o, weights_o, nodes_o, gamma_0, I_A, I_phi)
             use constants
             implicit none
         
             integer, intent(in) :: n_s, n_s2, n_o
             ! f2py intent(hide) :: n_s, n_s2, n_o
             real(WP), dimension(3, 3), intent(in) :: nodes_s, nodes_o
-            complex(WP), intent(in) :: jk_0
+            complex(WP), intent(in) :: gamma_0
         
             real(WP), intent(in), dimension(0:n_s2-1, 0:n_s-1, 2) :: xi_eta_s
             real(WP), intent(in), dimension(0:n_s2-1, 0:n_s-1) :: weights_s
@@ -87,14 +87,14 @@ module core_for
         end subroutine
 
         subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
-                weights_o, nodes_o_in, jk_0, normal, T_form, num_singular_terms, I_Z)
+                weights_o, nodes_o_in, gamma_0, normal, T_form, num_singular_terms, I_Z)
             ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
             ! NB: includes the 1/4A**2 prefactor
             !
             ! xi_eta_s/o - list of coordinate pairs in source/observer triangle
             ! weights_s/o - the integration weights of the source and observer
             ! nodes_s/o - the nodes of the source and observer triangles
-            ! jk_0 - *complex* free space wavenumber, j*k_0
+            ! gamma_0 - *complex* free space wavenumber, j*k_0
             ! nodes - the position of the triangle nodes
         
             use constants
@@ -102,7 +102,7 @@ module core_for
         
             integer, intent(in) :: n_s, n_o
             real(WP), dimension(3, 3), intent(in) :: nodes_s_in, nodes_o_in
-            complex(WP), intent(in) :: jk_0
+            complex(WP), intent(in) :: gamma_0
         
             real(WP), intent(in), dimension(0:n_s-1, 2) :: xi_eta_s
             real(WP), intent(in), dimension(0:n_s-1) :: weights_s
@@ -254,7 +254,7 @@ end subroutine
 
 subroutine Z_EFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_triangles_s, &
                                num_integration, nodes_o, triangle_nodes_o, nodes_s, triangle_nodes_s, &
-                                s, xi_eta_eval, weights, &
+                                gamma_0, xi_eta_eval, weights, &
                                 A_face, phi_face)
     ! Calculate the face to face interaction terms used to build the impedance matrix
     ! For mutual coupling terms between different parts
@@ -264,7 +264,7 @@ subroutine Z_EFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
     !
     ! nodes - position of all the triangle nodes
     ! omega - evaulation frequency in rad/s
-    ! s - complex frequency
+    ! gamma_0 - complex wavenumber of background
     ! xi_eta_eval, weights - quadrature rule over the triangle (weights normalised to 0.5)
 
     use core_for
@@ -277,7 +277,7 @@ subroutine Z_EFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
     real(WP), intent(in), dimension(0:num_nodes_s-1, 0:2) :: nodes_s
     integer, intent(in), dimension(0:num_triangles_s-1, 0:2) :: triangle_nodes_s
 
-    complex(WP), intent(in) :: s
+    complex(WP), intent(in) :: gamma_0
 
     real(WP), intent(in), dimension(0:num_integration-1, 0:1) :: xi_eta_eval
     real(WP), intent(in), dimension(0:num_integration-1) :: weights
@@ -285,16 +285,11 @@ subroutine Z_EFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
     complex(WP), intent(out), dimension(0:num_triangles_o-1, 0:2, 0:num_triangles_s-1, 0:2) :: A_face
     complex(WP), intent(out), dimension(0:num_triangles_o-1, 0:num_triangles_s-1) :: phi_face
     
-    
-    complex(WP) :: jk_0 
-    
     real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
     complex(WP), dimension(3, 3) :: I_A
     complex(WP) :: I_phi
 
     integer :: p, q
-
-    jk_0 = s/c
 
     ! calculate all the integrations for each face pair
     !$OMP PARALLEL DO SCHEDULE(DYNAMIC) DEFAULT(SHARED) &
@@ -308,7 +303,7 @@ subroutine Z_EFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
             ! As per RWG, triangle area must be cancelled in the integration
             ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
             call EFIE_face_integrals(num_integration, xi_eta_eval, weights, nodes_q, &
-                                num_integration, xi_eta_eval, weights, nodes_p, jk_0, 0, I_A, I_phi)
+                                num_integration, xi_eta_eval, weights, nodes_p, gamma_0, 0, I_A, I_phi)
             ! by symmetry of Galerkin procedure, transposed components are identical (but transposed node indices)
             A_face(p, :, q, :) = I_A
             phi_face(p, q) = I_phi
@@ -321,14 +316,14 @@ end subroutine Z_EFIE_faces_mutual
 
 
 subroutine EFIE_face_integrals(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
-        weights_o, nodes_o_in, jk_0, degree_singular, I_A, I_phi)
+        weights_o, nodes_o_in, gamma_0, degree_singular, I_A, I_phi)
     ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
     ! NB: includes the 1/4A**2 prefactor
     !
     ! xi_eta_s/o - list of coordinate pairs in source/observer triangle
     ! weights_s/o - the integration weights of the source and observer
     ! nodes_s/o - the nodes of the source and observer triangles
-    ! jk_0 - *complex* free space wavenumber, j*k_0
+    ! gamma_0 - *complex* free space wavenumber, j*k_0
     ! nodes - the position of the triangle nodes
 
     use core_for
@@ -337,7 +332,7 @@ subroutine EFIE_face_integrals(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta
     integer, intent(in) :: n_s, n_o
     ! f2py intent(hide) :: n_s, n_o
     real(WP), dimension(3, 3), intent(in) :: nodes_s_in, nodes_o_in
-    complex(WP), intent(in) :: jk_0
+    complex(WP), intent(in) :: gamma_0
 
     real(WP), intent(in), dimension(0:n_s-1, 2) :: xi_eta_s
     real(WP), intent(in), dimension(0:n_s-1) :: weights_s
@@ -414,17 +409,17 @@ subroutine EFIE_face_integrals(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta
             R = sqrt(sum((r_s - r_o)**2))
 
             if (degree_singular == 0) then 
-                g = exp(-jk_0*R)/R
+                g = exp(-gamma_0*R)/R
             else
-                if (abs(jk_0*R) < 1e-8) then
+                if (abs(gamma_0*R) < 1e-8) then
                     ! give the explicit limit for R=0 
                     ! (could use a Taylor expansion for small k_0*R?)
-                    g = -jk_0
+                    g = -gamma_0
                 else
-                    g = (exp(-jk_0*R) - 1.0)/R
+                    g = (exp(-gamma_0*R) - 1.0)/R
                 end if
                 if (degree_singular > 1) then
-                    g = g - (jk_0**2)*R/2.0
+                    g = g - (gamma_0**2)*R/2.0
                 end if
             end if
 
@@ -441,7 +436,7 @@ end subroutine EFIE_face_integrals
 
 
 subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_singular, degree_singular, &
-                                nodes, triangle_nodes, s, xi_eta_eval, weights, phi_precalc, A_precalc, &
+                                nodes, triangle_nodes, gamma_0, xi_eta_eval, weights, phi_precalc, A_precalc, &
                                 indices_precalc, indptr_precalc, A_face, phi_face)
     ! Calculate the face to face interaction terms used to build the impedance matrix
     !
@@ -451,8 +446,7 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
     ! nodes - position of all the triangle nodes
     ! basis_tri_p/m - the positive and negative triangles for each basis function
     ! basis_node_p/m - the free nodes for each basis function
-    ! omega - evaulation frequency in rad/s
-    ! s - complex frequency
+    ! gamma_0 - complex background wavenumber
     ! xi_eta_eval, weights - quadrature rule over the triangle (weights normalised to 0.5)
     ! A_precalc, phi_precalc - precalculated 1/R singular terms
 
@@ -465,7 +459,7 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
     real(WP), intent(in), dimension(0:num_nodes-1, 0:2) :: nodes
     integer, intent(in), dimension(0:num_triangles-1, 0:2) :: triangle_nodes
 
-    complex(WP), intent(in) :: s
+    complex(WP), intent(in) :: gamma_0
 
     real(WP), intent(in), dimension(0:num_integration-1, 0:1) :: xi_eta_eval
     real(WP), intent(in), dimension(0:num_integration-1) :: weights
@@ -477,17 +471,12 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
 
     complex(WP), intent(out), dimension(0:num_triangles-1, 0:2, 0:num_triangles-1, 0:2) :: A_face
     complex(WP), intent(out), dimension(0:num_triangles-1, 0:num_triangles-1) :: phi_face
-    
-    
-    complex(WP) :: jk_0 
-    
+       
     real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
     complex(WP), dimension(3, 3) :: I_A
     complex(WP) :: I_phi
 
     integer :: p, q, index_singular
-
-    jk_0 = s/c
 
     ! calculate all the integrations for each face pair
     !$OMP PARALLEL DO SCHEDULE(DYNAMIC) DEFAULT(SHARED) &
@@ -500,7 +489,7 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
             if (any(triangle_nodes(p, :) == triangle_nodes(q, :))) then
                 ! triangles have one or more common nodes, perform singularity extraction
                 call EFIE_face_integrals(num_integration, xi_eta_eval, weights, nodes_q, &
-                                    num_integration, xi_eta_eval, weights, nodes_p, jk_0, degree_singular, I_A, I_phi)
+                                    num_integration, xi_eta_eval, weights, nodes_p, gamma_0, degree_singular, I_A, I_phi)
         
                 ! the singular 1/R components are pre-calculated
                 index_singular = scr_index(p, q, indices_precalc, indptr_precalc)
@@ -510,8 +499,8 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
                 
                 ! The R term
                 if (degree_singular > 1) then
-                    I_A = I_A + A_precalc(index_singular, 1, :, :)*jk_0**2/2
-                    I_phi = I_phi + phi_precalc(index_singular, 1)*jk_0**2/2
+                    I_A = I_A + A_precalc(index_singular, 1, :, :)*gamma_0**2/2
+                    I_phi = I_phi + phi_precalc(index_singular, 1)*gamma_0**2/2
                 end if
         
             else
@@ -519,7 +508,7 @@ subroutine Z_EFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
                 ! As per RWG, triangle area must be cancelled in the integration
                 ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
                 call EFIE_face_integrals(num_integration, xi_eta_eval, weights, nodes_q, &
-                                    num_integration, xi_eta_eval, weights, nodes_p, jk_0, 0, I_A, I_phi)
+                                    num_integration, xi_eta_eval, weights, nodes_p, gamma_0, 0, I_A, I_phi)
             end if
 
             ! by symmetry of Galerkin procedure, transposed components are identical (but transposed node indices)
@@ -969,14 +958,14 @@ end subroutine face_integrals_yla_oijala
 
 
 subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
-        weights_o, nodes_o_in, jk_0, normal, T_form, num_singular_terms, I_Z)
+        weights_o, nodes_o_in, gamma_0, normal, T_form, num_singular_terms, I_Z)
     ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
     ! NB: includes the 1/4A**2 prefactor
     !
     ! xi_eta_s/o - list of coordinate pairs in source/observer triangle
     ! weights_s/o - the integration weights of the source and observer
     ! nodes_s/o - the nodes of the source and observer triangles
-    ! jk_0 - *complex* free space wavenumber, j*k_0
+    ! gamma_0 - *complex* free space wavenumber, j*k_0
     ! nodes - the position of the triangle nodes
 
     use core_for
@@ -985,7 +974,7 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
 
     integer, intent(in) :: n_s, n_o
     real(WP), dimension(3, 3), intent(in) :: nodes_s_in, nodes_o_in
-    complex(WP), intent(in) :: jk_0
+    complex(WP), intent(in) :: gamma_0
 
     real(WP), intent(in), dimension(0:n_s-1, 2) :: xi_eta_s
     real(WP), intent(in), dimension(0:n_s-1) :: weights_s
@@ -1062,11 +1051,11 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
             R = sqrt(sum((r_s - r_o)**2))
 
             if (num_singular_terms == 1) then
-                g = ((1.0 + jk_0*R)*exp(-jk_0*R) - 1.0)/R**3
+                g = ((1.0 + gamma_0*R)*exp(-gamma_0*R) - 1.0)/R**3
             elseif (num_singular_terms == 2) then
-                g = ((1.0 + jk_0*R)*exp(-jk_0*R) - 1.0 + 0.5*(jk_0*R)**2)/R**3
+                g = ((1.0 + gamma_0*R)*exp(-gamma_0*R) - 1.0 + 0.5*(gamma_0*R)**2)/R**3
             else
-                g = (1.0 + jk_0*R)*exp(-jk_0*R)/R**3
+                g = (1.0 + gamma_0*R)*exp(-gamma_0*R)/R**3
             end if
 
             
@@ -1173,7 +1162,7 @@ subroutine face_unit_integral(n, xi_eta, weights, nodes_in, normal, n_cross, I_Z
 end subroutine face_unit_integral
 
 subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_singular, degree_singular, nodes, triangle_nodes, &
-                                triangle_areas, s, xi_eta, weights, normals, T_form, Z_precalc, &
+                                triangle_areas, gamma_0, xi_eta, weights, normals, T_form, Z_precalc, &
                                 indices_precalc, indptr_precalc, Z_face)
     ! Calculate the face to face interaction terms used to build the impedance matrix
     !
@@ -1183,8 +1172,7 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
     ! nodes - position of all the triangle nodes
     ! basis_tri_p/m - the positive and negative triangles for each basis function
     ! basis_node_p/m - the free nodes for each basis function
-    ! omega - evaulation frequency in rad/s
-    ! s - complex frequency
+    ! gamma_0 - complex background wavenumber
     ! xi_eta, weights - quadrature rule over the triangle (weights normalised to 0.5)
     ! Z_precalc - precalculated 1/R and R singular terms
 
@@ -1198,7 +1186,7 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
     integer, intent(in), dimension(0:num_triangles-1, 0:2) :: triangle_nodes
     real(WP), intent(in), dimension(0:num_triangles-1) :: triangle_areas
 
-    complex(WP), intent(in) :: s
+    complex(WP), intent(in) :: gamma_0
 
     real(WP), intent(in), dimension(0:num_integration-1, 0:1) :: xi_eta
     real(WP), intent(in), dimension(0:num_integration-1) :: weights
@@ -1211,14 +1199,10 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
 
     complex(WP), intent(out), dimension(0:num_triangles-1, 0:2, 0:num_triangles-1, 0:2) :: Z_face
     
-    complex(WP) :: jk_0 
-    
     real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
     complex(WP), dimension(3, 3) :: I_Z
 
     integer :: p, q, index_singular
-
-    jk_0 = s/c
 
     !$OMP PARALLEL DO SCHEDULE(DYNAMIC) DEFAULT(SHARED) &
     !$OMP PRIVATE (p, q, nodes_p, nodes_q, I_Z, index_singular)
@@ -1236,7 +1220,7 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
             elseif (any(triangle_nodes(p, :) == triangle_nodes(q, :))) then
                 ! triangles have one or two common nodes, perform singularity extraction
                 call face_integral_MFIE(num_integration, xi_eta, weights, nodes_q, &
-                                    num_integration, xi_eta, weights, nodes_p, jk_0, normals(p, :), T_form, 1, I_Z)
+                                    num_integration, xi_eta, weights, nodes_p, gamma_0, normals(p, :), T_form, 1, I_Z)
                 ! the singular components are pre-calculated
                 index_singular = scr_index(p, q, indices_precalc, indptr_precalc)
 
@@ -1247,7 +1231,7 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
 
 !                ! The R term
 !                if (degree_singular > 1) then
-!                    I_Z = I_Z - Z_precalc(index_singular, 1, :, :)*jk_0**2/2
+!                    I_Z = I_Z - Z_precalc(index_singular, 1, :, :)*gamma_0**2/2
 !                end if
 
                 I_Z = I_Z/4.0/pi
@@ -1257,7 +1241,7 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
                 ! As per RWG, triangle area must be cancelled in the integration
                 ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
                 call face_integral_MFIE(num_integration, xi_eta, weights, nodes_q, &
-                                    num_integration, xi_eta, weights, nodes_p, jk_0, normals(p, :), T_form, 0, I_Z)
+                                    num_integration, xi_eta, weights, nodes_p, gamma_0, normals(p, :), T_form, 0, I_Z)
                 I_Z = I_Z/4.0/pi
             end if
 
@@ -1272,7 +1256,7 @@ end subroutine Z_MFIE_faces_self
 
 
 subroutine Z_MFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_triangles_s, num_integration, nodes_o, triangles_o, &
-                                nodes_s, triangles_s, s, xi_eta, weights, normals_o, T_form, &
+                                nodes_s, triangles_s, gamma_0, xi_eta, weights, normals_o, T_form, &
                                 Z_face)
     ! Calculate the face to face interaction terms used to build the impedance matrix
     !
@@ -1282,8 +1266,7 @@ subroutine Z_MFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
     ! nodes - position of all the triangle nodes
     ! basis_tri_p/m - the positive and negative triangles for each basis function
     ! basis_node_p/m - the free nodes for each basis function
-    ! omega - evaulation frequency in rad/s
-    ! s - complex frequency
+    ! gamma_0 - complex background wavenumber
     ! xi_eta, weights - quadrature rule over the triangle (weights normalised to 0.5)
     ! Z_precalc - precalculated 1/R and R singular terms
 
@@ -1297,7 +1280,7 @@ subroutine Z_MFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
     real(WP), intent(in), dimension(0:num_nodes_s-1, 0:2) :: nodes_s
     integer, intent(in), dimension(0:num_triangles_s-1, 0:2) :: triangles_s
 
-    complex(WP), intent(in) :: s
+    complex(WP), intent(in) :: gamma_0
 
     real(WP), intent(in), dimension(0:num_integration-1, 0:1) :: xi_eta
     real(WP), intent(in), dimension(0:num_integration-1) :: weights
@@ -1306,14 +1289,10 @@ subroutine Z_MFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
 
     complex(WP), intent(out), dimension(0:num_triangles_o-1, 0:2, 0:num_triangles_s-1, 0:2) :: Z_face
     
-    complex(WP) :: jk_0 
-    
     real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
     complex(WP), dimension(3, 3) :: I_Z
 
     integer :: p, q
-
-    jk_0 = s/c
 
     !$OMP PARALLEL DO SCHEDULE(DYNAMIC) DEFAULT(SHARED) &
     !$OMP PRIVATE (p, q, nodes_p, nodes_q, I_Z)
@@ -1327,7 +1306,7 @@ subroutine Z_MFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
                 ! As per RWG, triangle area must be cancelled in the integration
                 ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
                 call face_integral_MFIE(num_integration, xi_eta, weights, nodes_q, &
-                                    num_integration, xi_eta, weights, nodes_p, jk_0, normals_o(p, :), T_form, 0, I_Z)
+                                    num_integration, xi_eta, weights, nodes_p, gamma_0, normals_o(p, :), T_form, 0, I_Z)
                 I_Z = I_Z/4.0/pi
 
             Z_face(p, :, q, :) = I_Z

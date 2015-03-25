@@ -19,16 +19,27 @@
 """
 Routines to describe materials
 """
+from __future__ import division
 
 from openmodes.helpers import Identified
+
+
+def wrap_if_constant(func):
+    """If passed a constant, wrap it in a function. If passed a function, just
+    return it as is"""
+    if hasattr(func, '__call__'):
+        return func
+    else:
+        return lambda x: func
 
 
 class IsotropicMaterial(Identified):
     "An isotropic material with a given permittivity and permeability"
     def __init__(self, name, epsilon_r, mu_r):
+        super(IsotropicMaterial, self).__init__()
         self.name = name
-        self.epsilon_r = epsilon_r
-        self.mu_r = mu_r
+        self.epsilon_r = wrap_if_constant(epsilon_r)
+        self.mu_r = wrap_if_constant(mu_r)
 
 # a constant for free space
 FreeSpace = IsotropicMaterial("Free space", 1.0, 1.0)
