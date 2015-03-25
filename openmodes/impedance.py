@@ -218,7 +218,7 @@ class AbstractImpedanceMatrix(object):
         for key, val in self.matrices.items():
             matrices_red[key] = modes_o.T.dot(val.dot(modes_s))
 
-        return self.__class__(matrices_red, self.metadata)
+        return self.__class__(matrices_red, self.md)
 
     def source_modes(self, V, num_modes, mode_currents):
         "Take a source field, and project it onto the modes of the system"
@@ -234,8 +234,8 @@ class AbstractImpedanceMatrix(object):
     def T(self):
         "A transposed version of the impedance matrix"
         # note interchange of source and observer basis functions
-        matrices_T = {key: val.T for key, val in self.matrices.items}
-        return self.__class__(matrices_T, self.metadata)
+        matrices_T = {key: val.T for key, val in self.matrices.items()}
+        return self.__class__(matrices_T, self.md)
 
     @staticmethod
     def combine_parts(matrices, s, part_o, part_s):
