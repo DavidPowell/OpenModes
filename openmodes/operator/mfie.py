@@ -20,13 +20,12 @@
 
 import numpy as np
 
-from openmodes.constants import epsilon_0, mu_0, pi, c
 from openmodes.core import z_mfie_faces_self, z_mfie_faces_mutual
 from openmodes.basis import LinearTriangleBasis
 from openmodes.impedance import SimpleImpedanceMatrix
 import logging
 
-from openmodes.operator.operator import Operator, FreeSpaceGreensFunction
+from openmodes.operator.operator import Operator
 from openmodes.operator.singularities import singular_impedance_rwg
 
 
@@ -89,7 +88,6 @@ class MfieOperator(Operator):
     source_field = "magnetic_field"
 
     def __init__(self, integration_rule, basis_container,
-                 greens_function=FreeSpaceGreensFunction(),
                  tangential_form=False, num_singular_terms=2,
                  singularity_accuracy=1e-5):
         """
@@ -105,7 +103,6 @@ class MfieOperator(Operator):
         """
         self.basis_container = basis_container
         self.integration_rule = integration_rule
-        self.greens_function = greens_function
         self.num_singular_terms = num_singular_terms
         self.singularity_accuracy = singularity_accuracy
 
@@ -156,18 +153,14 @@ class MfieOperator(Operator):
 
         normals = basis_o.mesh.surface_normals
 
-        if isinstance(self.greens_function, FreeSpaceGreensFunction):
-            if isinstance(basis_o, LinearTriangleBasis):
-                Z = impedance_rwg_mfie_free_space(s, self.integration_rule,
-                                                  basis_o, part_o.nodes,
-                                                  basis_s, part_s.nodes,
-                                                  normals,
-                                                  part_o == part_s,
-                                                  self.num_singular_terms,
-                                                  self.singularity_accuracy,
-                                                  self.tangential_form)
-            else:
-                raise NotImplementedError
+        if isinstance(basis_o, LinearTriangleBasis):
+            Z = impedance_rwg_mfie_free_space(s, self.integration_rule,
+                                              basis_o, part_o.nodes,
+                                              basis_s, part_s.nodes,
+                                              normals, part_o == part_s,
+                                              self.num_singular_terms,
+                                              self.singularity_accuracy,
+                                              self.tangential_form)
         else:
             raise NotImplementedError
 

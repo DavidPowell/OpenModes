@@ -31,7 +31,7 @@ from openmodes import gmsh
 from openmodes.integration import DunavantRule
 from openmodes.parts import SinglePart, CompositePart
 from openmodes.basis import LoopStarBasis, BasisContainer
-from openmodes.operator import EfieOperator, FreeSpaceGreensFunction
+from openmodes.operator import EfieOperator
 from openmodes.visualise import plot_mayavi, write_vtk, preprocess
 from openmodes.model import ScalarModelLeastSq
 from openmodes.mesh import TriangularSurfaceMesh

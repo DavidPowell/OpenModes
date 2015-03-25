@@ -27,7 +27,7 @@ from openmodes.basis import LinearTriangleBasis, LoopStarBasis
 from openmodes.impedance import (EfieImpedanceMatrix,
                                  EfieImpedanceMatrixLoopStar)
 
-from openmodes.operator.operator import Operator, FreeSpaceGreensFunction
+from openmodes.operator.operator import Operator
 from openmodes.operator.singularities import singular_impedance_rwg
 
 
@@ -94,12 +94,10 @@ class EfieOperator(Operator):
     reciprocal = True
 
     def __init__(self, integration_rule, basis_container,
-                 greens_function=FreeSpaceGreensFunction(),
                  tangential_form=True, num_singular_terms=2,
                  singularity_accuracy=1e-5):
         self.basis_container = basis_container
         self.integration_rule = integration_rule
-        self.greens_function = greens_function
         self.num_singular_terms = num_singular_terms
         self.singularities_accuracy = singularity_accuracy
 
@@ -137,16 +135,13 @@ class EfieOperator(Operator):
         basis_o = self.basis_container[part_o]
         basis_s = self.basis_container[part_s]
 
-        if isinstance(self.greens_function, FreeSpaceGreensFunction):
-            if isinstance(basis_o, LinearTriangleBasis):
-                L, S = impedance_rwg_efie_free_space(s, self.integration_rule,
-                                                     basis_o, part_o.nodes,
-                                                     basis_s, part_s.nodes,
-                                                     part_o == part_s,
-                                                     self.num_singular_terms,
-                                                     self.singularities_accuracy)
-            else:
-                raise NotImplementedError
+        if isinstance(basis_o, LinearTriangleBasis):
+            L, S = impedance_rwg_efie_free_space(s, self.integration_rule,
+                                                 basis_o, part_o.nodes,
+                                                 basis_s, part_s.nodes,
+                                                 part_o == part_s,
+                                                 self.num_singular_terms,
+                                                 self.singularities_accuracy)
         else:
             raise NotImplementedError
 
@@ -165,44 +160,3 @@ class EfieOperator(Operator):
         basis = self.basis_container[part]
         return basis.weight_function(field, self.integration_rule,
                                      part.nodes, self.source_cross)
-
-    def far_field_radiation(self, s, part, current_vec, direction):
-        """Calculate the far-field radiation in a given direction. Note that
-        all calculations will be referenced to the global origin. This means
-        that the contributions of different parts can be added together if
-        their current solutions were calculated consistently.
-
-        Parameters
-        ----------
-        s : complex
-            The complex frequency
-        part : SinglePart
-            The part for which to calculate far-field radiation.
-        current_vec : ndarray
-            The current solution defined over basis functions
-        direction : (num_direction, 3) ndarray
-           The directions in which to calculate radiation as cartesian vectors
-        xi_eta : (num_points, 2) ndarray
-            The barycentric integration points
-        weights : (num_points) ndarray
-            The integration weights
-
-        Returns
-        -------
-        pattern : (num_direction, 3) ndarray
-            The radiation pattern in each direction. When multiplied by
-            $exp(jkr)/r$, this gives the far-field component of the
-            electric field at distance r.
-        """
-
-        raise NotImplementedError
-
-        # ensure that all directions are unit vectors
-        direction = np.atleast_2d(direction)
-        direction /= np.sqrt(np.sum(direction**2, axis=1))
-
-        basis = self.basis_container[part]
-        r, currents = basis.interpolate_function(current_vec,
-                                                 self.integration_rule,
-                                                 nodes=part.mesh.nodes,
-                                                 scale_area=False)
