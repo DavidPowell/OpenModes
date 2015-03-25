@@ -20,6 +20,4 @@
 Operator classes
 """
 
-from .efie import EfieOperator
-from .mfie import MfieOperator
-from .cfie import CfieOperator
+from .pec import EfieOperator, MfieOperator, CfieOperator
