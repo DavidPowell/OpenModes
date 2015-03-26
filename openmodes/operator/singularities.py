@@ -182,11 +182,9 @@ def singular_impedance_rwg(basis, operator, tangential_form, num_terms,
         which_operator = OPERATOR_EFIE
     elif operator == "EFIE":
         raise NotImplementedError
-    elif operator == "MFIE" and not tangential_form:
+    elif operator == "MFIE":
         singular_terms = MultiSparse([(np.float64, (num_terms, 3, 3))])  # A
         which_operator = OPERATOR_MFIE
-    elif operator == "MFIE":
-        raise NotImplementedError
     else:
         raise ValueError("Don't know how to handle singularities for operator "
                          "%s with tangential_form=%s" %
@@ -217,7 +215,10 @@ def singular_impedance_rwg(basis, operator, tangential_form, num_terms,
             res = face_integrals_yla_oijala(nodes[polygons[q]], rule.xi_eta, rule.weights,
                                           nodes[polygons[p]], normal_o=normal)
             if operator == "MFIE":
-                singular_terms[p, q] = (res[2],)
+                if tangential_form:
+                    singular_terms[p, q] = (res[3],)
+                else:
+                    singular_terms[p, q] = (res[2],)
             else:
                 singular_terms[p, q] = (res[1], res[0])
 

@@ -786,7 +786,7 @@ end subroutine face_integrals_hanninen
 
 
 subroutine face_integrals_yla_oijala(nodes_s, n_o, xi_eta_o, weights_o, &
-                                   nodes_o, normal_o, I_A, I_phi, Z_NMFIE)
+                                   nodes_o, normal_o, I_A, I_phi, Z_NMFIE, Z_TMFIE)
     ! Fully integrated over source and observer the singular part of the MOM 
     ! for RWG basis functions
     ! NB: includes the 1/4A**2 prefactor
@@ -809,6 +809,7 @@ subroutine face_integrals_yla_oijala(nodes_s, n_o, xi_eta_o, weights_o, &
     real(WP), intent(out), dimension(2, 3, 3) :: I_A
     real(WP), intent(out), dimension(2) :: I_phi
     real(WP), intent(out), dimension(2, 3, 3) :: Z_NMFIE
+    real(WP), intent(out), dimension(2, 3, 3) :: Z_TMFIE
 
     real(WP) :: xi_o, eta_o, zeta_o, w_o
     integer :: count_o, count_s, basis_o, basis_s, order
@@ -941,18 +942,25 @@ subroutine face_integrals_yla_oijala(nodes_s, n_o, xi_eta_o, weights_o, &
             I_A(2, basis_o, basis_s) = I_A(2, basis_o, basis_s) + w_o*dot_product(r-nodes_o(basis_o, :), K_2(1,  basis_s, :))
         end forall
 
-        ! n x MFIE term, invalid on self triangle
+        ! n x MFIE term, and tangential MFIE, invalid on self triangle
         forall (basis_o=1:3, basis_s=1:3)
             Z_NMFIE(1, basis_o, basis_s) = Z_NMFIE(1, basis_o, basis_s) + w_o*dot_product(r-nodes_o(basis_o, :), &
                     cross_product(normal_o, K_4(-1, basis_s, :)))
             Z_NMFIE(2, basis_o, basis_s) = Z_NMFIE(2, basis_o, basis_s) + w_o*dot_product(r-nodes_o(basis_o, :), &
                     cross_product(normal_o, K_4(1,  basis_s, :)))
+
+            Z_TMFIE(1, basis_o, basis_s) = Z_TMFIE(1, basis_o, basis_s) + w_o*dot_product(r-nodes_o(basis_o, :), &
+                    K_4(-1, basis_s, :))
+            Z_TMFIE(2, basis_o, basis_s) = Z_TMFIE(2, basis_o, basis_s) + w_o*dot_product(r-nodes_o(basis_o, :), &
+                    K_4(1,  basis_s, :))
         end forall
+
 
     end do
     I_phi = I_phi/A/2
     I_A = I_A/A/2
     Z_NMFIE = Z_NMFIE/A/2
+    Z_TMFIE = Z_TMFIE/A/2
 
 end subroutine face_integrals_yla_oijala
 

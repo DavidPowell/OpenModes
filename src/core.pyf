@@ -63,7 +63,7 @@ python module core ! in
             real(kind=wp) dimension(2,3,3),intent(out) :: z_nmfie
             real(kind=wp) dimension(2,3,3),intent(out) :: z_tmfie
         end subroutine face_integrals_hanninen
-        subroutine face_integrals_yla_oijala(nodes_s,n_o,xi_eta_o,weights_o,nodes_o,normal_o,i_a,i_phi,z_nmfie) ! in :core:src/rwg.f90
+        subroutine face_integrals_yla_oijala(nodes_s,n_o,xi_eta_o,weights_o,nodes_o,normal_o,i_a,i_phi,z_nmfie,z_tmfie) ! in :core:src/rwg.f90
             use vectors
             use constants
             real(kind=wp) dimension(3,3),intent(in) :: nodes_s
@@ -75,6 +75,7 @@ python module core ! in
             real(kind=wp) dimension(2,3,3),intent(out) :: i_a
             real(kind=wp) dimension(2),intent(out) :: i_phi
             real(kind=wp) dimension(2,3,3),intent(out) :: z_nmfie
+            real(kind=wp) dimension(2,3,3),intent(out) :: z_tmfie
         end subroutine face_integrals_yla_oijala
         subroutine z_mfie_faces_self(num_nodes,num_triangles,num_integration,num_singular,degree_singular,nodes,triangle_nodes,triangle_areas,gamma_0,xi_eta,weights,normals,t_form,z_precalc,indices_precalc,indptr_precalc,z_face) ! in :core:src/rwg.f90
             use core_for
