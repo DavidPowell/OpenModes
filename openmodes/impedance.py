@@ -462,6 +462,44 @@ class EfieImpedanceMatrixLoopStar(EfieImpedanceMatrix):
                                                  part_s, True)
 
 
+class PenetrableImpedanceMatrix(AbstractImpedanceMatrix):
+    """Holds an impedance matrix from a surface equivalent problem for
+    a penetrable scatterer
+
+    Notation is from Kern and Martin, JOSA A 26, 732 (2009)
+    """
+
+    @classmethod
+    def build(cls, s, L_i, L_o, S_i, S_o, K_i, K_o, z_sq_i, z_sq_o,
+              basis_o, basis_s, operator, part_o, part_s, symmetric):
+        matrices = {'L_i': L_i, 'L_o': L_o, 'S_i': S_i, 'S_o': S_o,
+                    'K_i': K_i, 'K_o': K_o}
+        metadata = {'basis_o': basis_o, 'basis_s': basis_s, 's': s,
+                    'operator': operator, 'part_o': part_o, 'part_s': part_s,
+                    'symmetric': symmetric, 'z_sq_i': z_sq_i, 'z_sq_o': z_sq_o}
+        return cls(matrices, metadata)
+
+    def __init__(self, matrices, metadata):
+        if not all(x in matrices for x in ('L_i', 'L_o', 'S_i', 'S_o', 'K_i',
+                                           'K_o')):
+            raise ValueError("Penetrable impedance matrix must have matrices")
+
+        super(PenetrableImpedanceMatrix, self).__init__(matrices, metadata)
+
+    def __getitem__(self, index):
+        """Evaluates all or part of the impedance matrix, and returns it as
+        an array.
+        """
+        s = self.md['s']
+        D_in = s*self.matrices['L_i'][index]+self.matrices['S_i'][index]/s
+        D_out = s*self.matrices['L_o'][index]+self.matrices['S_o'][index]/s
+        K_in = self.matrices['K_i']
+        K_out = self.matrices['K_o']
+        return np.vstack((np.hstack((D_out + D_in, -K_out-K_in)),
+                         (np.hstack((K_out+K_in, D_out/self.md['z_sq_o'] +
+                                     D_in/self.md['z_sq_i'])))))
+
+
 class ImpedanceParts(object):
     """Holds a impedance matrices calculated at a specific frequency
 
