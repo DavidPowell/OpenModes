@@ -1066,22 +1066,10 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
                 g = (1.0 + gamma_0*R)*exp(-gamma_0*R)/R**3
             end if
 
-            
             if (T_form) then
                 ! The tang RWG form
                 forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
-                    dot_product(rho_o(:, uu), -cross_product(normal, cross_product(normal, cross_product(r_o - r_s, rho_s(:, vv))))))
-                !forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
-                !    dot_product(rho_o(:, uu), cross_product(r_o - r_s, rho_s(:, vv))))
-
-
-                !forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
-                !    dot_product(rho_o(:, uu), cross_product(r_o - r_s, rho_s(:, vv))))
-
-                ! From Reid
-                !forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
-                !    dot_product(r_o - r_s, cross_product(rho_o(:, uu), rho_s(:, vv))))
-
+                    dot_product(rho_o(:, uu), cross_product(r_o - r_s, rho_s(:, vv))))
             else     
                 ! The n x RWG form
                 forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
