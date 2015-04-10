@@ -32,6 +32,7 @@ import struct
 import numpy as np
 from collections import defaultdict
 import re
+import logging
 
 from openmodes.helpers import MeshError
 
@@ -89,8 +90,10 @@ def mesh_geometry(filename, dirname, mesh_tol=None, binary=True,
 
     if binary:
         call_options += ['-bin']
+
+    logging.info("Calling gmsh with options %s" % call_options)
     proc = subprocess.Popen(call_options, stdout=subprocess.PIPE,
-                            universal_newlines=True)
+                            stderr=subprocess.PIPE, universal_newlines=True)
 
     # run the process and read in stderr and stdout streams
     stdouttxt, stderrtxt = proc.communicate()
@@ -99,6 +102,11 @@ def mesh_geometry(filename, dirname, mesh_tol=None, binary=True,
         print(stdouttxt)
         print(stderrtxt)
         raise MeshError("Gmsh did not run successfully")
+
+    logging.info(stdouttxt)
+    if len(stderrtxt) > 0:
+        logging.warning("gmsh error/warning for file %s:\n%s"
+                        % (filename, stderrtxt))
 
     return meshname
 
