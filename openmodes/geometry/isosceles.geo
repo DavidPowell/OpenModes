@@ -1,10 +1,10 @@
 // an isosceles triangle
 
-If (width == 0.0)
+If (!Exists(width))
     width = 1e-3;
 EndIf
 
-If (height == 0.0)
+If (!Exists(height))
     height = 10e-3;
 EndIf
 

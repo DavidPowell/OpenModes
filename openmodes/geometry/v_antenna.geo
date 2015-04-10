@@ -3,22 +3,24 @@
 // allow the geometric parameters to be specified on the command-line
 
 // the width of each arm
-If (width == 0.0)
+If (!Exists(width))
     width = 5e-3;
 EndIf
 
 // the length of each arm
-If (length == 0.0)
+If (!Exists(length))
     length = 20.0e-3;
 EndIf
 
 // The angular span between the arm centres in degrees
-If (span == 0.0)
+If (!Exists(span))
     span = 45.0;
 EndIf
 
 // The orientation of the centre of the V relative to the x-axis is "orientation"
-// The default value is just zero, to allow it to be overridden with any value, including 0.
+If (!Exists(orientation))
+    orientation = 0.0;
+EndIf
 
 // If span is greater than 180 degrees, modify both span and
 // orientation so that span is less than 180

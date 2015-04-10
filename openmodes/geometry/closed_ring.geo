@@ -1,10 +1,10 @@
 // a planar closed ring
 
-If (inner_radius == 0.0)
+If (!Exists(inner_radius))
     inner_radius = 3.5e-3;
 EndIf
 
-If (outer_radius == 0.0)
+If (!Exists(outer_radius))
     outer_radius = 4e-3;
 EndIf
 

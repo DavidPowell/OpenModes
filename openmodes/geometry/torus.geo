@@ -1,11 +1,11 @@
 // A torus
 
 // Allow radius to be specified on the command line
-If (major_radius == 0.0)
+If (!Exists(major_radius))
     major_radius = 10e-3;
 EndIf
 
-If (minor_radius == 0.0)
+If (!Exists(minor_radius))
     minor_radius = 3e-3;
 EndIf
 

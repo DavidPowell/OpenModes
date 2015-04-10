@@ -2,14 +2,22 @@
 // specify the parameters positive_arc_angle and negative_arc_angle (in degrees) to control
 // the circular arcs at the ends of the arms
 
-If (width == 0.0)
+If (!Exists(width))
     width = 1e-3;
 EndIf
 
-If (r_outer == 0.0)
+If (!Exists(r_outer))
     r_outer = 10e-3;
 EndIf
 
+If (!Exists(positive_arc_angle))
+    positive_arc_angle = 10.0;
+EndIf
+
+If (!Exists(negative_arc_angle))
+    negative_arc_angle = positive_arc_angle;
+EndIf
+    
 negative_arc_angle = negative_arc_angle/180.0*Pi;
 positive_arc_angle = positive_arc_angle/180.0*Pi;
 

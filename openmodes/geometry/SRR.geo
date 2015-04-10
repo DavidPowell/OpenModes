@@ -1,19 +1,19 @@
 // a 2D split ring resonator
 
 // allow the geometric parameters to be specified on the command-line
-If (inner_radius == 0.0)
+If (!Exists(inner_radius))
     inner_radius = 3.5e-3;
 EndIf
 
-If (outer_radius == 0.0)
+If (!Exists(outer_radius))
     outer_radius = 4e-3;
 EndIf
 
-If (gap_width == 0.0)
+If (!Exists(gap_width))
     gap_width = 1e-3;
 EndIf
 
-If (mesh_tol == 0.0)
+If (!Exists(mesh_tol))
     mesh_tol = 2e-3;
 EndIf
 

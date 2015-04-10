@@ -1,18 +1,18 @@
 lc = 2e-3;
 
-If (inner_radius == 0.0)
+If (!Exists(inner_radius))
     inner_radius = 3e-3;
 EndIf
 
-If (outer_radius == 0.0)
+If (!Exists(outer_radius))
     outer_radius = 4e-3;
 EndIf
 
-If (gap_width == 0.0)
+If (!Exists(gap_width))
     gap_width = 3e-3;
 EndIf
 
-If (arm_length == 0.0)
+If (!Exists(arm_length))
     arm_length = 10e-3;
 EndIf
 

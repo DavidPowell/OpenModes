@@ -1,14 +1,14 @@
 // a flat rectangle
 
-If (width == 0.0)
+If (!Exists(width))
     width = 1e-3;
 EndIf
 
-If (height == 0.0)
+If (!Exists(height))
     height = 10e-3;
 EndIf
 
-If (mesh_tol == 0.0)
+If (!Exists(mesh_tol))
     mesh_tol = 3e-3;
 EndIf
 

@@ -1,10 +1,10 @@
 // a planar circle
 
-If (outer_radius == 0.0)
+If (!Exists(outer_radius))
     outer_radius = 4e-3;
 EndIf
 
-If (mesh_tol == 0.0)
+If (!Exists(mesh_tol))
     mesh_tol = 3e-3;
 EndIf
 

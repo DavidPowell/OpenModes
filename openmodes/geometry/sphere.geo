@@ -1,12 +1,12 @@
 // A sphere
 
 // Allow radius to be specified on the command line
-If (radius == 0.0)
+If (!Exists(radius))
     radius = 10e-3;
 EndIf
 
 // base element size on radius
-If (mesh_tol == 0.0)
+If (!Exists(mesh_tol))
     mesh_tol = radius*0.2;
 EndIf
 

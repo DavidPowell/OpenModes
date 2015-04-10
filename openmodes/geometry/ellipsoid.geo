@@ -1,21 +1,21 @@
 // An ellipsoid sphere
 
 // Allow the radii to be specified on the command line
-If (radius_x == 0.0)
+If (!Exists(radius_x))
     radius_x = 10e-3;
 EndIf
 
-If (radius_y == 0.0)
+If (!Exists(radius_y))
     radius_y = 12e-3;
 EndIf
 
-If (radius_z == 0.0)
+If (!Exists(radius_z))
     radius_z = 8e-3;
 EndIf
 
 // base element size on radius
-If (mesh_tol == 0.0)
-    mesh_tol = radius*0.2;
+If (!Exists(mesh_tol))
+    mesh_tol = radius_x*0.2;
 EndIf
 
 Point(1) = {0.0,0.0,0.0,mesh_tol};

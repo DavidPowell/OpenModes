@@ -1,23 +1,23 @@
 // a horseshoe without rounded edges
 
 // geometric parameters specifiable from the command line
-If (width == 0.0)
+If (!Exists(width))
     width = 12e-3;
 EndIf
 
-If (length == 0.0)
+If (!Exists(length))
     length = 12e-3;
 EndIf
 
-If (height == 0.0)
+If (!Exists(height))
     height = 3e-3;
 EndIf
 
-If (track == 0.0)
+If (!Exists(track))
     track = 3e-3;
 EndIf
 
-If (mesh_tol == 0.0)
+If (!Exists(mesh_tol))
     mesh_tol = 5e-3;
 EndIf
 
