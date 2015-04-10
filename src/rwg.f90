@@ -585,7 +585,7 @@ subroutine hanninen_inner(nodes_s, r_o, n_hat, h, m_hat, I_L_m1, I_L_1, I_L_3, I
     y = abs(dot_product(a(:, 1), cross_product(a(:, 2), a(:, 3))))
 
     ! This expression is for the absolute value of Omega, need the sign from h
-    I_S_m3_h = 2*atan2(y, x)*sign(1.0, h)
+    I_S_m3_h = 2*atan2(y, x)*sign(1.0_WP, h)
 
     I_S_m1 = -h*I_S_m3_h - sum(t*I_L_m1) 
     I_S_1 = h**2/3.0*I_S_m1 -sum(t*I_L_1)/3.0
