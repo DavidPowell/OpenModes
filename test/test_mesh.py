@@ -24,19 +24,33 @@ import os.path as osp
 def test_closed():
     "Check whether the meshes are closed"
 
-    mesh_values = [('circle.geo', False), ('cross.geo', False),
-                   ('rectangle.geo', False), ('v_antenna.geo', False),
-                   ('sphere.geo', True), ('closed_ring.geo', False),
-                   ('SRR.geo', False), ('torus.geo', True),
-                   ('canonical_spiral.geo', False),
-                   ('horseshoe_rect.geo', True)]
+    # For each file, list whether each of the meshes it contains is closed.
+    # There may be multiple meshes per file.
+    mesh_values = [('asymmetric_ring.geo', (False, False)),
+                   # ('canonical_spiral.geo', (False,)),
+                   ('circle.geo', (False,)),
+                   ('circled_cross.geo', (False,)),
+                   ('closed_ring.geo', (False,)),
+                   ('cross.geo', (False,)),
+                   ('ellipsoid.geo', (True,)),
+                   ('horseshoe_rect.geo', (True,)),
+                   ('isosceles.geo', (False,)),
+                   ('rectangle.geo', (False,)),
+                   ('single.geo', (False,)),
+                   ('sphere.geo', (True,)),
+                   ('SRR.geo', (False,)),
+                   ('torus.geo', (True,)),
+                   # ('v_antenna.geo', (False,)),
+                   ]
 
     sim = openmodes.Simulation()
 
     for filename, closed in mesh_values:
-        mesh = sim.load_mesh(osp.join(openmodes.geometry_dir, filename))
-        assert mesh.closed_surface == closed, ("%s closed_surface is not %s" %
-                                               (filename, closed))
+        mesh = sim.load_mesh(osp.join(openmodes.geometry_dir, filename),
+                             force_tuple=True)
+        assert all(m.closed_surface == closed_val for (m, closed_val) in
+                   zip(mesh, closed)), \
+            ("%s closed_surface is not %s" % (filename, closed))
 
 if __name__ == "__main__":
     test_closed()
