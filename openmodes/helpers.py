@@ -177,3 +177,12 @@ def equivalence(relations):
 
     # the class names are arbitrary, so just return the list of sets
     return classes_reverse.values()
+
+
+def wrap_if_constant(func):
+    """If passed a constant, wrap it in a function. If passed a function, just
+    return it as is"""
+    if hasattr(func, '__call__'):
+        return func
+    else:
+        return lambda x: func

@@ -21,16 +21,7 @@ Routines to describe materials
 """
 from __future__ import division
 
-from openmodes.helpers import Identified
-
-
-def wrap_if_constant(func):
-    """If passed a constant, wrap it in a function. If passed a function, just
-    return it as is"""
-    if hasattr(func, '__call__'):
-        return func
-    else:
-        return lambda x: func
+from openmodes.helpers import Identified, wrap_if_constant
 
 
 class IsotropicMaterial(Identified):
