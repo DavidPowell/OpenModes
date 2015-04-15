@@ -49,6 +49,7 @@ class AbstractImpedanceMatrix(object):
             elements 's', 'operator', 'part_o', 'part_s', 'basis_o', 'basis_s'
             'symmetric'
         """
+        # TODO: Some kind of traits library could replace these dicts
         self.matrices = matrices
         self.md = metadata
 
@@ -466,23 +467,31 @@ class PenetrableImpedanceMatrix(AbstractImpedanceMatrix):
     """Holds an impedance matrix from a surface equivalent problem for
     a penetrable scatterer
 
-    Notation is from Kern and Martin, JOSA A 26, 732 (2009)
+    Notation is from Yla-Oijala, Radio Science 2005
     """
 
+    # The matrices and metadata needed by this class
+    matrix_names = ('L_i', 'L_o', 'S_i', 'S_o', 'K_i', 'K_o')
+    metadata_names = ('basis_o', 'basis_s', 's', 'operator', 'part_o',
+                      'part_s', 'symmetric', 'w_EFIE_i', 'w_MFIE_i',
+                      'w_EFIE_o', 'w_MFIE_o', 'eta_i', 'eta_o')
+
     @classmethod
-    def build(cls, s, L_i, L_o, S_i, S_o, K_i, K_o, z_sq_i, z_sq_o,
-              basis_o, basis_s, operator, part_o, part_s, symmetric):
-        matrices = {'L_i': L_i, 'L_o': L_o, 'S_i': S_i, 'S_o': S_o,
-                    'K_i': K_i, 'K_o': K_o}
-        metadata = {'basis_o': basis_o, 'basis_s': basis_s, 's': s,
-                    'operator': operator, 'part_o': part_o, 'part_s': part_s,
-                    'symmetric': symmetric, 'z_sq_i': z_sq_i, 'z_sq_o': z_sq_o}
-        return cls(matrices, metadata)
+    def build(cls, s, L_i, L_o, S_i, S_o, K_i, K_o, eta_i, eta_o, w_EFIE_i,
+              w_MFIE_i, w_EFIE_o, w_MFIE_o, basis_o, basis_s, operator,
+              part_o, part_s, symmetric):
+        """Build the matrices and metadata structures, and use it to create the
+        object, which is returned"""
+        loc = locals()
+        return cls({m: loc[m] for m in cls.matrix_names},
+                   {m: loc[m] for m in cls.metadata_names})
 
     def __init__(self, matrices, metadata):
-        if not all(x in matrices for x in ('L_i', 'L_o', 'S_i', 'S_o', 'K_i',
-                                           'K_o')):
-            raise ValueError("Penetrable impedance matrix must have matrices")
+        if not all(m in matrices for m in self.matrix_names):
+            raise ValueError("Penetrable impedance matrix missing matrices")
+
+        if not all(m in metadata for m in self.metadata_names):
+            raise ValueError("Penetrable impedance matrix missing metadata")
 
         super(PenetrableImpedanceMatrix, self).__init__(matrices, metadata)
 
@@ -491,13 +500,20 @@ class PenetrableImpedanceMatrix(AbstractImpedanceMatrix):
         an array.
         """
         s = self.md['s']
-        D_in = s*self.matrices['L_i'][index]+self.matrices['S_i'][index]/s
-        D_out = s*self.matrices['L_o'][index]+self.matrices['S_o'][index]/s
-        K_in = self.matrices['K_i']
-        K_out = self.matrices['K_o']
-        return np.vstack((np.hstack((D_out + D_in, -K_out-K_in)),
-                         (np.hstack((K_out+K_in, D_out/self.md['z_sq_o'] +
-                                     D_in/self.md['z_sq_i'])))))
+        D_i = s*self.matrices['L_i'][index]+self.matrices['S_i'][index]/s
+        D_o = s*self.matrices['L_o'][index]+self.matrices['S_o'][index]/s
+        K_i = self.matrices['K_i'][index]
+        K_o = self.matrices['K_o'][index]
+        eta_o = self.md['eta_o']
+        eta_i = self.md['eta_i']
+        w_EFIE_i = self.md['w_EFIE_i']
+        w_EFIE_o = self.md['w_EFIE_o']
+        w_MFIE_i = self.md['w_MFIE_i']
+        w_MFIE_o = self.md['w_MFIE_o']
+        return np.vstack((np.hstack((eta_o*D_o*w_EFIE_o + eta_i*D_i*w_EFIE_i,
+                                     -K_o*w_EFIE_o-K_i*w_EFIE_i)),
+                         (np.hstack((K_o*w_MFIE_o+K_i*w_MFIE_i,
+                                     D_o/eta_o*w_MFIE_o + D_i/eta_i*w_MFIE_i)))))
 
 
 class ImpedanceParts(object):

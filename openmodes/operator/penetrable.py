@@ -20,19 +20,21 @@
 
 from __future__ import division
 
+import numpy as np
+
 from openmodes.basis import LinearTriangleBasis
 from openmodes.impedance import PenetrableImpedanceMatrix
 from openmodes.operator.operator import Operator
 from openmodes.operator import rwg
-from openmodes.constants import epsilon_0, mu_0
+from openmodes.constants import epsilon_0, mu_0, c
 
 
-class PMCHWTOperator(Operator):
-    "PMCHWT operator for penetrable objects"
+class TOperator(Operator):
+    "General tangential-form operator for penetrable objects"
     reciprocal = False
 
     def __init__(self, integration_rule, basis_container,
-                 background_material,
+                 background_material, w_EFIE_i, w_EFIE_o, w_MFIE_i, w_MFIE_o,
                  num_singular_terms=2, singularity_accuracy=1e-5):
         """
         Parameters
@@ -52,6 +54,10 @@ class PMCHWTOperator(Operator):
         self.num_singular_terms = num_singular_terms
         self.background_material = background_material
         self.singularity_accuracy = singularity_accuracy
+        self.w_EFIE_i = w_EFIE_i
+        self.w_EFIE_o = w_EFIE_o
+        self.w_MFIE_i = w_MFIE_i
+        self.w_MFIE_o = w_MFIE_o
 
     def source_single_part(self, source_field, s, part, extinction_field):
         basis = self.basis_container[part]
@@ -63,7 +69,7 @@ class PMCHWTOperator(Operator):
         V_H = basis.weight_function(H_field, self.integration_rule,
                                     part.nodes, False)
 
-        return V_E, V_H
+        return V_E*self.w_EFIE_o, V_H*self.w_MFIE_o
 
     def impedance_single_parts(self, s, part_o, part_s=None):
         """Calculate a self or mutual impedance matrix at a given complex
@@ -95,6 +101,10 @@ class PMCHWTOperator(Operator):
         eps_o = self.background_material.epsilon_r(s)
         mu_i = part_s.material.mu_r(s)
         mu_o = self.background_material.mu_r(s)
+        c_i = c/np.sqrt(eps_i*mu_i)
+        c_o = c/np.sqrt(eps_o*mu_o)
+        eta_i = np.sqrt((mu_i*mu_0)/(eps_i*epsilon_0))
+        eta_o = np.sqrt((mu_o*mu_0)/(eps_o*epsilon_0)),
 
         if isinstance(basis_o, LinearTriangleBasis):
             L_i, S_i = rwg.impedance_G(s, self.integration_rule, basis_o,
@@ -108,6 +118,13 @@ class PMCHWTOperator(Operator):
                                        part_o == part_s, eps_o, mu_o,
                                        self.num_singular_terms,
                                        self.singularity_accuracy)
+
+            # This scaling ensures that this operator has the same definition
+            # as cursive D defined by Yla-Oijala, Radio Science 2005.
+            L_i /= c_i
+            S_i *= c_i
+            L_o /= c_o
+            S_o *= c_o
 
             # note opposite sign of normals for interior problem
             K_i = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
@@ -129,8 +146,22 @@ class PMCHWTOperator(Operator):
         # TODO: some sub-matrices are symmetric but total isn't...
         return PenetrableImpedanceMatrix.build(s, L_i, L_o, S_i, S_o,
                                                K_i, K_o,
-                                               (mu_i*mu_0)/(eps_i*epsilon_0),
-                                               (mu_o*mu_0)/(eps_o*epsilon_0),
+                                               eta_i, eta_o,
+                                               self.w_EFIE_i, self.w_EFIE_o,
+                                               self.w_MFIE_i, self.w_MFIE_o,
                                                basis_o, basis_s,
                                                self, part_o, part_s,
                                                symmetric=False)
+
+
+class PMCHWTOperator(TOperator):
+    "Tangential PMCHWT operator for penetrable objects"
+    reciprocal = False
+
+    def __init__(self, integration_rule, basis_container,
+                 background_material,
+                 num_singular_terms=2, singularity_accuracy=1e-5):
+        super(PMCHWTOperator, self).__init__(integration_rule, basis_container,
+                                             background_material, 1, 1, 1, 1,
+                                             num_singular_terms,
+                                             singularity_accuracy)
