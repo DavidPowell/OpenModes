@@ -30,12 +30,16 @@ from openmodes.constants import epsilon_0, mu_0, c
 
 
 class TOperator(Operator):
-    "General tangential-form operator for penetrable objects"
+    """General tangential-form operator for penetrable objects
+
+    Note that this class is designed as an abstract base, so it should not
+    be created directly.
+    """
     reciprocal = False
 
     def __init__(self, integration_rule, basis_container,
-                 background_material, w_EFIE_i, w_EFIE_o, w_MFIE_i, w_MFIE_o,
-                 num_singular_terms=2, singularity_accuracy=1e-5):
+                 background_material, num_singular_terms=2,
+                 singularity_accuracy=1e-5):
         """
         Parameters
         ----------
@@ -54,10 +58,6 @@ class TOperator(Operator):
         self.num_singular_terms = num_singular_terms
         self.background_material = background_material
         self.singularity_accuracy = singularity_accuracy
-        self.w_EFIE_i = w_EFIE_i
-        self.w_EFIE_o = w_EFIE_o
-        self.w_MFIE_i = w_MFIE_i
-        self.w_MFIE_o = w_MFIE_o
 
     def source_single_part(self, source_field, s, part, extinction_field):
         basis = self.basis_container[part]
@@ -69,11 +69,12 @@ class TOperator(Operator):
         V_H = basis.weight_function(H_field, self.integration_rule,
                                     part.nodes, False)
 
-        return V_E*self.w_EFIE_o, V_H*self.w_MFIE_o
+        return V_E, V_H
 
     def impedance_single_parts(self, s, part_o, part_s=None):
         """Calculate a self or mutual impedance matrix at a given complex
-        frequency
+        frequency. Note that this abstract function should be called by
+        sub-classes, not by the user.
 
         Parameters
         ----------
@@ -84,6 +85,8 @@ class TOperator(Operator):
         part_s : SinglePart, optional
             The source part, if not specified will default to observing part
         """
+
+        # TODO: Handle the mutual impedance case
 
         # if source part is not given, default to observer part
         part_s = part_s or part_o
@@ -143,15 +146,20 @@ class TOperator(Operator):
         else:
             raise NotImplementedError
 
+        # Build the matrices and metadata for creating the impedance matrix
+        # object from the locally defined variables. This relies on them having
+        # the correct name in this function. The parent class must set the
+        # weights for the different parts of the equations
+        loc = locals()
+        matrices = {name: loc[name] for name in
+                    PenetrableImpedanceMatrix.matrix_names}
+        metadata = {name: loc[name] for name in
+                    PenetrableImpedanceMatrix.metadata_names if name in loc}
         # TODO: some sub-matrices are symmetric but total isn't...
-        return PenetrableImpedanceMatrix.build(s, L_i, L_o, S_i, S_o,
-                                               K_i, K_o,
-                                               eta_i, eta_o,
-                                               self.w_EFIE_i, self.w_EFIE_o,
-                                               self.w_MFIE_i, self.w_MFIE_o,
-                                               basis_o, basis_s,
-                                               self, part_o, part_s,
-                                               symmetric=False)
+        metadata["symmetric"] = False
+        metadata["operator"] = self
+
+        return matrices, metadata
 
 
 class PMCHWTOperator(TOperator):
@@ -162,6 +170,27 @@ class PMCHWTOperator(TOperator):
                  background_material,
                  num_singular_terms=2, singularity_accuracy=1e-5):
         super(PMCHWTOperator, self).__init__(integration_rule, basis_container,
-                                             background_material, 1, 1, 1, 1,
+                                             background_material,
                                              num_singular_terms,
                                              singularity_accuracy)
+
+    def impedance_single_parts(self, s, part_o, part_s=None):
+        """Calculate a self or mutual impedance matrix at a given complex
+        frequency
+
+        Parameters
+        ----------
+        s : complex
+            Complex frequency at which to calculate impedance
+        part_o : SinglePart
+            The observing part, which must be a single part, not a composite
+        part_s : SinglePart, optional
+            The source part, if not specified will default to observing part
+        """
+        matrices, metadata = super(PMCHWTOperator, self).impedance_single_parts(s, part_o, part_s)
+        # set the weights
+        metadata['w_EFIE_i'] = 1.0
+        metadata['w_EFIE_o'] = 1.0
+        metadata['w_MFIE_i'] = 1.0
+        metadata['w_MFIE_o'] = 1.0
+        return PenetrableImpedanceMatrix(matrices, metadata)
