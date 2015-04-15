@@ -27,6 +27,7 @@ from openmodes.impedance import (EfieImpedanceMatrix,
 
 from openmodes.operator.operator import Operator
 from openmodes.operator import rwg
+from openmodes.constants import epsilon_0, mu_0
 
 
 class EfieOperator(Operator):
@@ -89,6 +90,9 @@ class EfieOperator(Operator):
                                    self.singularity_accuracy)
         else:
             raise NotImplementedError
+
+        L *= mu*mu_0
+        S /= eps*epsilon_0
 
         if issubclass(self.basis_container.basis_class, LoopStarBasis):
             return EfieImpedanceMatrixLoopStar.build(s, L, S, basis_o, basis_s,
@@ -276,6 +280,8 @@ class CfieOperator(Operator):
                                    part_o == part_s, eps, mu,
                                    self.num_singular_terms,
                                    self.singularity_accuracy)
+            L *= mu*mu_0
+            S /= eps*epsilon_0
 
             M = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
                                      part_o.nodes, basis_s, part_s.nodes,

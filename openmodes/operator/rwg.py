@@ -24,7 +24,7 @@ import numpy as np
 from openmodes.operator.singularities import singular_impedance_rwg
 from openmodes.core import z_mfie_faces_self, z_mfie_faces_mutual
 from openmodes.core import z_efie_faces_self, z_efie_faces_mutual
-from openmodes.constants import epsilon_0, mu_0, pi, c
+from openmodes.constants import pi, c
 
 
 def impedance_curl_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
@@ -86,7 +86,11 @@ def impedance_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
                 singularity_accuracy):
     """Calculates the impedance matrix corresponding to the equation:
     fm . (I + grad grad) G . fn
-    for RWG or loop-star basis functions"""
+    for RWG or loop-star basis functions
+
+    No factors of epsilon/mu are included, as these can vary depending on
+    the operator
+    """
 
     transform_L_o, transform_S_o = basis_o.transformation_matrices
     num_faces_o = len(basis_o.mesh.polygons)
@@ -137,6 +141,6 @@ def impedance_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
                                                             order='C').T).T)
     S = transform_S_o.dot(transform_S_s.dot(phi_faces.T).T)
 
-    L *= mu*mu_0/(4*pi)
-    S *= 1/(pi*epsilon*epsilon_0)
+    L /= 4*pi
+    S /= pi
     return L, S
