@@ -194,3 +194,45 @@ class PMCHWTOperator(TOperator):
         metadata['w_MFIE_i'] = 1.0
         metadata['w_MFIE_o'] = 1.0
         return PenetrableImpedanceMatrix(matrices, metadata)
+
+
+class CTFOperator(TOperator):
+    """Combined tangential form operator, a better conditioned alternative
+    to PMCHWT. See Yla-Oijala, Radio Science 2005"""
+    reciprocal = False
+
+    def __init__(self, integration_rule, basis_container,
+                 background_material,
+                 num_singular_terms=2, singularity_accuracy=1e-5):
+        super(CTFOperator, self).__init__(integration_rule, basis_container,
+                                          background_material,
+                                          num_singular_terms,
+                                          singularity_accuracy)
+
+    def impedance_single_parts(self, s, part_o, part_s=None):
+        """Calculate a self or mutual impedance matrix at a given complex
+        frequency
+
+        Parameters
+        ----------
+        s : complex
+            Complex frequency at which to calculate impedance
+        part_o : SinglePart
+            The observing part, which must be a single part, not a composite
+        part_s : SinglePart, optional
+            The source part, if not specified will default to observing part
+        """
+        matrices, metadata = super(CTFOperator, self).impedance_single_parts(s, part_o, part_s)
+        # set the weights
+        eta_i = part_o.material.eta(s)
+        eta_o = self.background_material.eta(s)
+        metadata['w_EFIE_i'] = 1.0/eta_i
+        metadata['w_EFIE_o'] = 1.0/eta_o
+        metadata['w_MFIE_i'] = eta_i
+        metadata['w_MFIE_o'] = eta_o
+        return PenetrableImpedanceMatrix(matrices, metadata)
+
+    def source_single_part(self, source_field, s, part, extinction_field):
+        V_E, V_H = super(CTFOperator, self).source_single_part(source_field, s, part, extinction_field)
+
+        return V_E/self.background_material.eta(s), V_H*self.background_material.eta(s)
