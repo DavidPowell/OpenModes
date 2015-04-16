@@ -18,9 +18,12 @@ Quick Install Instructions
 
 2. Install `gmsh`_ **version 2.8.4 or later**
 
-3. Ensure that the location of the gmsh
-   executable is added to the PATH environment variable.
+3. Ensure that the location of the gmsh executable is added to the
+   PATH environment variable, so running the following on the command-line
+   does not give an error:
 
+   ``gmsh --version``
+   
 4. From the anaconda command-line, OpenModes can be installed with the command 
 
    ``pip install openmodes``.
@@ -32,7 +35,7 @@ Upgrading to a Newer Version
 
 It's usually a good idea to update all your other Python packages first with
 
-    ``conda update anaconda``
+    ``conda update --all``
 
 You can upgrade your installed version from the command-line, using the command
 
