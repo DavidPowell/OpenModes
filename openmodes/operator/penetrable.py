@@ -198,7 +198,12 @@ class PMCHWTOperator(TOperator):
 
 class CTFOperator(TOperator):
     """Combined tangential form operator, a better conditioned alternative
-    to PMCHWT. See Yla-Oijala, Radio Science 2005"""
+    to PMCHWT. See Yla-Oijala, Radio Science 2005
+
+    This operator is further scaled so that the quantities H' = eta_0*H and
+    J' = eta_0*J are solved for. This improves the scaling of the eigenvalues,
+    giving electric and magnetic modes similar eigenimpedances.
+    """
     reciprocal = False
 
     def __init__(self, integration_rule, basis_container,
@@ -224,8 +229,11 @@ class CTFOperator(TOperator):
         """
         matrices, metadata = super(CTFOperator, self).impedance_single_parts(s, part_o, part_s)
         # set the weights
-        eta_i = part_o.material.eta(s)
-        eta_o = self.background_material.eta(s)
+        eta_i = part_o.material.eta_r(s)
+        eta_o = self.background_material.eta_r(s)
+        # override impedance to use relative values
+        metadata['eta_i'] = eta_i
+        metadata['eta_o'] = eta_o
         metadata['w_EFIE_i'] = 1.0/eta_i
         metadata['w_EFIE_o'] = 1.0/eta_o
         metadata['w_MFIE_i'] = eta_i
@@ -235,4 +243,4 @@ class CTFOperator(TOperator):
     def source_single_part(self, source_field, s, part, extinction_field):
         V_E, V_H = super(CTFOperator, self).source_single_part(source_field, s, part, extinction_field)
 
-        return V_E/self.background_material.eta(s), V_H*self.background_material.eta(s)
+        return V_E/self.background_material.eta_r(s), V_H*self.background_material.eta(s)
