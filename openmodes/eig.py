@@ -20,10 +20,9 @@
 Routines for solving linear and nonlinear eigenvalue problems
 """
 
-#from openmodes.basis import LoopStarBasis
-#from openmodes.impedance import EfieImpedanceMatrixLoopStar
 import scipy.linalg as la
 import numpy as np
+import logging
 
 
 def eig_linearised(Z, modes):
@@ -160,13 +159,14 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
                              "case")
         y_s = y_0
 
+    logging.info("Searching for zeros with eig_newton")
+
     converged = False
 
     if not func_gives_der:
         # evaluate at an arbitrary nearby starting point to allow finite
         # differences to be taken
         lambda_sm = lambda_0*(1+10j*lambda_tol)
-        #lambda_sm = lambda_0*(1+10j*lambda_tol)
         T_sm = func(lambda_sm, *args)
 
     for iter_count in range(max_iter):
@@ -190,7 +190,7 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
             v_s = np.dot(T_s.T, x_s)
         elif weight.lower == 'rayleigh asymmetric':
             y_s = la.lu_solve(T_s_lu, np.dot(T_ds, y_s), trans=1)
-            y_s /= np.sqrt(num.sum(abs(y_s)**2))
+            y_s /= np.sqrt(np.sum(abs(y_s)**2))
             v_s = np.dot(T_s.T, y_s)
         else:
             raise ValueError("Unknown weighting method %s" % weight)
@@ -212,8 +212,7 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
 
         lambda_s = lambda_s1
         x_s = x_s1
-        #print x_s
-        #print lambda_s
+        logging.debug("%+.4e %+.4ej" % (lambda_s.real, lambda_s.imag))
 
     if not converged:
         raise ValueError("maximum iterations reached, no convergence")
@@ -333,11 +332,11 @@ def eig_newton_linear(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
 def eig_newton_bordered(A, w_0, vr_0, vl_0=None, w_tol=1e-8,
                         max_iter=20, B=None):
     """Solve a linear (generalised) eigenvalue problem by Newton iteration
-    
+
     A.vr = w B.vr
-    
+
     and optionally also
-    
+
     vl.A = w vl.B
 
     Parameters
