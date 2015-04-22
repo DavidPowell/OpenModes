@@ -67,9 +67,9 @@ class Operator(object):
 
         return ImpedanceParts(s, parent_o, parent_s, matrices, type(res))
 
-    def singularities(self, s_start, modes, part, use_gram=True,
-                      rel_tol=1e-6, max_iter=200):
-        """Find the singularities of a part or of the whole system
+    def poles(self, s_start, modes, part, use_gram=True,
+              rel_tol=1e-6, max_iter=200):
+        """Find the poles of the operator applied to a specified part
 
         Parameters
         ----------
@@ -93,12 +93,12 @@ class Operator(object):
         Returns
         -------
         mode_s : ndarray (num_modes)
-            The location of the singularities
+            The location of the poles
         mode_j : ndarray (num_basis, num_modes)
-            The current distributions at the singularities
+            The current distributions at the poles
         """
 
-        logging.info("Finding singularities for part %s" % str(part.id))
+        logging.info("Finding poles for part %s" % str(part.id))
 
         try:
             # check if a list of mode numbers was passed

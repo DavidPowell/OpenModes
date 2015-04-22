@@ -217,7 +217,7 @@ class Simulation(Identified):
 
     def singularities(self, s_start, modes, part=None, use_gram=True,
                       rel_tol=1e-6, max_iter=200):
-        """Find the singularities of a part or of the whole system
+        """Find the poles of the response of a part
 
         Parameters
         ----------
@@ -249,8 +249,8 @@ class Simulation(Identified):
 
         part = part or self.parts
 
-        return self.operator.singularities(s_start, modes, part, use_gram,
-                                           rel_tol, max_iter)
+        return self.operator.poles(s_start, modes, part, use_gram, rel_tol,
+                                   max_iter)
 
     def construct_models(self, mode_s, mode_j, part=None,
                          model_class=ScalarModelLeastSq):
