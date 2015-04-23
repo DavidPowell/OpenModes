@@ -159,7 +159,9 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
                              "case")
         y_s = y_0
 
-    logging.info("Searching for zeros with eig_newton")
+    logging.debug("Searching for zeros with eig_newton")
+    logging.debug("Starting guess %+.4e %+.4ej" % (lambda_0.real,
+                                                   lambda_0.imag))
 
     converged = False
 
