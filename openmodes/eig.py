@@ -459,52 +459,53 @@ def eig_newton_bordered(A, w_0, vr_0, vl_0=None, w_tol=1e-8,
             'delta_w': delta_w, 'vl': vl_s}
 
 
-def eig_newton_bordered_nonlinear(func, lambda_0, x_0, lambda_tol=1e-8,
-                                  max_iter=20, func_gives_der=False, args=[],
-                                  G=None, weight=None):
-    """Solve a nonlinear eigenvalue problem by Newton iteration
+def eig_bordered_nonlinear(func, w_0, vr_0, vl_0=None, w_tol=1e-8,
+                           max_iter=20, B=None, func_gives_der=False, args=[]):
+    """Solve a nonlinear eigenvalue problem by bordered Newton iteration
+
+    func(w).vr = 0
+
+    and optionally also
+
+    vl.func(w) = 0
+
+    with the weighting vl.B.vr = 1
 
     Parameters
     ----------
     func : function
-        The function with input `lambda` which returns the matrix
-    lambda_0 : complex
+        The function to search for zeros
+    w_0 : complex
         The starting guess for the eigenvalue
-    x_0 : ndarray
-        The starting guess for the eigenvector
-    lambda_tol : float
+    vr_0 : ndarray
+        The starting guess for the right eigenvector
+    vl_0 : ndarray, optional
+        The starting guess for the left eigenvector. If not supplied, vr_0
+        will be used, which is only accurate when A = A^T and B = B^T.
+    w_tol : float, optional
         The relative tolerance in the eigenvalue for convergence
-    max_iter : int
+    max_iter : int, optional
         The maximum number of iterations to perform
+    B : ndarray, optional
+        The RHS matrix for the generalised problem. If omitted, the identity
+        matrix will be used
     func_gives_der : boolean, optional
         If `True`, then the function also returns the derivative as the second
         returned value. If `False` finite differences will be used instead,
         which will have reduced accuracy
     args : list, optional
         Any additional arguments to be supplied to `func`
-    weight : string, optional
-        How to perform the weighting of the eigenvector
-
-        'max element' : The element with largest magnitude will be preserved
-
-        'rayleigh' : Rayleigh iteration for Hermition matrices will be used
-
-        'rayleigh symmetric' : Rayleigh iteration for complex symmetric
-        (i.e. non-Hermitian) matrices will be used
 
     Returns
     -------
     res : dictionary
         A dictionary containing the following members:
 
-        `eigval` : the eigenvalue
-
-        'eigvect' : the eigenvector
-
+        'w' : the eigenvalue
+        'vr' : the right eigenvector
+        'vl' : the left eigenvector
         'iter_count' : the number of iterations performed
-
-        'delta_lambda' : the change in the eigenvalue on the final iteration
-
+        'delta_w' : the change in the eigenvalue on the final iteration
 
     See:
     1.  P. Lancaster, Lambda Matrices and Vibrating Systems.
@@ -513,87 +514,94 @@ def eig_newton_bordered_nonlinear(func, lambda_0, x_0, lambda_tol=1e-8,
     2.  A. Ruhe, “Algorithms for the Nonlinear Eigenvalue Problem,”
         SIAM J. Numer. Anal., vol. 10, no. 4, pp. 674–689, Sep. 1973.
 
+    3.  A. L. Andrew, E. K. Chu, and P. Lancaster, “On the numerical solution
+        of nonlinear eigenvalue problems,” Computing, vol. 55, no. 2,
+        pp. 91–111, Jun. 1995.
     """
 
-    N = len(x_0)
+    logging.debug("Searching for zeros with eig_bordered_nonlinear")
+    logging.debug("Starting guess %+.4e %+.4ej" % (w_0.real, w_0.imag))
+
+    N = len(vr_0)
+
+    if B is None:
+        B = np.eye(N)
+    elif hasattr(B, 'toarray'):
+        # handle the sparse case
+        B = B.toarray()
+    else:
+        B = np.asarray(B)
+
+    # If left eigenvalue is not passed, assume complex-symmetric matrix
+    if vl_0 is None:
+        vl_0 = vr_0
+        symmetric = True
+    else:
+        symmetric = False
+
+    vr_0 /= np.sqrt(np.sum(np.abs(vr_0)**2))
+    vl_0 /= np.sqrt(np.sum(np.abs(vl_0)**2))
+
+    w_s = w_0
+    converged = False
+
     augmented = np.empty((N+1, N+1), dtype=np.complex128)
     augmented[N, N] = 0.0
-
-    if G is None:
-        G = np.eye(N)
+    augmented[N, :N] = vr_0.conjugate()  # vector c in Andrew notation
+    augmented[:N, N] = vl_0.conjugate()  # vector b in Andrew notation
 
     rhs = np.zeros(N+1, np.complex128)
     rhs[-1] = 1
 
-    #x_s = x_0
-    x_s = x_0/np.sqrt(np.sum(x_0.dot(G.dot(x_0))))
-    lambda_s = lambda_0
-
-    converged = False
-
     if not func_gives_der:
         # evaluate at an arbitrary nearby starting point to allow finite
         # differences to be taken
-        lambda_sm = lambda_0*(1+10j*lambda_tol)
-        #lambda_sm = lambda_0*lambda_tol
-        T_sm = func(lambda_sm, *args)
+        w_sm = w_0*(1+(10+10j)*w_tol)
+        T_sm = func(w_sm, *args)
 
     for iter_count in range(max_iter):
         if func_gives_der:
-            T_s, T_ds = func(lambda_s, *args)
+            T_s, T_ds = func(w_s, *args)
         else:
-            T_s = func(lambda_s, *args)
-            T_ds = (T_s - T_sm)/(lambda_s - lambda_sm)
+            T_s = func(w_s, *args)
+            T_ds = (T_s - T_sm)/(w_s - w_sm)
 
+        # Fill the augmented matrix with the impedance
         augmented[:N, :N] = T_s
-        augmented[N, :N] = x_s
-        augmented[:N, N] = x_s
 
-        sg = la.solve(augmented, rhs)
-        u = sg[:N]
+        aug_lu = la.lu_factor(augmented)
+        sg = la.lu_solve(aug_lu, rhs)
+        vr_s1 = sg[:N]
 
-#        u = la.solve(T_s, np.dot(T_ds, x_s))
-#
-#        # if known_vects is supplied, we should take this into account when
-#        # finding v
-#        if weight.lower() == 'max element':
-#            v_s = np.zeros_like(x_s)
-#            v_s[np.argmax(abs(x_s))] = 1.0
-#        elif weight.lower() == 'rayleigh':
-#            v_s = np.dot(T_s.T, x_s.conj())
-#        elif weight.lower() == 'rayleigh symmetric':
-#            v_s = np.dot(T_s.T, x_s)
+        if symmetric:
+            vl_s1 = vr_s1
+        else:
+            sg2 = la.lu_solve(aug_lu, rhs, trans=1)
+            vl_s1 = sg2[:N]
 
-        delta_lambda_abs = x_s.dot(T_s.dot(x_s))/x_s.dot(T_ds.dot(x_s))
-        #print delta_lambda_abs
+        delta_w = vl_s1.dot(T_s.dot(vr_s1))/vl_s1.dot(T_ds.dot(vr_s1))
+        logging.debug("Delta %+.4e %+.4ej" % (delta_w.real, delta_w.imag))
 
-        delta_lambda = abs(delta_lambda_abs/lambda_s)
-        #print delta_lambda
-        converged = delta_lambda < lambda_tol
-        if converged:
-            break
+        delta_w_rel = abs(delta_w/w_s)
+        converged = delta_w_rel < w_tol
 
-        lambda_s1 = lambda_s - delta_lambda_abs
-        #x_s1 = u/np.sqrt(np.sum(np.abs(u)**2))
-        x_s1 = u/np.sqrt(np.sum(u.dot(G.dot(u))))
-
-        # update variables for next iteration
         if not func_gives_der:
-            lambda_sm = lambda_s
+            w_sm = w_s
             T_sm = T_s
 
-        lambda_s = lambda_s1
-        x_s = x_s1
-        #print x_s
-        #print lambda_s
+        # update values for next iteration
+        w_s = w_s-delta_w
+
+        logging.debug("%+.4e %+.4ej" % (w_s.real, w_s.imag))
+
+        if converged:
+            break
 
     if not converged:
         raise ValueError("maximum iterations reached, no convergence")
 
-    res = {'eigval': lambda_s, 'eigvec': x_s, 'iter_count': iter_count+1,
-           'delta_lambda': delta_lambda}
-
-    return res
+    return {'w': w_s, 'vr': vr_s1, 'iter_count': iter_count+1,
+            'delta_w': delta_w, 'vl': vl_s1}
 
 
 def project_modes(mode_j, E):
