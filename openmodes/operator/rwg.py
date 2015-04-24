@@ -23,7 +23,7 @@ import numpy as np
 
 from openmodes.operator.singularities import singular_impedance_rwg
 from openmodes.core import z_mfie_faces_self, z_mfie_faces_mutual
-from openmodes.core import z_efie_faces_self, z_efie_faces_mutual
+from openmodes.core import z_efie_faces_self, z_efie_faces_mutual, dz_dgamma_efie
 from openmodes.constants import pi, c
 
 
@@ -83,7 +83,7 @@ def impedance_curl_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
 
 def impedance_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
                 self_impedance, epsilon, mu, num_singular_terms,
-                singularity_accuracy):
+                singularity_accuracy, frequency_derivatives=False):
     """Calculates the impedance matrix corresponding to the equation:
     fm . (I + grad grad) G . fn
     for RWG or loop-star basis functions
@@ -143,4 +143,22 @@ def impedance_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
 
     L /= 4*pi
     S /= pi
-    return L, S
+
+    if not frequency_derivatives:
+        return L, S
+
+    # calculate the frequency derivatives
+    A_faces, phi_faces = dz_dgamma_efie(nodes_o, basis_o.mesh.polygons,
+                                        nodes_s, basis_s.mesh.polygons,
+                                        gamma_0, integration_rule.xi_eta,
+                                        integration_rule.weights)
+
+    dL_ds = transform_L_o.dot(transform_L_s.dot(A_faces.reshape(num_faces_o*3,
+                                                                num_faces_s*3,
+                                                                order='C').T).T)
+    dS_ds = transform_S_o.dot(transform_S_s.dot(phi_faces.T).T)
+
+    dL_ds /= c*4*pi
+    dS_ds /= c*pi
+
+    return L, S, dL_ds, dS_ds

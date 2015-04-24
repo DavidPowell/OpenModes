@@ -345,6 +345,12 @@ class EfieImpedanceMatrix(AbstractImpedanceMatrix):
         return (self.md['s']*self.matrices['L'][index] +
                 self.matrices['S'][index]/self.md['s'])
 
+    def frequency_derivative(self, index):
+        return (self.matrices['L'][index] +
+                self.md['s']*self.matrices['dL_ds'][index] -
+                self.matrices['S'][index]/self.md['s']**2 +
+                self.matrices['dS_ds'][index]/self.md['s'])
+
 
 class CfieImpedanceMatrix(AbstractImpedanceMatrix):
     """Holds an impedance matrix from the combined field integral equation,

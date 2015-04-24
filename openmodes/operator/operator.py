@@ -30,7 +30,7 @@ from openmodes.impedance import ImpedanceParts
 class Operator(object):
     "A base class for operator equations"
 
-    def impedance(self, s, parent_o, parent_s):
+    def impedance(self, s, parent_o, parent_s, frequency_derivatives=False):
         """Evaluate the self and mutual impedances of all parts in the
         simulation. Return an `ImpedancePart` object which can calculate
         several derived impedance quantities
@@ -62,7 +62,8 @@ class Operator(object):
                     # use reciprocity to avoid repeated calculation
                     res = matrices[part_s, part_o].T
                 else:
-                    res = self.impedance_single_parts(s, part_o, part_s)
+                    res = self.impedance_single_parts(s, part_o, part_s,
+                                                      frequency_derivatives)
                 matrices[part_o, part_s] = res
 
         return ImpedanceParts(s, parent_o, parent_s, matrices, type(res))
@@ -116,7 +117,17 @@ class Operator(object):
         mode_j = VectorParts(part, self.basis_container, dtype=np.complex128,
                              cols=num_modes)
 
-        Z_func = lambda s: self.impedance(s, part, part)[part, part][:]
+        # Adaptively check if the operator provides frequency derivatives, and
+        # if so use them in the Newton iteration to find the poles.
+        func_gives_der = hasattr(Z, 'frequency_derivative')
+        if func_gives_der:
+            def Z_func(s):
+                Z = self.impedance(s, part, part, frequency_derivatives=True)[:]
+                return Z[:], Z.frequency_derivative(slice(None))
+        else:
+            def Z_func(s):
+                Z = self.impedance(s, part, part, frequency_derivatives=False)[:]
+                return Z[:]
 
         if use_gram:
             G = Z.md['basis_s'].gram_matrix
@@ -126,7 +137,7 @@ class Operator(object):
         for mode in range(num_modes):
             res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode],
                              weight='max element', lambda_tol=rel_tol,
-                             max_iter=max_iter)
+                             max_iter=max_iter, func_gives_der=func_gives_der)
 
             lin_hz = lin_s[mode]/2/np.pi
             nl_hz = res['eigval']/2/np.pi

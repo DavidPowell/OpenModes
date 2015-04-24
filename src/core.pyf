@@ -3,6 +3,11 @@
 
 python module core ! in 
     interface  ! in :core
+        module core_for ! in :core:src/rwg.f90
+            use constants
+            real(kind=dp), parameter,optional :: c=299792458.0_dp
+            real(kind=dp), parameter,optional :: pi=3.1415926535897931_dp
+        end module core_for
         subroutine arcioni_singular(nodes,i_a,i_phi) ! in :core:src/rwg.f90
             use vectors
             use constants
@@ -27,6 +32,23 @@ python module core ! in
             complex(kind=wp) dimension(num_triangles_o,3,num_triangles_s,3),intent(out),depend(num_triangles_o,num_triangles_s) :: a_face
             complex(kind=wp) dimension(num_triangles_o,num_triangles_s),intent(out),depend(num_triangles_o,num_triangles_s) :: phi_face
         end subroutine z_efie_faces_mutual
+        subroutine dz_dgamma_efie(num_nodes_o,num_triangles_o,num_nodes_s,num_triangles_s,num_integration,nodes_o,triangle_nodes_o,nodes_s,triangle_nodes_s,gamma_0,xi_eta_eval,weights,a_face,phi_face) ! in :core:src/rwg.f90
+            use core_for
+            integer, optional,intent(in),check(shape(nodes_o,0)==num_nodes_o),depend(nodes_o) :: num_nodes_o=shape(nodes_o,0)
+            integer, optional,intent(in),check(shape(triangle_nodes_o,0)==num_triangles_o),depend(triangle_nodes_o) :: num_triangles_o=shape(triangle_nodes_o,0)
+            integer, optional,intent(in),check(shape(nodes_s,0)==num_nodes_s),depend(nodes_s) :: num_nodes_s=shape(nodes_s,0)
+            integer, optional,intent(in),check(shape(triangle_nodes_s,0)==num_triangles_s),depend(triangle_nodes_s) :: num_triangles_s=shape(triangle_nodes_s,0)
+            integer, optional,intent(in),check(shape(xi_eta_eval,0)==num_integration),depend(xi_eta_eval) :: num_integration=shape(xi_eta_eval,0)
+            real(kind=wp) dimension(num_nodes_o,3),intent(in) :: nodes_o
+            integer dimension(num_triangles_o,3),intent(in) :: triangle_nodes_o
+            real(kind=wp) dimension(num_nodes_s,3),intent(in) :: nodes_s
+            integer dimension(num_triangles_s,3),intent(in) :: triangle_nodes_s
+            complex(kind=wp) intent(in) :: gamma_0
+            real(kind=wp) dimension(num_integration,2),intent(in) :: xi_eta_eval
+            real(kind=wp) dimension(num_integration),intent(in),depend(num_integration) :: weights
+            complex(kind=wp) dimension(num_triangles_o,3,num_triangles_s,3),intent(out),depend(num_triangles_o,num_triangles_s) :: a_face
+            complex(kind=wp) dimension(num_triangles_o,num_triangles_s),intent(out),depend(num_triangles_o,num_triangles_s) :: phi_face
+        end subroutine dz_dgamma_efie
         subroutine z_efie_faces_self(num_nodes,num_triangles,num_integration,num_singular,degree_singular,nodes,triangle_nodes,gamma_0,xi_eta_eval,weights,phi_precalc,a_precalc,indices_precalc,indptr_precalc,a_face,phi_face) ! in :core:src/rwg.f90
             use core_for
             integer, optional,intent(in),check(shape(nodes,0)==num_nodes),depend(nodes) :: num_nodes=shape(nodes,0)

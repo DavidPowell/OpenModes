@@ -55,7 +55,8 @@ class EfieOperator(Operator):
         logging.info("Creating EFIE operator, tangential form: %s"
                      % str(tangential_form))
 
-    def impedance_single_parts(self, s, part_o, part_s=None):
+    def impedance_single_parts(self, s, part_o, part_s=None,
+                               frequency_derivatives=False):
         """Calculate a self or mutual impedance matrix at a given complex
         frequency
 
@@ -83,24 +84,40 @@ class EfieOperator(Operator):
         mu = self.background_material.epsilon_r(s)
 
         if isinstance(basis_o, LinearTriangleBasis):
-            L, S = rwg.impedance_G(s, self.integration_rule, basis_o,
-                                   part_o.nodes, basis_s, part_s.nodes,
-                                   part_o == part_s, eps, mu,
-                                   self.num_singular_terms,
-                                   self.singularity_accuracy)
+            res = rwg.impedance_G(s, self.integration_rule, basis_o,
+                                  part_o.nodes, basis_s, part_s.nodes,
+                                  part_o == part_s, eps, mu,
+                                  self.num_singular_terms,
+                                  self.singularity_accuracy,
+                                  frequency_derivatives)
         else:
             raise NotImplementedError
+
+        if frequency_derivatives:
+            L, S, dL_ds, dS_ds = res
+        else:
+            L, S = res
 
         L *= mu*mu_0
         S /= eps*epsilon_0
 
+        matrices = {'L': L, 'S': S}
+
+        if frequency_derivatives:
+            dL_ds *= mu*mu_0
+            dS_ds /= eps*epsilon_0
+
+            matrices['dL_ds'] = dL_ds
+            matrices['dS_ds'] = dS_ds
+
+        metadata = {'basis_o': basis_o, 'basis_s': basis_s, 's': s,
+                    'operator': self, 'part_o': part_o, 'part_s': part_s,
+                    'symmetric': symmetric}
+
         if issubclass(self.basis_container.basis_class, LoopStarBasis):
-            return EfieImpedanceMatrixLoopStar.build(s, L, S, basis_o, basis_s,
-                                                     self, part_o, part_s,
-                                                     symmetric)
+            return EfieImpedanceMatrixLoopStar(matrices, metadata)
         else:
-            return EfieImpedanceMatrix.build(s, L, S, basis_o, basis_s, self,
-                                             part_o, part_s, symmetric)
+            return EfieImpedanceMatrix(matrices, metadata)
 
     def source_single_part(self, source_field, s, part,
                            extinction_field):

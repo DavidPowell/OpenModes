@@ -314,6 +314,172 @@ subroutine Z_EFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
 
 end subroutine Z_EFIE_faces_mutual
 
+subroutine EFIE_dgamma_integrals(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
+        weights_o, nodes_o_in, gamma_0, I_A, I_phi)
+    ! EFIE face integrals, derivatives with respect to complex wavenumber gamma
+    ! NB: includes the 1/4A**2 prefactor
+    !
+    ! xi_eta_s/o - list of coordinate pairs in source/observer triangle
+    ! weights_s/o - the integration weights of the source and observer
+    ! nodes_s/o - the nodes of the source and observer triangles
+    ! gamma_0 - *complex* free space wavenumber, j*k_0
+    ! nodes - the position of the triangle nodes
+
+    use core_for
+    implicit none
+
+    integer, intent(in) :: n_s, n_o
+    real(WP), dimension(3, 3), intent(in) :: nodes_s_in, nodes_o_in
+    complex(WP), intent(in) :: gamma_0
+
+    real(WP), intent(in), dimension(0:n_s-1, 2) :: xi_eta_s
+    real(WP), intent(in), dimension(0:n_s-1) :: weights_s
+
+    real(WP), intent(in), dimension(0:n_o-1, 2) :: xi_eta_o
+    real(WP), intent(in), dimension(0:n_o-1) :: weights_o
+
+    complex(WP), intent(out), dimension(3, 3) :: I_A
+    complex(WP), intent(out) :: I_phi
+
+    real(WP) :: xi_s, eta_s, zeta_s, xi_o, eta_o, zeta_o, R, w_s, w_o
+    real(WP), dimension(3) :: r_s, r_o
+    real(WP), dimension(3, 3) :: rho_s, rho_o
+    complex(WP) :: g
+    integer :: count_s, count_o, uu!, vv !, ww
+    real(WP), dimension(3, 3) :: nodes_s, nodes_o
+
+    real(WP), dimension(3, 0:n_s-1) :: r_s_table
+    real(WP), dimension(3, 3, 0:n_s-1) :: rho_s_table
+
+    ! explictly copying the output arrays gives some small speedup,
+    ! possibly by avoiding access to the shared target array
+    complex(WP) :: I_phi_int
+    complex(WP), dimension(3, 3) :: I_A_int
+
+    
+    ! transpose for speed
+    nodes_s = transpose(nodes_s_in)
+    nodes_o = transpose(nodes_o_in)
+
+    I_A_int = 0.0
+    I_phi_int = 0.0
+
+    ! The loop over the source is repeated many times. Therefore pre-calculate the source
+    ! quantities to optimise speed (gives minor benefit)
+
+    do count_s = 0,n_s-1
+
+        xi_s = xi_eta_s(count_s, 1)
+        eta_s = xi_eta_s(count_s, 2)
+
+        zeta_s = 1.0 - eta_s - xi_s
+        r_s = xi_s*nodes_s(:, 1) + eta_s*nodes_s(:, 2) + zeta_s*nodes_s(:, 3)
+        r_s_table(:, count_s) = r_s
+
+        forall (uu=1:3) rho_s_table(:, uu, count_s) = r_s - nodes_s(:, uu)
+
+    end do
+
+    do count_o = 0,n_o-1
+
+        w_o = weights_o(count_o)
+
+        ! Barycentric coordinates of the observer
+        xi_o = xi_eta_o(count_o, 1)
+        eta_o = xi_eta_o(count_o, 2)
+        zeta_o = 1.0 - eta_o - xi_o
+
+        ! Cartesian coordinates of the observer
+        r_o = xi_o*nodes_o(:, 1) + eta_o*nodes_o(:, 2) + zeta_o*nodes_o(:, 3)
+
+        ! Vector rho within the observer triangle
+        forall (uu=1:3) rho_o(:, uu) = r_o - nodes_o(:, uu)
+
+        do count_s = 0,n_s-1
+    
+            w_s = weights_s(count_s)
+
+            r_s = r_s_table(:, count_s)
+            rho_s = rho_s_table(:, :, count_s)
+
+            R = sqrt(sum((r_s - r_o)**2))
+
+            g = -exp(-gamma_0*R)
+
+            I_phi_int = I_phi_int + g*w_s*w_o
+            I_A_int = I_A_int + g*w_s*w_o*matmul(transpose(rho_o), rho_s)
+
+        end do
+    end do
+
+    I_A = I_A_int
+    I_phi = I_phi_int
+
+end subroutine EFIE_dgamma_integrals
+
+
+subroutine dZ_dgamma_EFIE(num_nodes_o, num_triangles_o, num_nodes_s, num_triangles_s, &
+                          num_integration, nodes_o, triangle_nodes_o, nodes_s, triangle_nodes_s, &
+                          gamma_0, xi_eta_eval, weights, &
+                          A_face, phi_face)
+    ! Calculate the face to face interaction terms used to build the impedance matrix
+    ! For mutual coupling terms between different parts
+    !
+    ! As per Rao, Wilton, Glisson, IEEE Trans AP-30, 409 (1982)
+    ! Uses impedance extraction techqnique of Hanninen, precalculated
+    !
+    ! nodes - position of all the triangle nodes
+    ! omega - evaulation frequency in rad/s
+    ! gamma_0 - complex wavenumber of background
+    ! xi_eta_eval, weights - quadrature rule over the triangle (weights normalised to 0.5)
+
+    use core_for
+    implicit none
+
+    integer, intent(in) :: num_nodes_o, num_triangles_o, num_nodes_s, num_triangles_s, num_integration
+
+    real(WP), intent(in), dimension(0:num_nodes_o-1, 0:2) :: nodes_o
+    integer, intent(in), dimension(0:num_triangles_o-1, 0:2) :: triangle_nodes_o
+    real(WP), intent(in), dimension(0:num_nodes_s-1, 0:2) :: nodes_s
+    integer, intent(in), dimension(0:num_triangles_s-1, 0:2) :: triangle_nodes_s
+
+    complex(WP), intent(in) :: gamma_0
+
+    real(WP), intent(in), dimension(0:num_integration-1, 0:1) :: xi_eta_eval
+    real(WP), intent(in), dimension(0:num_integration-1) :: weights
+
+    complex(WP), intent(out), dimension(0:num_triangles_o-1, 0:2, 0:num_triangles_s-1, 0:2) :: A_face
+    complex(WP), intent(out), dimension(0:num_triangles_o-1, 0:num_triangles_s-1) :: phi_face
+    
+    real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
+    complex(WP), dimension(3, 3) :: I_A
+    complex(WP) :: I_phi
+
+    integer :: p, q
+
+    ! calculate all the integrations for each face pair
+    !$OMP PARALLEL DO SCHEDULE(DYNAMIC) DEFAULT(SHARED) &
+    !$OMP PRIVATE (p, q, nodes_p, nodes_q, I_A, I_phi)
+    do p = 0,num_triangles_o-1 ! p is the index of the observer face:
+        nodes_p = nodes_o(triangle_nodes_o(p, :), :)
+        do q = 0,num_triangles_s-1 ! q is the index of the source face
+
+            nodes_q = nodes_s(triangle_nodes_s(q, :), :)
+            ! just perform regular integration
+            ! As per RWG, triangle area must be cancelled in the integration
+            ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
+            call EFIE_dgamma_integrals(num_integration, xi_eta_eval, weights, nodes_q, &
+                                       num_integration, xi_eta_eval, weights, nodes_p, gamma_0, I_A, I_phi)
+            ! by symmetry of Galerkin procedure, transposed components are identical (but transposed node indices)
+            A_face(p, :, q, :) = I_A
+            phi_face(p, q) = I_phi
+
+        end do
+    end do
+    !$OMP END PARALLEL DO
+
+end subroutine dZ_dgamma_EFIE
+
 
 subroutine EFIE_face_integrals(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
         weights_o, nodes_o_in, gamma_0, degree_singular, I_A, I_phi)
