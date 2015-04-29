@@ -93,8 +93,8 @@ class ScalarModelLeastSq(object):
 
         self.scale_factor = abs(mode_s.imag)/10
 
-        Z_func = lambda s: operator.impedance(s, part, part)[part, part]
-        z_der = delta_eig(mode_s, mode_j, Z_func)
+        Z_func = lambda s: operator.impedance(s, part, part, frequency_derivatives=True)[part, part]
+        z_der = mode_j.dot(Z_func(mode_s).frequency_derivative(slice(None)).dot(mode_j))
         self.coefficients = fit_four_term(mode_s/self.scale_factor,
                                           z_der*self.scale_factor)
         logging.info("Creating scalar model\ndlambda/ds = %+.4e %+.4e\n"
@@ -121,8 +121,8 @@ class ScalarModelResidues(object):
         self.mode_s = mode_s
         self.mode_j = mode_j
 
-        Z_func = lambda s: s*operator.impedance(s, part, part)[part, part][:]
-        self.z_der = delta_eig(mode_s, mode_j, Z_func)
+        Z_func = lambda s: operator.impedance(s, part, part, frequency_derivatives=True)[part, part]
+        self.z_der = mode_j.dot(Z_func(mode_s).frequency_derivative_P(slice(None)).dot(mode_j))
         self.coefficients = [self.z_der, self.z_der.conjugate()]
         logging.info("Creating residue expansion scalar model\n"
                      "dlambda/ds = %+.4e %+.4e"
