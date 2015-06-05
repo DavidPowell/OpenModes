@@ -669,18 +669,23 @@ class BasisContainer(object):
     def __getitem__(self, part):
         """Return the basis functions for a particular part, constructing them
         if they do not already exist"""
-        args = self.args.get(part, self.default_args)
-        unique_key = (part.mesh.id, self.basis_class, frozenset(args.items()))
 
-        try:
-            return self.cached_basis[unique_key]
-        except KeyError:
-            logging.debug("Constructing basis functions of class %s for "
-                          "mesh %s with args %s"
-                          % (self.basis_class, part.mesh, args))
-            result = self.basis_class(part.mesh, **args)
-            self.cached_basis[unique_key] = result
-            return result
+        args = self.args.get(part, self.default_args)
+        if hasattr(part, "children"):
+            # This is some sort of combined part
+            sub_basis = [self[sub_part] for sub_part in part.iter_single()]
+            return get_combined_basis(sub_basis)
+        else:
+            unique_key = (part.mesh.id, self.basis_class, frozenset(args.items()))
+            try:
+                return self.cached_basis[unique_key]
+            except KeyError:
+                logging.debug("Constructing basis functions of class %s for "
+                              "mesh %s with args %s"
+                              % (self.basis_class, part.mesh, args))
+                result = self.basis_class(part.mesh, **args)
+                self.cached_basis[unique_key] = result
+                return result
 
 
 class CombinedBasis(AbstractBasis):
