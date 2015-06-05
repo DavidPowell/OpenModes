@@ -23,6 +23,7 @@ Routines for solving linear and nonlinear eigenvalue problems
 import scipy.linalg as la
 import numpy as np
 import logging
+from openmodes.integration import GaussLegendreRule
 
 
 def eig_linearised(Z, modes):
@@ -86,6 +87,120 @@ def eig_linearised(Z, modes):
     which_modes = np.argsort(abs(w_selected.imag))[modes]
 
     return w_freq[which_modes], vr[:, which_modes]
+
+
+def poles_cauchy(Z_func, N, s_min, s_max, svd_threshold=1e-10,
+                 integration_rule=GaussLegendreRule(20), previous_result=None):
+    """Estimate location and residue of the poles of a matrix function by
+    Cauchy integration. Uses a technique described in:
+
+    D. A. Bykov and L. L. Doskolovich, "Numerical Methods for Calculating
+    Poles of the Scattering Matrix With Applications in Grating Theory,"
+    Journal of Lightwave Technology, vol. 31, no. 5, pp. 793-801, Mar. 2013.
+
+    Parameters
+    ----------
+    Z : Matrix function
+        The impedance matrix as a function of frequency s
+    N : integer
+        The size of the matrix
+    s_min, s_max : complex
+        The two corners of the integration region in the s-plane. Order doesn't
+        matter, they will always be sorted to obtain the correct sense of
+        integration.
+    integration_rule: object, optional
+        The integration rule to use for each of the 4 line integrals of the
+        contour
+    previous_result: dictionary, optional
+        By passing a dictionary previously returned by poles_cauchy, it is
+        possible to refine the svd_threshold without having to repeat the
+        contour integration
+
+    Returns
+    -------
+    result: dictionary
+        Contains several elements. Relevant ones to the user are
+        's': The complex frequencies
+        'vl': The left eigenvectors
+        'vr': The right eigenvectors
+        's_out', 'vl_out', 'vr_out' : corresponding quantities for solutions
+        outside the integration region, which may not be meaningful
+        'C1_s' : The singular values of C1
+    """
+
+    min_real, max_real = sorted((s_min.real, s_max.real))
+    min_imag, max_imag = sorted((s_min.imag, s_max.imag))
+
+    if previous_result is not None:
+        result = previous_result
+    else:
+
+        logging.info("Performing full cauchy integration")
+
+        C1 = np.zeros((N, N), np.complex128)
+        C2 = np.zeros((N, N), np.complex128)
+
+        coordinates = (min_real+1j*min_imag, max_real+1j*min_imag,
+                       max_real+1j*max_imag, min_real+1j*max_imag)
+
+        # integrate over all 4 lines
+        for line_count in range(4):
+            s_start = coordinates[line_count]
+            s_end = coordinates[(line_count+1) % 4]
+
+            ds = s_end-s_start
+            for x, w in integration_rule:
+                s = s_start + ds*x
+                Z_inv = la.inv(Z_func(s)[:])*w*ds
+                C1 += Z_inv
+                C2 += s*Z_inv
+
+        C1_U, C1_S, C1_Vh = la.svd(C1)
+        result = {'C2': C2,
+                  'C1_U': C1_U,
+                  'C1_S': C1_S,
+                  'C1_Vh': C1_Vh}
+
+    # Determine the rank of the SVD matrix for the given threshold
+    sv = result['C1_S']
+
+    C1_rank = np.sum(sv > svd_threshold*sv[0])
+    logging.info("Rank of integrated matrix %d with threshold %e" %
+                 (C1_rank, svd_threshold))
+
+    # construct a reduced rank approximation
+    U_r = result['C1_U'][:, :C1_rank]
+    Uh_r = U_r.T.conjugate()
+    Vh_r = result['C1_Vh'][:C1_rank, :]
+    V_r = Vh_r.T.conjugate()
+    S_r = sv[:C1_rank]
+
+    # solved the reduced eigenvalue problem
+    mode_s, vl, vr = la.eig(Uh_r.dot(result['C2'].dot(V_r)), np.diag(S_r), left=True)    
+
+    in_region = np.logical_and(np.logical_and(mode_s.real > min_real, mode_s.real < max_real),
+                               np.logical_and(mode_s.imag > min_imag, mode_s.imag < max_imag))
+    outside_region = np.logical_not(in_region)
+
+    # sort modes inside the region by frequency
+    in_region = np.argsort(mode_s[np.where(in_region)].imag)
+
+    result['s'] = mode_s[in_region]
+    result['s_out'] = mode_s[outside_region]
+
+    # Return the left and right eigenvectors in the full problem space.
+    # Notation left and right are relative to original operator Z, which are
+    # opposite to Z^-1
+    full_l = U_r.dot(np.diag(S_r).dot(vr))
+    full_r = (V_r.dot(np.diag(S_r).dot(vl))).conjugate()
+    # conjugate comes from scipy's vs my definition of left eigenvectors
+
+    result['vl'] = full_l[:, in_region]
+    result['vr'] = full_r[:, in_region]
+    result['vl_out'] = full_l[:, outside_region]
+    result['vr_out'] = full_r[:, outside_region]
+
+    return result
 
 
 def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
