@@ -183,8 +183,9 @@ def poles_cauchy(Z_func, N, s_min, s_max, svd_threshold=1e-10,
     outside_region = np.logical_not(in_region)
 
     # sort modes inside the region by frequency
-    in_region = np.argsort(mode_s[np.where(in_region)].imag)
-
+    in_region = np.where(in_region)[0]
+    in_order = np.argsort(mode_s[in_region].imag)
+    in_region = in_region[in_order]
     result['s'] = mode_s[in_region]
     result['s_out'] = mode_s[outside_region]
 
