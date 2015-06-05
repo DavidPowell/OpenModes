@@ -86,6 +86,11 @@ class GaussLegendreRule(Identified):
     def __len__(self):
         return len(self.x)
 
+    def __iter__(self):
+        "Iterate over all integration points and weights"
+        for x, w in zip(self.x, self.weights):
+            yield x, w
+
 
 def cartesian_to_barycentric(r, nodes):
     """Convert cartesian coordinates to barycentric (area coordinates) in a
