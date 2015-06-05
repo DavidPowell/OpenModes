@@ -177,7 +177,8 @@ class MfieOperator(Operator):
         return basis.weight_function(field, self.integration_rule,
                                      part.nodes, source_cross)
 
-    def impedance_single_parts(self, s, part_o, part_s=None):
+    def impedance_single_parts(self, s, part_o, part_s=None,
+                               frequency_derivatives=False):
         """Calculate a self or mutual impedance matrix at a given complex
         frequency
 
@@ -193,6 +194,9 @@ class MfieOperator(Operator):
 
         # if source part is not given, default to observer part
         part_s = part_s or part_o
+
+        if frequency_derivatives:
+            raise NotImplementedError("Frequency derivatives for MFIE")
 
         basis_o = self.basis_container[part_o]
         basis_s = self.basis_container[part_s]
@@ -263,7 +267,8 @@ class CfieOperator(Operator):
 
         return self.alpha*V_E+(1-self.alpha)*V_H
 
-    def impedance_single_parts(self, s, part_o, part_s=None):
+    def impedance_single_parts(self, s, part_o, part_s=None,
+                               frequency_derivatives=False):
         """Calculate a self or mutual impedance matrix at a given complex
         frequency
 
@@ -279,6 +284,9 @@ class CfieOperator(Operator):
 
         # if source part is not given, default to observer part
         part_s = part_s or part_o
+
+        if frequency_derivatives:
+            raise NotImplementedError("Frequency derivatives for CFIE")
 
         basis_o = self.basis_container[part_o]
         basis_s = self.basis_container[part_s]

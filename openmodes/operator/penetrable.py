@@ -71,7 +71,8 @@ class TOperator(Operator):
 
         return V_E, V_H
 
-    def impedance_single_parts(self, s, part_o, part_s=None):
+    def impedance_single_parts(self, s, part_o, part_s=None,
+                               frequency_derivatives=False):
         """Calculate a self or mutual impedance matrix at a given complex
         frequency. Note that this abstract function should be called by
         sub-classes, not by the user.
@@ -85,6 +86,9 @@ class TOperator(Operator):
         part_s : SinglePart, optional
             The source part, if not specified will default to observing part
         """
+
+        if frequency_derivatives:
+            raise NotImplementedError("Frequency derivatives for penetrable")
 
         # TODO: Handle the mutual impedance case
 
@@ -174,7 +178,8 @@ class PMCHWTOperator(TOperator):
                                              num_singular_terms,
                                              singularity_accuracy)
 
-    def impedance_single_parts(self, s, part_o, part_s=None):
+    def impedance_single_parts(self, s, part_o, part_s=None,
+                               frequency_derivatives=False):
         """Calculate a self or mutual impedance matrix at a given complex
         frequency
 
@@ -187,7 +192,8 @@ class PMCHWTOperator(TOperator):
         part_s : SinglePart, optional
             The source part, if not specified will default to observing part
         """
-        matrices, metadata = super(PMCHWTOperator, self).impedance_single_parts(s, part_o, part_s)
+        matrices, metadata = super(PMCHWTOperator, self).impedance_single_parts(s, part_o, part_s,
+                                                                                frequency_derivatives)
         # set the weights
         metadata['w_EFIE_i'] = 1.0
         metadata['w_EFIE_o'] = 1.0
@@ -214,7 +220,8 @@ class CTFOperator(TOperator):
                                           num_singular_terms,
                                           singularity_accuracy)
 
-    def impedance_single_parts(self, s, part_o, part_s=None):
+    def impedance_single_parts(self, s, part_o, part_s=None,
+                               frequency_derivatives=False):
         """Calculate a self or mutual impedance matrix at a given complex
         frequency
 
@@ -227,7 +234,8 @@ class CTFOperator(TOperator):
         part_s : SinglePart, optional
             The source part, if not specified will default to observing part
         """
-        matrices, metadata = super(CTFOperator, self).impedance_single_parts(s, part_o, part_s)
+        matrices, metadata = super(CTFOperator, self).impedance_single_parts(s, part_o, part_s,
+                                                                             frequency_derivatives)
         # set the weights
         eta_i = part_o.material.eta_r(s)
         eta_o = self.background_material.eta_r(s)
