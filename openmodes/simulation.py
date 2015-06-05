@@ -215,6 +215,24 @@ class Simulation(Identified):
         return self.operator.source_vector(source_field, s, parent,
                                            extinction_field)
 
+    def estimate_poles(self, s_min, s_max, part=None, threshold=1e-11,
+                       previous_result=None):
+        "Estimate the location of poles and their modes by Cauchy integration"
+        part = part or self.parts
+
+        return self.operator.estimate_poles(s_min, s_max, part,
+                                            threshold, previous_result)
+
+    def refine_poles(self, estimate_s, estimate_vr, estimate_vl=None,
+                     part=None, rel_tol=1e-8):
+        "Refine the location of poles by iterative search"
+        part = part or self.parts
+
+        return self.operator.poles(0, len(estimate_s), part, use_gram=True,
+                                   rel_tol=rel_tol, max_iter=40,
+                                   estimate_s=estimate_s,
+                                   estimate_vr=estimate_vr)
+
     def singularities(self, s_start, modes, part=None, use_gram=True,
                       rel_tol=1e-6, max_iter=200):
         """Find the poles of the response of a part

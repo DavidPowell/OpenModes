@@ -22,7 +22,7 @@ import numpy as np
 import logging
 
 from openmodes.vector import VectorParts
-from openmodes.eig import eig_linearised, eig_newton
+from openmodes.eig import eig_linearised, eig_newton, poles_cauchy
 
 from openmodes.impedance import ImpedanceParts
 
@@ -68,8 +68,20 @@ class Operator(object):
 
         return ImpedanceParts(s, parent_o, parent_s, matrices, type(res))
 
+    def estimate_poles(self, s_min, s_max, part=None, threshold=1e-11,
+                       previous_result=None):
+
+        N = len(self.basis_container[part])
+
+        def Z_func(s):
+            Z = self.impedance(s, part, part, frequency_derivatives=False)[:]
+            return Z[:]
+
+        return poles_cauchy(Z_func, N, s_min, s_max, threshold,
+                            previous_result=previous_result)
+
     def poles(self, s_start, modes, part, use_gram=True,
-              rel_tol=1e-6, max_iter=200):
+              rel_tol=1e-6, max_iter=200, estimate_s=None, estimate_vr=None):
         """Find the poles of the operator applied to a specified part
 
         Parameters
@@ -90,6 +102,10 @@ class Operator(object):
         max_iter : integer, optional
             The maximum number of iterations to use when searching for
             singularities
+        estimate_s : array of complex, optional
+            The estimated location of the poles
+        estimate_vr : array, optional
+            Columns are the estimated right eigenvalues
 
         Returns
         -------
@@ -109,9 +125,11 @@ class Operator(object):
             num_modes = modes
             modes = range(num_modes)
 
-        # first get an estimate of the pole locations
-        Z = self.impedance(s_start, part, part)[part, part]
-        lin_s, lin_currents = eig_linearised(Z, modes)
+        # If required, create a quasi-static estimate of the pole locations,
+        # which will not find all modes
+        if estimate_s is None or estimate_vr is None:
+            Z = self.impedance(s_start, part, part)[part, part]
+            estimate_s, estimate_vr = eig_linearised(Z, modes)
 
         mode_s = np.empty(num_modes, np.complex128)
         mode_j = VectorParts(part, self.basis_container, dtype=np.complex128,
@@ -119,7 +137,9 @@ class Operator(object):
 
         # Adaptively check if the operator provides frequency derivatives, and
         # if so use them in the Newton iteration to find the poles.
-        func_gives_der = hasattr(Z, 'frequency_derivative')
+        # TODO: Fix this nasty kludge
+        func_gives_der = self.__class__.__name__ == 'EfieOperator'
+        print(func_gives_der)
         if func_gives_der:
             def Z_func(s):
                 Z = self.impedance(s, part, part, frequency_derivatives=True)[:]
@@ -130,16 +150,16 @@ class Operator(object):
                 return Z[:]
 
         if use_gram:
-            G = Z.md['basis_s'].gram_matrix
+            G = self.basis_container[part].gram_matrix
 
         # Note that mode refers to the position in the array modes, which
         # at this point need not correspond to the original mode numbering
         for mode in range(num_modes):
-            res = eig_newton(Z_func, lin_s[mode], lin_currents[:, mode],
+            res = eig_newton(Z_func, estimate_s[mode], estimate_vr[:, mode],
                              weight='max element', lambda_tol=rel_tol,
                              max_iter=max_iter, func_gives_der=func_gives_der)
 
-            lin_hz = lin_s[mode]/2/np.pi
+            lin_hz = estimate_s[mode]/2/np.pi
             nl_hz = res['eigval']/2/np.pi
             logging.info("Converged after %d iterations\n"
                          "%+.4e %+.4ej (linearised solution)\n"
