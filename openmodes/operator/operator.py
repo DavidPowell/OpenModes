@@ -139,7 +139,6 @@ class Operator(object):
         # if so use them in the Newton iteration to find the poles.
         # TODO: Fix this nasty kludge
         func_gives_der = self.__class__.__name__ == 'EfieOperator'
-        print(func_gives_der)
         if func_gives_der:
             def Z_func(s):
                 Z = self.impedance(s, part, part, frequency_derivatives=True)[:]

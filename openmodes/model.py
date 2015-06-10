@@ -157,8 +157,6 @@ class ScalarModelResidues(object):
         return (self.mode_j*np.dot(self.mode_j, V[:])/z +
                 self.mode_j.conj()*np.dot(self.mode_j.conj(), V[:])/z_conj)*s
 
-        #return self.mode_j*np.dot(self.mode_j, V[:])/self.scalar_impedance(s)
-
 
 def fit_LS(s_0, L_0, S_0):
     """
