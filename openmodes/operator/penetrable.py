@@ -27,6 +27,7 @@ from openmodes.impedance import PenetrableImpedanceMatrix
 from openmodes.operator.operator import Operator
 from openmodes.operator import rwg
 from openmodes.constants import epsilon_0, mu_0, c
+from openmodes.array import LookupArray
 
 
 class TOperator(Operator):
@@ -58,6 +59,20 @@ class TOperator(Operator):
         self.num_singular_terms = num_singular_terms
         self.background_material = background_material
         self.singularity_accuracy = singularity_accuracy
+
+    def source_vector(self, source_field, s, parent, extinction_field):
+        "Calculate the relevant source vector for this operator"
+
+        V = LookupArray((("E", "H"), parent), self.basis_container,
+                        dtype=np.complex128)
+
+        for part in parent.iter_single():
+            E_field, H_field = self.source_single_part(source_field, s, part,
+                                                       extinction_field)
+            V["E", part] = E_field
+            V["H", part] = H_field
+
+        return V
 
     def source_single_part(self, source_field, s, part, extinction_field):
         basis = self.basis_container[part]
