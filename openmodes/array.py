@@ -50,6 +50,29 @@ def part_ranges(parent_part, basis_container):
     return ranges
 
 
+def build_lookup(index_data, basis_container):
+    "Create the lookup table for a LookupArray"
+    lookup = []
+    shape = []
+    for index in index_data:
+        if isinstance(index, Part):
+            # a hierarchy of parts
+            ranges = part_ranges(index, basis_container)
+            lookup.append(ranges)
+            shape.append(ranges[index].stop)
+        elif isinstance(index, numbers.Integral):
+            # an integer for a specific length
+            lookup.append(None)
+            shape.append(index)
+        else:
+            # Assumed to be a tuple of strings, although any sequence of
+            # immutable objects should be okay.
+            lookup.append({y: x for (x, y) in enumerate(index)})
+            shape.append(len(index))
+
+    return lookup, shape
+
+
 class LookupArray(np.ndarray):
     """
     A subclass of a numpy array, where for certain dimensions, Part objects
@@ -63,6 +86,8 @@ class LookupArray(np.ndarray):
         - transpose
         - adding new axes by indexing with np.newaxis/None
         - flattening
+        - anything other than C ordering
+        - Functions which reduce dimensions
     """
 
     def __new__(subtype, index_data, basis_container, dtype=float):
@@ -79,24 +104,7 @@ class LookupArray(np.ndarray):
             The numpy data type of the vector
         """
 
-        shape = []
-        lookup = []
-        for index in index_data:
-            if isinstance(index, Part):
-                # a hierarchy of parts
-                ranges = part_ranges(index, basis_container)
-                lookup.append(ranges)
-                shape.append(ranges[index].stop)
-            elif isinstance(index, numbers.Integral):
-                # an integer for a specific length
-                lookup.append(None)
-                shape.append(index)
-            else:
-                # Assumed to be a tuple of strings, although any sequence of
-                # immutable objects should be okay.
-                lookup.append({y: x for (x, y) in enumerate(index)})
-                shape.append(len(index))
-
+        lookup, shape = build_lookup(index_data, basis_container)
         obj = np.ndarray.__new__(subtype, shape, dtype)
         obj.lookup = lookup
         obj.basis_container = basis_container
@@ -110,7 +118,7 @@ class LookupArray(np.ndarray):
             return
 
         # set default values for the custom attributes
-        self.basis_container = obj.basis_container
+        self.basis_container = getattr(obj, 'basis_container', None)
         self.lookup = getattr(obj, 'lookup', None)
 
     def __setstate__(self, state):
@@ -222,3 +230,12 @@ class LookupArray(np.ndarray):
 
     def transpose(self, **args):
         raise NotImplementedError
+
+
+def view_lookuparray(original, index_data, basis_container):
+    """Convert an array to a LookupArray, where possible avoiding copying"""
+    lookup, shape = build_lookup(index_data, basis_container)
+    result = original.reshape(shape).view(LookupArray)
+    result.lookup = lookup
+    result.basis_container = basis_container
+    return result
