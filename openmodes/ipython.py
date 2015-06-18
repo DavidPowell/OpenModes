@@ -24,6 +24,7 @@ from IPython.display import HTML, display
 import numpy as np
 import uuid
 import json
+import matplotlib
 
 from openmodes.mesh import combine_mesh
 from openmodes import template_env
@@ -150,3 +151,16 @@ def plot_3d(parts_list, charges, currents, centres, width=700, height=500,
                                          'skip_webgl': skip_webgl})
 
     display(HTML(html_generated))
+
+
+def matplotlib_defaults():
+    "Set some nicer defaults for matplotlib plots for ipython notebooks"
+    rcp = matplotlib.rcParams
+    rcp['figure.figsize'] = (8, 5)
+    rcp['lines.linewidth'] = 1.0
+    rcp['lines.markeredgewidth'] = 2.0
+    rcp['axes.labelsize'] = 12
+    rcp['font.size'] = 12
+    rcp['patch.linewidth'] = 1.0
+    rcp['figure.facecolor'] = 'white'
+    rcp['figure.edgecolor'] = 'white'
