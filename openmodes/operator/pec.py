@@ -46,7 +46,9 @@ class EfieOperator(Operator):
         self.singularity_accuracy = singularity_accuracy
 
         self.tangential_form = tangential_form
+        self.unknowns = ("J",)
         if tangential_form:
+            self.sources = ("E",)
             self.reciprocal = True
             self.source_cross = False
         else:
@@ -133,8 +135,6 @@ class MfieOperator(Operator):
     respect to some set of basis functions. Assumes that Galerkin's method is
     used, such that the testing functions are the same as the basis functions.
     """
-    source_field = "magnetic_field"
-
     def __init__(self, integration_rule, basis_container, background_material,
                  tangential_form=False, num_singular_terms=2,
                  singularity_accuracy=1e-5):
@@ -156,12 +156,16 @@ class MfieOperator(Operator):
         self.singularity_accuracy = singularity_accuracy
 
         self.tangential_form = tangential_form
+
+        self.unknowns = ("J",)
         if tangential_form:
             self.reciprocal = False
             self.source_cross = False
+            self.sources = ("H",)
         else:
             self.reciprocal = False
             self.source_cross = True
+            self.sources = ("nxH",)
 
         logging.info("Creating MFIE operator, tangential form: %s"
                      % str(tangential_form))
@@ -252,6 +256,9 @@ class CfieOperator(Operator):
         self.num_singular_terms = num_singular_terms
         self.singularity_accuracy = singularity_accuracy
         self.alpha = alpha
+
+        self.unknowns = ("J",)
+        self.sources = ("E+nxH",)
 
     def source_single_part(self, source_field, s, part, extinction_field):
         basis = self.basis_container[part]

@@ -60,6 +60,9 @@ class TOperator(Operator):
         self.background_material = background_material
         self.singularity_accuracy = singularity_accuracy
 
+        self.unknowns = ("J", "M")
+        self.sources = ("E", "H")
+
     def source_vector(self, source_field, s, parent, extinction_field):
         "Calculate the relevant source vector for this operator"
 
