@@ -61,11 +61,11 @@ def test_horseshoe_modes(plot=False, skip_asserts=False,
 
     if write_reference:
         write_1d_complex(osp.join(reference_dir, 'eigenvector_0.txt'),
-                         mode_j[:, 0])
+                         mode_j["J", :, 0])
         write_1d_complex(osp.join(reference_dir, 'eigenvector_1.txt'),
-                         mode_j[:, 1])
+                         mode_j["J", :, 1])
         write_1d_complex(osp.join(reference_dir, 'eigenvector_2.txt'),
-                         mode_j[:, 2])
+                         mode_j["J", :, 2])
 
     j_0_ref = read_1d_complex(osp.join(reference_dir, 'eigenvector_0.txt'))
     j_1_ref = read_1d_complex(osp.join(reference_dir, 'eigenvector_1.txt'))
@@ -76,16 +76,16 @@ def test_horseshoe_modes(plot=False, skip_asserts=False,
                                  -1.887518e+10 + 4.500579e+10j,
                                  -1.991163e+10 + 6.846221e+10j],
                         rtol=1e-3)
-        assert_allclose_sign(mode_j[:, 0], j_0_ref, rtol=1e-2)
-        assert_allclose_sign(mode_j[:, 1], j_1_ref, rtol=1e-2)
-        assert_allclose_sign(mode_j[:, 2], j_2_ref, rtol=1e-2)
+        assert_allclose_sign(mode_j["J", :, 0], j_0_ref, rtol=1e-2)
+        assert_allclose_sign(mode_j["J", :, 1], j_1_ref, rtol=1e-2)
+        assert_allclose_sign(mode_j["J", :, 2], j_2_ref, rtol=1e-2)
 
     if plot:
-        sim.plot_3d(solution=mode_j[:, 0], output_format='mayavi',
+        sim.plot_3d(solution=mode_j["J", :, 0], output_format='mayavi',
                     compress_scalars=3)
-        sim.plot_3d(solution=mode_j[:, 1], output_format='mayavi',
+        sim.plot_3d(solution=mode_j["J", :, 1], output_format='mayavi',
                     compress_scalars=3)
-        sim.plot_3d(solution=mode_j[:, 2], output_format='mayavi',
+        sim.plot_3d(solution=mode_j["J", :, 2], output_format='mayavi',
                     compress_scalars=3)
 
 
