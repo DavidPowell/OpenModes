@@ -23,6 +23,7 @@ import logging
 
 from openmodes.vector import VectorParts
 from openmodes.eig import eig_linearised, eig_newton, poles_cauchy
+from openmodes.array import LookupArray, view_lookuparray
 
 from openmodes.impedance import ImpedanceParts
 
@@ -68,17 +69,35 @@ class Operator(object):
 
         return ImpedanceParts(s, parent_o, parent_s, matrices, type(res))
 
+    def gram_matrix(self, part):
+        """Create a Gram matrix as a LookupArray"""
+        G = self.basis_container[part].gram_matrix
+        Gp = LookupArray((self.unknowns, part, self.sources, part),
+                         self.basis_container, dtype=G.dtype)
+        Gp[:] = 0.0
+        for unknown, source in zip(self.unknowns, self.sources):
+            Gp[unknown, :, source, :] = G
+        return Gp
+
     def estimate_poles(self, s_min, s_max, part=None, threshold=1e-11,
                        previous_result=None):
 
-        N = len(self.basis_container[part])
+        N = len(self.basis_container[part])*len(self.unknowns)
 
         def Z_func(s):
             Z = self.impedance(s, part, part, frequency_derivatives=False)[:]
             return Z[:]
 
-        return poles_cauchy(Z_func, N, s_min, s_max, threshold,
-                            previous_result=previous_result)
+        result = poles_cauchy(Z_func, N, s_min, s_max, threshold,
+                              previous_result=previous_result)
+        # reformat vectors in result into LookupArrays
+        for key in ('vr', 'vl', 'vl_out', 'vr_out'):
+            this_result = result[key]
+            num_cols = this_result.shape[1]
+            result[key] = view_lookuparray(this_result,
+                                           (self.unknowns, part, num_cols),
+                                           self.basis_container)
+        return result
 
     def poles(self, s_start, modes, part, use_gram=True,
               rel_tol=1e-6, max_iter=200, estimate_s=None, estimate_vr=None):
@@ -130,10 +149,13 @@ class Operator(object):
         if estimate_s is None or estimate_vr is None:
             Z = self.impedance(s_start, part, part)[part, part]
             estimate_s, estimate_vr = eig_linearised(Z, modes)
+            estimate_vr = view_lookuparray(estimate_vr,
+                                           (self.unknowns, part, len(estimate_s)),
+                                           self.basis_container)
 
         mode_s = np.empty(num_modes, np.complex128)
-        mode_j = VectorParts(part, self.basis_container, dtype=np.complex128,
-                             cols=num_modes)
+        mode_j = LookupArray((self.unknowns, part, num_modes),
+                             self.basis_container, dtype=np.complex128)
 
         # Adaptively check if the operator provides frequency derivatives, and
         # if so use them in the Newton iteration to find the poles.
@@ -149,12 +171,12 @@ class Operator(object):
                 return Z[:]
 
         if use_gram:
-            G = self.basis_container[part].gram_matrix
+            G = self.gram_matrix(part).simple_view()
 
         # Note that mode refers to the position in the array modes, which
         # at this point need not correspond to the original mode numbering
         for mode in range(num_modes):
-            res = eig_newton(Z_func, estimate_s[mode], estimate_vr[:, mode],
+            res = eig_newton(Z_func, estimate_s[mode], estimate_vr[:, :, mode].simple_view(),
                              weight='max element', lambda_tol=rel_tol,
                              max_iter=max_iter, func_gives_der=func_gives_der)
 
@@ -174,7 +196,7 @@ class Operator(object):
             else:
                 j_calc /= np.sqrt(np.sum(j_calc**2))
 
-            mode_j[:, mode] = j_calc
+            mode_j[:, :, mode] = j_calc.reshape((len(self.unknowns), -1))
 
         return mode_s, mode_j
 
