@@ -88,6 +88,7 @@ class LookupArray(np.ndarray):
         - flattening
         - anything other than C ordering
         - Functions which reduce dimensions
+        - Indexing with ...
     """
 
     def __new__(subtype, index_data, basis_container, dtype=float):
@@ -177,14 +178,17 @@ class LookupArray(np.ndarray):
                 new_idx.append(entry)
 
                 if not isinstance(entry, numbers.Integral):
-                    # Integers mean a dimension is dropped, in all other cases
-                    # the dimension is kept but the dimension metadata is lost
-
-                    # TODO: what if None/np.newaxis is passed?
+                    # Integers mean a dimension is dropped, in all other
+                    # cases it is kept
                     if entry is None:
+                        # TODO: what if None/np.newaxis is passed?
                         raise NotImplementedError
-
-                    sub_lookup.append(None)
+                    elif entry == slice(None):
+                        # If slicing the whole dimension, metadata can be kept
+                        sub_lookup.append(self.lookup[entry_num])
+                    else:
+                        # In all other cases metadata is lost
+                        sub_lookup.append(None)
 
         # now add lookup data for all the non-indexed dimensions
         sub_lookup = sub_lookup+self.lookup[len(idx):]
@@ -192,7 +196,7 @@ class LookupArray(np.ndarray):
         try:
             result = super(LookupArray, self).__getitem__(tuple(new_idx))
         except IndexError as exc:
-            message = "Invalid index %s" % idx
+            message = "Invalid index %s" % str(idx)
             exc.args = (message,)+exc.args[1:]
             raise
 
@@ -230,6 +234,19 @@ class LookupArray(np.ndarray):
 
     def transpose(self, **args):
         raise NotImplementedError
+
+    def simple_view(self):
+        """Return a view where quantity dimensions (with string keys) are
+        collapsed into the subsequent dimension. View is of type ndarray."""
+        new_shape = []
+
+        for dim_n, lu_n in zip(reversed(self.shape), reversed(self.lookup)):
+            if type(lu_n) == dict and type(lu_n.keys()[0]) == str:
+                new_shape[-1] *= dim_n
+            else:
+                new_shape.append(dim_n)
+        new_shape.reverse()
+        return self.reshape(new_shape).view(np.ndarray)
 
 
 def view_lookuparray(original, index_data, basis_container):
