@@ -75,9 +75,10 @@ class EfieOperator(Operator):
         # if source part is not given, default to observer part
         if part_s is None:
             part_s = part_o
-            symmetric = self.reciprocal
         else:
             symmetric = False
+
+        symmetric = self.reciprocal and (part_s == part_o)
 
         basis_o = self.basis_container[part_o]
         basis_s = self.basis_container[part_s]
