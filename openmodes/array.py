@@ -241,7 +241,7 @@ class LookupArray(np.ndarray):
         new_shape = []
 
         for dim_n, lu_n in zip(reversed(self.shape), reversed(self.lookup)):
-            if type(lu_n) == dict and type(lu_n.keys()[0]) == str:
+            if type(lu_n) == dict and type(list(lu_n.keys())[0]) == str:
                 new_shape[-1] *= dim_n
             else:
                 new_shape.append(dim_n)
