@@ -195,13 +195,12 @@ class Operator(object):
                              weight='max element', lambda_tol=rel_tol,
                              max_iter=max_iter, func_gives_der=func_gives_der)
 
-            lin_hz = estimate_s[mode]/2/np.pi
-            nl_hz = res['eigval']/2/np.pi
             logging.info("Converged after %d iterations\n"
                          "%+.4e %+.4ej (linearised solution)\n"
                          "%+.4e %+.4ej (nonlinear solution)"
-                         % (res['iter_count'], lin_hz.real, lin_hz.imag,
-                            nl_hz.real, nl_hz.imag))
+                         % (res['iter_count'], estimate_s[mode].real,
+                            estimate_s[mode].imag,
+                            res['eigval'].real, res['eigval'].imag))
 
             mode_s[mode] = res['eigval']
             j_calc = res['eigvec']
