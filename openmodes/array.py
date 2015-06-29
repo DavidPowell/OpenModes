@@ -135,7 +135,7 @@ class LookupArray(np.ndarray):
 
         Note that some metadata may be lost when unpickling."""
         base_reduce = list(super(LookupArray, self).__reduce__(self))
-        full_state = (base_reduce[2], self.lookup, self.basis_container)
+        full_state = (base_reduce[2], (self.lookup, self.basis_container))
         base_reduce[2] = full_state
         return tuple(base_reduce)
 
