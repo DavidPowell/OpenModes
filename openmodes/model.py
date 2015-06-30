@@ -94,7 +94,7 @@ class ScalarModelLeastSq(object):
         self.scale_factor = abs(mode_s.imag)/10
 
         Z_func = lambda s: operator.impedance(s, part, part, frequency_derivatives=True)[part, part]
-        z_der = mode_j.dot(Z_func(mode_s).frequency_derivative(slice(None)).dot(mode_j))
+        z_der = mode_j.dot(Z_func(mode_s).frequency_derivative().dot(mode_j))
         self.coefficients = fit_four_term(mode_s/self.scale_factor,
                                           z_der*self.scale_factor)
         logging.info("Creating scalar model\ndlambda/ds = %+.4e %+.4e\n"
@@ -109,7 +109,7 @@ class ScalarModelLeastSq(object):
 
     def solve(self, s, V):
         "Solve the model for the current at arbitrary frequency"
-        return self.mode_j*np.dot(self.mode_j, V[:])/self.scalar_impedance(s)
+        return self.mode_j*np.dot(self.mode_j, V.simple_view())/self.scalar_impedance(s)
 
 
 class ScalarModelResidues(object):
@@ -127,7 +127,7 @@ class ScalarModelResidues(object):
         self.real_mode = abs(self.mode_s.imag) < 1e-2*abs(self.mode_s.real)
 
         Z_func = lambda s: operator.impedance(s, part, part, frequency_derivatives=True)[part, part]
-        self.z_der = mode_j.dot(Z_func(mode_s).frequency_derivative_P(slice(None)).dot(mode_j))
+        self.z_der = mode_j.dot(Z_func(mode_s).frequency_derivative_P().dot(mode_j))
         if self.real_mode:
             self.mode_s = mode_s.real
             self.z_der = self.z_der.real
