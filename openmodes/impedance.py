@@ -28,6 +28,7 @@ from openmodes.helpers import inc_slice
 from openmodes.basis import get_combined_basis
 from openmodes.eig import eig_newton_bordered
 from openmodes.vector import VectorParts
+from openmodes.array import LookupArray
 
 
 class AbstractImpedanceMatrix(object):
@@ -525,6 +526,161 @@ class PenetrableImpedanceMatrix(AbstractImpedanceMatrix):
                                      -K_o*w_EFIE_o-K_i*w_EFIE_i)),
                          (np.hstack((K_o*w_MFIE_o+K_i*w_MFIE_i,
                                      D_o/eta_o*w_MFIE_o + D_i/eta_i*w_MFIE_i)))))
+
+
+class ImpedanceMatrixLA(object):
+    """An impedance matrix based on LookupArray, which can hold matrices for
+    Parts of arbitrary level"""
+
+    matrix_names = ('Z',)
+
+    def __init__(self, part_o, part_s, basis_container, metadata={},
+                 matrices=None, derivatives=None):
+        self.md = metadata
+        self.part_o = part_o
+        self.part_s = part_s
+        self.basis_container = basis_container
+
+        if matrices is None:
+            # create the empty matrices
+            self.matrices = {name: LookupArray((part_o, part_s), self.basis_container,
+                                               dtype=np.complex128)
+                             for name in self.matrix_names}
+        else:
+            self.matrices = matrices
+
+        # create the frequency derivatives of the matrices
+        if derivatives is None:
+            self.der = None
+        elif derivatives is True:
+            self.der = {name: LookupArray((part_o, part_s), self.basis_container,
+                                          dtype=np.complex128)
+                        for name in self.matrix_names}
+        else:
+            self.der = derivatives
+
+    def val(self):
+        "The value of the impedance matrix"
+        op = self.md['operator']
+        Z = LookupArray((op.sources, self.part_o, op.unknowns, self.part_s),
+                        self.basis_container, dtype=np.complex128)
+        Z.simple_view()[:] = self.matrices['Z']
+        return Z
+
+    def clear_cached(self):
+        "Clear any cached data"
+        if hasattr(self, "lu_factored"):
+            del self.lu_factored
+
+    def factored(self):
+        "Caches the LU factorisation of the matrix"
+        try:
+            return self.lu_factored
+        except AttributeError:
+            self.lu_factored = la.lu_factor(self.val().simple_view())
+            return self.lu_factored
+
+    def solve(self, vec):
+        """Solve the impedance matrix for a source vector. Caches the
+        factorised matrix for efficiently solving multiple vectors"""
+        if self.part_o != self.part_s:
+            raise ValueError("Can only invert a self-impedance matrix")
+
+        Z_lu = self.factored()
+        if isinstance(vec, LookupArray):
+            vec = vec.simple_view()
+
+        lookup = (self.md['operator'].unknowns, self.part_s)
+
+        if len(vec.shape) > 1:
+            lookup = lookup+(vec.shape[1],)
+
+        I = LookupArray(lookup, self.basis_container, dtype=np.complex128)
+        I_simp = I.simple_view()
+        I_simp[:] = la.lu_solve(Z_lu, vec)
+        return I
+
+    def __getitem__(self, index):
+        "Retrieve the matrix for a subset of parts"
+        try:
+            ind1, ind2 = index
+        except:
+            ind1 = index
+            ind2 = self.part_s
+
+        matrices = {key: val[ind1, ind2] for key, val in self.matrices.iteritems()}
+        if self.der in (None, False):
+            der = self.der
+        else:
+            der = {key: val[ind1, ind2] for key, val in self.der.iteritems()}
+
+        return self.__class__(ind1, ind2, self.basis_container, metadata=self.md,
+                              matrices=matrices, derivatives=der)
+
+    def __setitem__(self, index, other):
+        "Set part of this matrix from another impedance matrix"
+        if not isinstance(other, ImpedanceMatrixLA):
+            raise ValueError("Can only set to another impedance matrix")
+        for name in self.matrix_names:
+            self.matrices[name][index] = other.matrices[name]
+            if self.der:
+                self.der[name][index] = other.der[name]
+
+    @property
+    def T(self):
+        matrices = {key: val.T for key, val in self.matrices.iteritems()}
+
+        if self.der in (None, False):
+            der = self.der
+        else:
+            der = {key: val.T for key, val in self.der.iteritems()}
+
+        return self.__class__(self.part_s, self.part_o, self.basis_container, metadata=self.md,
+                              matrices=matrices, derivatives=der)
+
+
+class EfieImpedanceMatrixLA(ImpedanceMatrixLA):
+    "An impedance matrix for metallic objects solved via EFIE"
+
+    matrix_names = ('L', 'S')
+
+    def val(self):
+        "The value of the impedance matrix"
+        s = self.md['s']
+        op = self.md['operator']
+        Z = LookupArray((op.sources, self.part_o, op.unknowns, self.part_s),
+                        self.basis_container, dtype=np.complex128)
+        Z.simple_view()[:] = self.matrices['S']/s + s*self.matrices['L']
+        return Z
+
+    def frequency_derivative(self):
+        # TODO: return LookupArray
+        return (self.matrices['L'] +
+                self.md['s']*self.der['L'] -
+                self.matrices['S']/self.md['s']**2 +
+                self.der['S']/self.md['s'])
+
+    def frequency_derivative_P(self):
+        return (2*self.md['s']*self.matrices['L'] +
+                self.md['s']**2*self.der['L'] +
+                self.der['S'])
+
+
+class CfieImpedanceMatrixLA(ImpedanceMatrixLA):
+    "An impedance matrix for metallic objects solved via EFIE"
+
+    matrix_names = ('L', 'S', 'M')
+
+    def val(self):
+        "The value of the impedance matrix"
+        s = self.md['s']
+        op = self.md['operator']
+        alpha = self.md['alpha']
+        Z = LookupArray((op.sources, self.part_o, op.unknowns, self.part_s),
+                        self.basis_container, dtype=np.complex128)
+        Z.simple_view()[:] = (alpha*(self.matrices['S']/s + s*self.matrices['L']) +
+                              (1.0-alpha)*self.matrices['M'])
+        return Z
 
 
 class ImpedanceParts(object):
