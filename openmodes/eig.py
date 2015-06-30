@@ -24,6 +24,7 @@ import scipy.linalg as la
 import numpy as np
 import logging
 from openmodes.integration import GaussLegendreRule
+from openmodes.array import loop_star_indices
 
 
 def eig_linearised(Z, modes):
@@ -50,34 +51,29 @@ def eig_linearised(Z, modes):
 
     modes = np.asarray(modes)
 
-    # check whether the operator has a null-space to be eliminated
-    has_nullspace = (hasattr(Z.md['basis_o'], 'num_loops')
-                     and Z.md['basis_o'].num_loops != 0)
-
     L = Z.matrices['L']
     S = Z.matrices['S']
 
-    if has_nullspace:
-        star_range = Z.star_range_o
+    if True:
+        # Try to find the loop and star parts of the matrix (all relevant
+        # matrices and vectors follow the same decomposition)
+        loop, star = loop_star_indices(L)
 
-        loop_range = Z.loop_range_o
+        L_conv = la.solve(L[loop[0], loop[1]],
+                          L[loop[0], star[1]])
+        L_red = (L[star[0], star[1]] -
+                 np.dot(L[star[0], loop[1]], L_conv))
 
-        L_conv = la.solve(L[loop_range, loop_range],
-                          L[loop_range, star_range])
-        L_red = (L[star_range, star_range] -
-                 np.dot(L[star_range, loop_range], L_conv))
+        # find eigenvalues, and star part of eigenvectors
+        w, v_s = la.eig(S[star[0], star[1]], -L_red)
+
+        vr = np.empty((L.shape[0], len(w)), np.complex128)
+        vr[star[1]] = v_s
+        vr[loop[1]] = -np.dot(L_conv, v_s)
     else:
-        star_range = slice(None)
-        L_red = L
-
-    # find eigenvalues, and star part of eigenvectors, for LS combined modes
-    w, v_s = la.eig(S[star_range, star_range], -L_red)
-
-    if has_nullspace:
-        v_l = -np.dot(L_conv, v_s)
-        vr = np.vstack((v_l, v_s))
-    else:
-        vr = v_s
+        # Matrix does not have loop-star decomposition, so use the whole thing
+        # TODO: implement some filtering to eliminate null-space solutions?
+        w, vr = la.eig(S, -L)
 
     w_freq = np.sqrt(w)
     # make sure real part is negative
