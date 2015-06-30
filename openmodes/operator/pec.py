@@ -19,15 +19,16 @@
 "Operators for PEC scatterers"
 
 import logging
+import numpy as np
 
-from openmodes.basis import LinearTriangleBasis, LoopStarBasis
-from openmodes.impedance import (EfieImpedanceMatrix,
-                                 EfieImpedanceMatrixLoopStar,
-                                 CfieImpedanceMatrix, SimpleImpedanceMatrix)
+from openmodes.basis import LinearTriangleBasis
+from openmodes.impedance import (EfieImpedanceMatrixLA,
+                                 CfieImpedanceMatrixLA, ImpedanceMatrixLA)
 
 from openmodes.operator.operator import Operator
 from openmodes.operator import rwg
 from openmodes.constants import epsilon_0, mu_0
+from openmodes.array import LookupArray
 
 
 class EfieOperator(Operator):
@@ -44,6 +45,7 @@ class EfieOperator(Operator):
         self.integration_rule = integration_rule
         self.num_singular_terms = num_singular_terms
         self.singularity_accuracy = singularity_accuracy
+        self.impedance_class = EfieImpedanceMatrixLA
 
         self.tangential_form = tangential_form
         self.unknowns = ("J",)
@@ -54,11 +56,13 @@ class EfieOperator(Operator):
         else:
             raise NotImplementedError("n x EFIE")
 
+        self.extinction_fields = ("E",)
+
         logging.info("Creating EFIE operator, tangential form: %s"
                      % str(tangential_form))
 
-    def impedance_single_parts(self, s, part_o, part_s=None,
-                               frequency_derivatives=False):
+    def impedance_single_parts(self, Z, s, part_o, part_s,
+                               frequency_derivatives):
         """Calculate a self or mutual impedance matrix at a given complex
         frequency
 
@@ -71,14 +75,6 @@ class EfieOperator(Operator):
         part_s : SinglePart, optional
             The source part, if not specified will default to observing part
         """
-
-        # if source part is not given, default to observer part
-        if part_s is None:
-            part_s = part_o
-        else:
-            symmetric = False
-
-        symmetric = self.reciprocal and (part_s == part_o)
 
         basis_o = self.basis_container[part_o]
         basis_s = self.basis_container[part_s]
@@ -101,26 +97,24 @@ class EfieOperator(Operator):
         else:
             L, S = res
 
-        L *= mu*mu_0
-        S /= eps*epsilon_0
-
-        matrices = {'L': L, 'S': S}
+        Z.matrices['L'][part_o, part_s] = L*(mu*mu_0)
+        Z.matrices['S'][part_o, part_s] = S/(eps*epsilon_0)
 
         if frequency_derivatives:
-            dL_ds *= mu*mu_0
-            dS_ds /= eps*epsilon_0
+            Z.der['L'] = dL_ds*(mu*mu_0)
+            Z.der['S'] = dS_ds/(eps*epsilon_0)
 
-            matrices['dL_ds'] = dL_ds
-            matrices['dS_ds'] = dS_ds
+    def source_vector(self, source_field, s, parent, extinction_field):
+        "Calculate the relevant source vector for this operator"
 
-        metadata = {'basis_o': basis_o, 'basis_s': basis_s, 's': s,
-                    'operator': self, 'part_o': part_o, 'part_s': part_s,
-                    'symmetric': symmetric}
+        V = LookupArray((("E"), parent), self.basis_container,
+                        dtype=np.complex128)
 
-        if issubclass(self.basis_container.basis_class, LoopStarBasis):
-            return EfieImpedanceMatrixLoopStar(matrices, metadata)
-        else:
-            return EfieImpedanceMatrix(matrices, metadata)
+        for part in parent.iter_single():
+            V["E", part] = self.source_single_part(source_field, s, part,
+                                                   extinction_field)
+
+        return V
 
     def source_single_part(self, source_field, s, part,
                            extinction_field):
@@ -155,6 +149,7 @@ class MfieOperator(Operator):
         self.integration_rule = integration_rule
         self.num_singular_terms = num_singular_terms
         self.singularity_accuracy = singularity_accuracy
+        self.impedance_class = ImpedanceMatrixLA
 
         self.tangential_form = tangential_form
 
@@ -168,21 +163,12 @@ class MfieOperator(Operator):
             self.source_cross = True
             self.sources = ("nxH",)
 
+        self.extinction_fields = ("E",)
+
         logging.info("Creating MFIE operator, tangential form: %s"
                      % str(tangential_form))
 
-    def source_single_part(self, source_field, s, part, extinction_field):
-        if extinction_field:
-            field = lambda r: source_field.electric_field(s, r)
-            source_cross = False
-        else:
-            field = lambda r: source_field.magnetic_field(s, r)
-            source_cross = self.source_cross
-        basis = self.basis_container[part]
-        return basis.weight_function(field, self.integration_rule,
-                                     part.nodes, source_cross)
-
-    def impedance_single_parts(self, s, part_o, part_s=None,
+    def impedance_single_parts(self, Z, s, part_o, part_s=None,
                                frequency_derivatives=False):
         """Calculate a self or mutual impedance matrix at a given complex
         frequency
@@ -215,17 +201,16 @@ class MfieOperator(Operator):
         normals = basis_o.mesh.surface_normals
 
         if isinstance(basis_o, LinearTriangleBasis):
-            Z = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
-                                     part_o.nodes, basis_s, part_s.nodes,
-                                     normals, part_o == part_s, eps, mu,
-                                     self.num_singular_terms,
-                                     self.singularity_accuracy,
-                                     self.tangential_form)
+            Zv = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
+                                      part_o.nodes, basis_s, part_s.nodes,
+                                      normals, part_o == part_s, eps, mu,
+                                      self.num_singular_terms,
+                                      self.singularity_accuracy,
+                                      self.tangential_form)
         else:
             raise NotImplementedError
 
-        return SimpleImpedanceMatrix.build(s, Z, basis_o, basis_s, self,
-                                           part_o, part_s, symmetric=False)
+        Z.matrices['Z'][part_o, part_s] = Zv
 
 
 class TMfieOperator(MfieOperator):
@@ -257,25 +242,56 @@ class CfieOperator(Operator):
         self.num_singular_terms = num_singular_terms
         self.singularity_accuracy = singularity_accuracy
         self.alpha = alpha
+        self.impedance_class = CfieImpedanceMatrixLA
 
         self.unknowns = ("J",)
         self.sources = ("E+nxH",)
 
-    def source_single_part(self, source_field, s, part, extinction_field):
-        basis = self.basis_container[part]
-        E_field = lambda r: source_field.electric_field(s, r)
-        V_E = basis.weight_function(E_field, self.integration_rule,
-                                    part.nodes, False)
+        self.extinction_fields = ("E",)
+
+    def source_vector(self, source_field, s, parent, extinction_field=False):
+        "Calculate the relevant source vector for this operator"
+
         if extinction_field:
-            return V_E
+            return super(CfieOperator, self).source_vector(source_field, s, parent, True)
 
-        H_field = lambda r: source_field.magnetic_field(s, r)
-        V_H = basis.weight_function(H_field, self.integration_rule,
-                                    part.nodes, True)
+        fields = ("E", "nxH")
 
-        return self.alpha*V_E+(1-self.alpha)*V_H
+        V = LookupArray((fields, parent), self.basis_container,
+                        dtype=np.complex128)
 
-    def impedance_single_parts(self, s, part_o, part_s=None,
+        # define the functions to interpolate over the mesh
+        def elec_func(r):
+            return source_field.electric_field(s, r)
+
+        def mag_func(r):
+            return source_field.magnetic_field(s, r)
+
+        for field in fields:
+            if field == "E":
+                field_func = elec_func
+                source_cross = False
+            elif field == "nxH":
+                field_func = mag_func
+                source_cross = True
+
+            for part in parent.iter_single():
+                basis = self.basis_container[part]
+                V[field, part] = basis.weight_function(field_func, self.integration_rule,
+                                                       part.nodes, source_cross)
+
+        V_final = LookupArray((self.sources, parent), self.basis_container,
+                              dtype=np.complex128)
+        V_final[:] = self.alpha*V["E"]+(1.0-self.alpha)*V["nxH"]
+
+        return V_final
+
+    def impedance(self, s, parent_o, parent_s, frequency_derivatives=False):
+        Z = super(CfieOperator, self).impedance(s, parent_o, parent_s, frequency_derivatives)
+        Z.md['alpha'] = self.alpha
+        return Z
+
+    def impedance_single_parts(self, Z, s, part_o, part_s=None,
                                frequency_derivatives=False):
         """Calculate a self or mutual impedance matrix at a given complex
         frequency
@@ -305,7 +321,7 @@ class CfieOperator(Operator):
         normals = basis_o.mesh.surface_normals
 
         if not (basis_o.mesh.closed_surface and basis_s.mesh.closed_surface):
-            raise ValueError("MFIE can only be solved for closed objects")
+            raise ValueError("CFIE can only be solved for closed objects")
 
         if isinstance(basis_o, LinearTriangleBasis):
             L, S = rwg.impedance_G(s, self.integration_rule, basis_o,
@@ -313,8 +329,6 @@ class CfieOperator(Operator):
                                    part_o == part_s, eps, mu,
                                    self.num_singular_terms,
                                    self.singularity_accuracy)
-            L *= mu*mu_0
-            S /= eps*epsilon_0
 
             M = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
                                      part_o.nodes, basis_s, part_s.nodes,
@@ -326,5 +340,6 @@ class CfieOperator(Operator):
         else:
             raise NotImplementedError
 
-        return CfieImpedanceMatrix.build(s, L, S, M, self.alpha, basis_o,
-                                         basis_s, self,  part_o, part_s, False)
+        Z.matrices['L'][part_o, part_s] = L*(mu*mu_0)
+        Z.matrices['S'][part_o, part_s] = S/(eps*epsilon_0)
+        Z.matrices['M'][part_o, part_s] = M

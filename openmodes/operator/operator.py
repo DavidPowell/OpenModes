@@ -25,8 +25,6 @@ from openmodes.vector import VectorParts
 from openmodes.eig import eig_linearised, eig_newton, poles_cauchy
 from openmodes.array import LookupArray, view_lookuparray
 
-from openmodes.impedance import ImpedanceParts
-
 
 class Operator(object):
     "A base class for operator equations"
@@ -50,24 +48,24 @@ class Operator(object):
             the object in several ways.
         """
 
-        matrices = {}
+        symmetric = self.reciprocal and (parent_o == parent_s)
 
-        # TODO: cache individual part impedances to avoid repetition?
-        # May not be worth it because mutual impedances cannot be cached
-        # except in specific cases such as arrays, and self terms may be
-        # invalidated by green's functions which depend on coordinates
+        Z = self.impedance_class(parent_o, parent_s, self.basis_container,
+                                 derivatives=frequency_derivatives)
 
-        for part_o in parent_o.iter_single():
-            for part_s in parent_s.iter_single():
-                if self.reciprocal and (part_s, part_o) in matrices:
-                    # use reciprocity to avoid repeated calculation
-                    res = matrices[part_s, part_o].T
+        # set the common metadata
+        Z.md['s'] = s
+        Z.md['symmetric'] = symmetric
+        Z.md['operator'] = self
+
+        for count_o, part_o in enumerate(parent_o.iter_single()):
+            for count_s, part_s in enumerate(parent_s.iter_single()):
+                if symmetric and count_s < count_o:
+                    Z[part_o, part_s] = Z[part_s, part_o].T
                 else:
-                    res = self.impedance_single_parts(s, part_o, part_s,
-                                                      frequency_derivatives)
-                matrices[part_o, part_s] = res
+                    self.impedance_single_parts(Z, s, part_o, part_s, frequency_derivatives)
+        return Z
 
-        return ImpedanceParts(s, parent_o, parent_s, matrices, type(res))
 
     def gram_matrix(self, part):
         """Create a Gram matrix as a LookupArray"""
@@ -85,8 +83,8 @@ class Operator(object):
         N = len(self.basis_container[part])*len(self.unknowns)
 
         def Z_func(s):
-            Z = self.impedance(s, part, part, frequency_derivatives=False)[:]
-            return Z[:]
+            Z = self.impedance(s, part, part, frequency_derivatives=False)
+            return Z.val().simple_view()
 
         result = poles_cauchy(Z_func, N, s_min, s_max, threshold,
                               previous_result=previous_result)
@@ -163,12 +161,12 @@ class Operator(object):
         func_gives_der = self.__class__.__name__ == 'EfieOperator'
         if func_gives_der:
             def Z_func(s):
-                Z = self.impedance(s, part, part, frequency_derivatives=True)[:]
-                return Z[:], Z.frequency_derivative(slice(None))
+                Z = self.impedance(s, part, part, frequency_derivatives=True)
+                return Z.val().simple_view(), Z.frequency_derivative().simple_view()
         else:
             def Z_func(s):
-                Z = self.impedance(s, part, part, frequency_derivatives=False)[:]
-                return Z[:]
+                Z = self.impedance(s, part, part, frequency_derivatives=False)
+                return Z.val().simple_view()
 
         if use_gram:
             G = self.gram_matrix(part).simple_view()
@@ -200,13 +198,37 @@ class Operator(object):
 
         return mode_s, mode_j
 
-    def source_vector(self, source_field, s, parent, extinction_field):
+    def source_vector(self, source_field, s, parent, extinction_field=False):
         "Calculate the relevant source vector for this operator"
 
-        V = VectorParts(parent, self.basis_container, dtype=np.complex128)
+        if extinction_field:
+            fields = self.extinction_fields
+        else:
+            fields = self.sources
 
-        for part in parent.iter_single():
-            V[part] = self.source_single_part(source_field, s, part,
-                                              extinction_field)
+        V = LookupArray((fields, parent), self.basis_container,
+                        dtype=np.complex128)
+
+        # define the functions to interpolate over the mesh
+        def elec_func(r):
+            return source_field.electric_field(s, r)
+
+        def mag_func(r):
+            return source_field.magnetic_field(s, r)
+
+        for field in fields:
+            if field in ("E", "nxE"):
+                field_func = elec_func
+                source_cross = field == "nxE"
+            elif field in ("H", "nxH"):
+                field_func = mag_func
+                source_cross = field == "nxH"
+            else:
+                raise ValueError(field)
+
+            for part in parent.iter_single():
+                basis = self.basis_container[part]
+                V[field, part] = basis.weight_function(field_func, self.integration_rule,
+                                                       part.nodes, source_cross)
 
         return V
