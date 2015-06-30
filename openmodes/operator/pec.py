@@ -101,8 +101,8 @@ class EfieOperator(Operator):
         Z.matrices['S'][part_o, part_s] = S/(eps*epsilon_0)
 
         if frequency_derivatives:
-            Z.der['L'] = dL_ds*(mu*mu_0)
-            Z.der['S'] = dS_ds/(eps*epsilon_0)
+            Z.der['L'][part_o, part_s] = dL_ds*(mu*mu_0)
+            Z.der['S'][part_o, part_s] = dS_ds/(eps*epsilon_0)
 
     def source_vector(self, source_field, s, parent, extinction_field):
         "Calculate the relevant source vector for this operator"
