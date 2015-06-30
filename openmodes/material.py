@@ -46,5 +46,5 @@ class IsotropicMaterial(Identified):
 # a constant for free space
 FreeSpace = IsotropicMaterial("Free space", 1.0, 1.0)
 
-# a constant, indicating that this material is a perfect electric conductor
-PecMaterial = "Perfect electric conductor"
+# a constant for a perfect electric conductor
+PecMaterial = IsotropicMaterial("Perfect electric conductor", -np.inf, -np.inf)

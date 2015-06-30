@@ -114,6 +114,13 @@ class SinglePart(Part):
         self.initial_location = location
         self.reset()
 
+        # A SinglePart is uniquely identified by its mesh and material. i.e.
+        # all parts with the same unique_id would have the same modes etc. This
+        # must be used with care since it does not account for the background
+        # material (presumably the same for all parts), and it may be
+        # invalidated by a Green's function for inhomogeneous media.
+        self.unique_id = (mesh.id, material.id)
+
     @property
     def nodes(self):
         "The nodes of this part after all transformations have been applied"
@@ -144,6 +151,12 @@ class CompositePart(Part):
         self.initial_location = location
         self.reset()
         self.children = []
+
+    @property
+    def unique_id(self):
+        """The unique_id of a composite part is just the concatenation of that
+        of its child parts"""
+        tuple(part.unique_id for part in self.children)
 
     def clear(self):
         "Clear all child parts from this part"
