@@ -26,6 +26,7 @@ import os.path as osp
 import logging
 import tempfile
 import shutil
+import collections
 
 from openmodes import gmsh
 from openmodes.integration import DunavantRule
@@ -215,23 +216,95 @@ class Simulation(Identified):
         return self.operator.source_vector(source_field, s, parent,
                                            extinction_field)
 
-    def estimate_poles(self, s_min, s_max, part=None, threshold=1e-11,
+    def estimate_poles(self, s_min, s_max, parts=None, threshold=1e-11,
                        previous_result=None):
-        "Estimate the location of poles and their modes by Cauchy integration"
-        part = part or self.parts
+        """Estimate the location of poles and their modes by Cauchy integration
+        Parameters
+        ----------
+        s_min, s_max: complex
+            The corners of the rectangular region in the s-plane around which
+            the integration will be performed
+        parts: Part or list, optional
+            Which particular part or parts to calculate poles for. If not
+            specified, then the whole system will be used
 
-        return self.operator.estimate_poles(s_min, s_max, part,
-                                            threshold, previous_result)
+        Returns
+        -------
+        estimates: dict
+            If a list of parts was specified, then a dictionary will be
+            returned with the parts as keys, and the solutions as values.
+            Otherwise a single solution is returned. The solution is always
+            a dictionary
+        """
+        parts = parts or self.parts
 
-    def refine_poles(self, estimate_s, estimate_vr, estimate_vl=None,
-                     part=None, rel_tol=1e-8):
-        "Refine the location of poles by iterative search"
-        part = part or self.parts
+        if isinstance(parts, collections.Iterable):
+            # a list of parts was given
+            res = {}
+            cache = {}
+            for part in parts:
+                if part.unique_id in cache:
+                    # If an identical part's modes have already been calculated
+                    # then reuse them
+                    res[part] = cache[part.unique_id]
+                    continue
 
-        return self.operator.poles(0, len(estimate_s), part, use_gram=True,
-                                   rel_tol=rel_tol, max_iter=40,
-                                   estimate_s=estimate_s,
-                                   estimate_vr=estimate_vr)
+                res[part] = self.operator.estimate_poles(s_min, s_max,
+                                                         part,
+                                                         threshold,
+                                                         previous_result)
+                cache[part.unique_id] = res[part]
+            return res
+        else:
+            return self.operator.estimate_poles(s_min, s_max, parts,
+                                                threshold, previous_result)
+
+    def refine_poles(self, estimates, rel_tol=1e-8, max_iter=40):
+        """Refine the location of poles by iterative search
+
+        Parameters
+        ----------
+        estimates: dict
+            The result returned from estimate_poles
+
+        Results
+        -------
+        refined: dict
+            If a single part is considered, then this contains the modal
+            solution for that part. Otherwise it is a dictionary with keys
+            given by the parts
+        """
+
+        try:
+            # This is just an estimate for a single part
+            part = estimates['part']
+            mode_s, mode_j = self.operator.poles(0, len(estimates['s']), part,
+                                                 use_gram=True,
+                                                 rel_tol=rel_tol,
+                                                 max_iter=max_iter,
+                                                 estimate_s=estimates['s'],
+                                                 estimate_vr=estimates['vr'])
+            refined = {'s': mode_s, 'vr': mode_j}
+        except KeyError:
+            # Multiple parts have been estimated
+            refined = {}
+            cache = {}
+            for part, estimate in estimates.iteritems():
+                if part.unique_id in cache:
+                    # If an identical part's modes have already been calculated
+                    # then reuse them
+                    refined[part] = cache[part.unique_id]
+                    continue
+
+                mode_s, mode_j = self.operator.poles(0, len(estimate['s']),
+                                                     part, use_gram=True,
+                                                     rel_tol=rel_tol,
+                                                     max_iter=max_iter,
+                                                     estimate_s=estimate['s'],
+                                                     estimate_vr=estimate['vr'])
+                refined[part] = {'s': mode_s, 'vr': mode_j}
+                cache[part.unique_id] = refined[part]
+        return refined
 
     def singularities(self, s_start, modes, part=None, use_gram=True,
                       rel_tol=1e-6, max_iter=200):

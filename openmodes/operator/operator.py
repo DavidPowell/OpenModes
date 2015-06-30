@@ -77,9 +77,9 @@ class Operator(object):
             Gp[unknown, :, source, :] = G
         return Gp
 
-    def estimate_poles(self, s_min, s_max, part=None, threshold=1e-11,
+    def estimate_poles(self, s_min, s_max, part, threshold=1e-11,
                        previous_result=None):
-
+        "Estimate pole location for an operator by Cauchy integration"
         N = len(self.basis_container[part])*len(self.unknowns)
 
         def Z_func(s):
@@ -95,6 +95,7 @@ class Operator(object):
             result[key] = view_lookuparray(this_result,
                                            (self.unknowns, part, num_cols),
                                            self.basis_container)
+        result['part'] = part
         return result
 
     def poles(self, s_start, modes, part, use_gram=True,
