@@ -183,7 +183,7 @@ class LookupArray(np.ndarray):
                     if entry is None:
                         # TODO: what if None/np.newaxis is passed?
                         raise NotImplementedError
-                    elif entry == slice(None):
+                    elif isinstance(entry, slice) and entry == slice(None):
                         # If slicing the whole dimension, metadata can be kept
                         sub_lookup.append(self.lookup[entry_num])
                     else:
@@ -256,3 +256,67 @@ def view_lookuparray(original, index_data, basis_container):
     result.lookup = lookup
     result.basis_container = basis_container
     return result
+
+
+def loop_star_indices(x):
+    """Return the indices into the array corresponding to the loop and star
+    parts. The array must have been constructed using loop/star basis
+    functions.
+
+    Parameters
+    ----------
+    x: LookupArray
+        Must have either 2 dimensions, both of which must be indexable
+        by Parts
+
+    Returns
+    -------
+    indices_loop, indices_star: list of ndarray
+        For each dimension n, indices_loop[n] is an array indexing the loop
+        part, and indices_star[n] is an array indexing the star part.
+    """
+
+    indices_loop = []
+    indices_star = []
+
+    for lookup_num, lookup in enumerate(x.lookup):
+        if isinstance(list(lookup.keys())[0], Part):
+            # This index is a lookup for Parts, so find all the SingleParts
+            # along this index and add the relevant ranges to the indexing
+            # array
+
+            loop_list = []
+            star_list = []
+            # First find the parent part, the one covering the largest range
+            part_list = list(lookup.keys())
+            parent_part = part_list[np.argmax(lookup[n].stop-lookup[n].start
+                                              for n in part_list)]
+
+            # now iterate over all SingleParts of this parent part
+            for part in parent_part.iter_single():
+                part_start = lookup[part].start
+
+                bf = x.basis_container[part]
+                loop_range = bf.loop_range
+                loop_list.append(np.arange(loop_range.start+part_start,
+                                           loop_range.stop+part_start))
+
+                star_range = bf.star_range
+                star_list.append(np.arange(star_range.start+part_start,
+                                           star_range.stop+part_start))
+
+            # If this is not the last axis, then add the necessary number of
+            # extra dimensions to each array so that they will be broadcast
+            # correctly when the caller goes to use them
+            new_shape = (-1,)+(1,)*(x.ndim-lookup_num-1)
+            loop_array = np.hstack(loop_list).reshape(new_shape)
+            star_array = np.hstack(star_list).reshape(new_shape)
+
+            indices_loop.append(loop_array)
+            indices_star.append(star_array)
+        else:
+            # This index is not for parts, so just take the whole axis
+            indices_loop.append(slice(None))
+            indices_star.append(slice(None))
+
+    return indices_loop, indices_star
