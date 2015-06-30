@@ -53,7 +53,7 @@ def test_pickling_references():
             V = pickle.load(infile)
 
         parents_dict = {}
-        for part in V.index_arrays.keys():
+        for part in V.lookup[1].keys():
             print("Unpickled part", part)
             if part.parent_ref is None:
                 parents_dict[str(part.id)] = 'None'
