@@ -27,6 +27,7 @@ import logging
 import tempfile
 import shutil
 import collections
+import numbers
 
 from openmodes import gmsh
 from openmodes.integration import DunavantRule
@@ -217,8 +218,10 @@ class Simulation(Identified):
                                            extinction_field)
 
     def estimate_poles(self, s_min, s_max, parts=None, threshold=1e-11,
-                       previous_result=None):
+                       previous_result=None, cauchy_integral=True, modes=None):
         """Estimate the location of poles and their modes by Cauchy integration
+        or a simpler quasi-static method
+
         Parameters
         ----------
         s_min, s_max: complex
@@ -238,6 +241,9 @@ class Simulation(Identified):
         """
         parts = parts or self.parts
 
+        if isinstance(modes, numbers.Integral):
+            modes = np.arange(modes)
+
         if isinstance(parts, collections.Iterable):
             # a list of parts was given
             res = {}
@@ -252,12 +258,15 @@ class Simulation(Identified):
                 res[part] = self.operator.estimate_poles(s_min, s_max,
                                                          part,
                                                          threshold,
-                                                         previous_result)
+                                                         previous_result,
+                                                         cauchy_integral,
+                                                         modes)
                 cache[part.unique_id] = res[part]
             return res
         else:
             return self.operator.estimate_poles(s_min, s_max, parts,
-                                                threshold, previous_result)
+                                                threshold, previous_result,
+                                                cauchy_integral, modes)
 
     def refine_poles(self, estimates, rel_tol=1e-8, max_iter=40):
         """Refine the location of poles by iterative search

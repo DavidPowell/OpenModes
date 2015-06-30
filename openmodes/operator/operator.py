@@ -78,23 +78,39 @@ class Operator(object):
         return Gp
 
     def estimate_poles(self, s_min, s_max, part, threshold=1e-11,
-                       previous_result=None):
-        "Estimate pole location for an operator by Cauchy integration"
-        N = len(self.basis_container[part])*len(self.unknowns)
+                       previous_result=None, cauchy_integral=True, modes=None):
+        """Estimate pole location for an operator by Cauchy integration or
+        the simpler quasi-static method"""
 
-        def Z_func(s):
-            Z = self.impedance(s, part, part, frequency_derivatives=False)
-            return Z.val().simple_view()
-
-        result = poles_cauchy(Z_func, N, s_min, s_max, threshold,
-                              previous_result=previous_result)
-        # reformat vectors in result into LookupArrays
-        for key in ('vr', 'vl', 'vl_out', 'vr_out'):
-            this_result = result[key]
-            num_cols = this_result.shape[1]
-            result[key] = view_lookuparray(this_result,
-                                           (self.unknowns, part, num_cols),
+        if not cauchy_integral:
+            # use the simpler quasi-static method
+            Z = self.impedance(s_min, part, part)
+            estimate_s, estimate_vr = eig_linearised(Z, modes)
+            estimate_vr = view_lookuparray(estimate_vr,
+                                           (self.unknowns, part, len(estimate_s)),
                                            self.basis_container)
+            result = {'s': estimate_s, 'vr': estimate_vr}
+        else:
+            N = len(self.basis_container[part])*len(self.unknowns)
+
+            def Z_func(s):
+                Z = self.impedance(s, part, part, frequency_derivatives=False)
+                return Z.val().simple_view()
+
+            result = poles_cauchy(Z_func, N, s_min, s_max, threshold,
+                                  previous_result=previous_result)
+            # reformat vectors in result into LookupArrays
+            for key in ('vr', 'vl', 'vl_out', 'vr_out'):
+                this_result = result[key]
+                if modes is not None:
+                    this_result = this_result[:, modes]
+                num_cols = this_result.shape[1]
+                result[key] = view_lookuparray(this_result,
+                                               (self.unknowns, part, num_cols),
+                                               self.basis_container)
+            if modes is not None:
+                result['s'] = result['s'][modes]
+
         result['part'] = part
         return result
 
