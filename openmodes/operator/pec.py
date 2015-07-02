@@ -287,9 +287,9 @@ class CfieOperator(Operator):
         return V_final
 
     def impedance(self, s, parent_o, parent_s, frequency_derivatives=False):
-        Z = super(CfieOperator, self).impedance(s, parent_o, parent_s, frequency_derivatives)
-        Z.md['alpha'] = self.alpha
-        return Z
+        metadata = {'alpha': self.alpha}
+        return super(CfieOperator, self).impedance(s, parent_o, parent_s,
+                                                   frequency_derivatives, metadata)
 
     def impedance_single_parts(self, Z, s, part_o, part_s=None,
                                frequency_derivatives=False):

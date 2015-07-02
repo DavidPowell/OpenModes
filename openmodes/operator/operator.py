@@ -21,7 +21,6 @@
 import numpy as np
 import logging
 
-from openmodes.vector import VectorParts
 from openmodes.eig import eig_linearised, eig_newton, poles_cauchy
 from openmodes.array import LookupArray, view_lookuparray
 
@@ -29,7 +28,8 @@ from openmodes.array import LookupArray, view_lookuparray
 class Operator(object):
     "A base class for operator equations"
 
-    def impedance(self, s, parent_o, parent_s, frequency_derivatives=False):
+    def impedance(self, s, parent_o, parent_s, frequency_derivatives=False,
+                  metadata={}):
         """Evaluate the self and mutual impedances of all parts in the
         simulation. Return an `ImpedancePart` object which can calculate
         several derived impedance quantities
@@ -57,6 +57,7 @@ class Operator(object):
         Z.md['s'] = s
         Z.md['symmetric'] = symmetric
         Z.md['operator'] = self
+        Z.md.update(metadata)
 
         for count_o, part_o in enumerate(parent_o.iter_single()):
             for count_s, part_s in enumerate(parent_s.iter_single()):
