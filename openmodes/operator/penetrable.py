@@ -23,11 +23,10 @@ from __future__ import division
 import numpy as np
 
 from openmodes.basis import LinearTriangleBasis
-from openmodes.impedance import PenetrableImpedanceMatrix
+from openmodes.impedance import PenetrableImpedanceMatrixLA
 from openmodes.operator.operator import Operator
 from openmodes.operator import rwg
-from openmodes.constants import epsilon_0, mu_0, c
-from openmodes.array import LookupArray
+from openmodes.constants import epsilon_0, mu_0, c, eta_0
 
 
 class TOperator(Operator):
@@ -62,34 +61,26 @@ class TOperator(Operator):
 
         self.unknowns = ("J", "M")
         self.sources = ("E", "H")
+        self.extinction_fields = ("E", "H")
+        self.impedance_class = PenetrableImpedanceMatrixLA
 
-    def source_vector(self, source_field, s, parent, extinction_field):
-        "Calculate the relevant source vector for this operator"
+    def impedance(self, s, parent_o, parent_s, frequency_derivatives=False,
+                  metadata={}):
 
-        V = LookupArray((("E", "H"), parent), self.basis_container,
-                        dtype=np.complex128)
+        metadata['eta_o'] = self.background_material.eta_r(s)
+        metadata['eta_i'] = {}
+        metadata['w_EFIE_o'], metadata['w_MFIE_o'] = self.weights_o(s)
+        metadata['w_EFIE_i'] = {}
+        metadata['w_MFIE_i'] = {}
 
-        for part in parent.iter_single():
-            E_field, H_field = self.source_single_part(source_field, s, part,
-                                                       extinction_field)
-            V["E", part] = E_field
-            V["H", part] = H_field
+        for part in parent_s.iter_single():
+            metadata['eta_i'][part] = part.material.eta_r(s)
+            metadata['w_EFIE_i'][part], metadata['w_MFIE_i'][part] = self.weights_i(s, part)
 
-        return V
+        return super(TOperator, self).impedance(s, parent_o, parent_s,
+                                                frequency_derivatives, metadata)
 
-    def source_single_part(self, source_field, s, part, extinction_field):
-        basis = self.basis_container[part]
-        E_field = lambda r: source_field.electric_field(s, r)
-        V_E = basis.weight_function(E_field, self.integration_rule,
-                                    part.nodes, False)
-
-        H_field = lambda r: source_field.magnetic_field(s, r)
-        V_H = basis.weight_function(H_field, self.integration_rule,
-                                    part.nodes, False)
-
-        return V_E, V_H
-
-    def impedance_single_parts(self, s, part_o, part_s=None,
+    def impedance_single_parts(self, Z, s, part_o, part_s=None,
                                frequency_derivatives=False):
         """Calculate a self or mutual impedance matrix at a given complex
         frequency. Note that this abstract function should be called by
@@ -170,18 +161,18 @@ class TOperator(Operator):
 
         # Build the matrices and metadata for creating the impedance matrix
         # object from the locally defined variables. This relies on them having
-        # the correct name in this function. The parent class must set the
-        # weights for the different parts of the equations
+        # the correct name in this function.
         loc = locals()
-        matrices = {name: loc[name] for name in
-                    PenetrableImpedanceMatrix.matrix_names}
-        metadata = {name: loc[name] for name in
-                    PenetrableImpedanceMatrix.metadata_names if name in loc}
-        # TODO: some sub-matrices are symmetric but total isn't...
-        metadata["symmetric"] = False
-        metadata["operator"] = self
+        for name in self.impedance_class.matrix_names:
+            Z.matrices[name][part_o, part_s] = loc[name]
 
-        return matrices, metadata
+    def source_vector(self, source_field, s, parent, extinction_field=False):
+        V = super(TOperator, self).source_vector(source_field, s, parent,
+                                                 extinction_field)
+        w_EFIE_o, w_MFIE_o = self.weights_o(s)
+        V["E"] *= w_EFIE_o
+        V["H"] *= eta_0*w_MFIE_o
+        return V
 
 
 class PMCHWTOperator(TOperator):
@@ -196,28 +187,13 @@ class PMCHWTOperator(TOperator):
                                              num_singular_terms,
                                              singularity_accuracy)
 
-    def impedance_single_parts(self, s, part_o, part_s=None,
-                               frequency_derivatives=False):
-        """Calculate a self or mutual impedance matrix at a given complex
-        frequency
+    def weights_o(self, s):
+        "Weights for outer EFIE and MFIE problems"
+        return 1.0, 1.0
 
-        Parameters
-        ----------
-        s : complex
-            Complex frequency at which to calculate impedance
-        part_o : SinglePart
-            The observing part, which must be a single part, not a composite
-        part_s : SinglePart, optional
-            The source part, if not specified will default to observing part
-        """
-        matrices, metadata = super(PMCHWTOperator, self).impedance_single_parts(s, part_o, part_s,
-                                                                                frequency_derivatives)
-        # set the weights
-        metadata['w_EFIE_i'] = 1.0
-        metadata['w_EFIE_o'] = 1.0
-        metadata['w_MFIE_i'] = 1.0
-        metadata['w_MFIE_o'] = 1.0
-        return PenetrableImpedanceMatrix(matrices, metadata)
+    def weights_i(self, s, part):
+        "Weights for inner EFIE and MFIE problems, part specific"
+        return 1.0, 1.0
 
 
 class CTFOperator(TOperator):
@@ -238,35 +214,13 @@ class CTFOperator(TOperator):
                                           num_singular_terms,
                                           singularity_accuracy)
 
-    def impedance_single_parts(self, s, part_o, part_s=None,
-                               frequency_derivatives=False):
-        """Calculate a self or mutual impedance matrix at a given complex
-        frequency
-
-        Parameters
-        ----------
-        s : complex
-            Complex frequency at which to calculate impedance
-        part_o : SinglePart
-            The observing part, which must be a single part, not a composite
-        part_s : SinglePart, optional
-            The source part, if not specified will default to observing part
-        """
-        matrices, metadata = super(CTFOperator, self).impedance_single_parts(s, part_o, part_s,
-                                                                             frequency_derivatives)
-        # set the weights
-        eta_i = part_o.material.eta_r(s)
+    def weights_o(self, s):
+        "Weights for outer EFIE and MFIE problems"
         eta_o = self.background_material.eta_r(s)
-        # override impedance to use relative values
-        metadata['eta_i'] = eta_i
-        metadata['eta_o'] = eta_o
-        metadata['w_EFIE_i'] = 1.0/eta_i
-        metadata['w_EFIE_o'] = 1.0/eta_o
-        metadata['w_MFIE_i'] = eta_i
-        metadata['w_MFIE_o'] = eta_o
-        return PenetrableImpedanceMatrix(matrices, metadata)
+        return 1.0/eta_o, eta_o
 
-    def source_single_part(self, source_field, s, part, extinction_field):
-        V_E, V_H = super(CTFOperator, self).source_single_part(source_field, s, part, extinction_field)
+    def weights_i(self, s, part):
+        "Weights for inner EFIE and MFIE problems, part specific"
+        eta_i = part.material.eta_r(s)
+        return 1.0/eta_i, eta_i
 
-        return V_E/self.background_material.eta_r(s), V_H*self.background_material.eta(s)

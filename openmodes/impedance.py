@@ -683,6 +683,49 @@ class CfieImpedanceMatrixLA(ImpedanceMatrixLA):
         return Z
 
 
+class PenetrableImpedanceMatrixLA(ImpedanceMatrixLA):
+    "An impedance matrix for penetrable objects"
+
+    matrix_names = ('L_i', 'L_o', 'S_i', 'S_o', 'K_i', 'K_o')
+
+    # TODO: D_i and K_i are stored inefficiently as full matrices, but only
+    # self terms are actually needed
+
+    def val(self):
+        "The value of the impedance matrix"
+        s = self.md['s']
+        D_i = s*self.matrices['L_i']+self.matrices['S_i']/s
+        D_o = s*self.matrices['L_o']+self.matrices['S_o']/s
+        K_i = self.matrices['K_i']
+        K_o = self.matrices['K_o']
+        eta_o = self.md['eta_o']
+        eta_i = self.md['eta_i']
+        w_EFIE_i = self.md['w_EFIE_i']
+        w_EFIE_o = self.md['w_EFIE_o']
+        w_MFIE_i = self.md['w_MFIE_i']
+        w_MFIE_o = self.md['w_MFIE_o']
+
+        Z = LookupArray((("E", "H"), self.part_o, ("J", "M"), self.part_s),
+                        self.basis_container, dtype=np.complex128)
+
+        # first calculate the external problem contributions
+        Z["E", :, "J"] = eta_o*D_o*w_EFIE_o
+        Z["E", :, "M"] = -K_o*w_EFIE_o
+        Z["H", :, "J"] = K_o*w_MFIE_o
+        Z["H", :, "M"] = D_o/eta_o*w_MFIE_o
+
+        # The internal contributions are only for self-terms
+        for part_o in self.part_o.iter_single():
+            for part_s in self.part_s.iter_single():
+                if part_o == part_s:
+                    Z["E", :, "J"][part_o, part_s] += eta_i[part_s]*D_i[part_o, part_s]*w_EFIE_i[part_s]
+                    Z["E", :, "M"][part_o, part_s] -= K_i[part_o, part_s]*w_EFIE_i[part_s]
+                    Z["H", :, "J"][part_o, part_s] += K_i[part_o, part_s]*w_MFIE_i[part_s]
+                    Z["H", :, "M"][part_o, part_s] += D_i[part_o, part_s]/eta_i[part_s]*w_MFIE_i[part_s]
+
+        return Z
+
+
 class ImpedanceParts(object):
     """Holds a impedance matrices calculated at a specific frequency
 
