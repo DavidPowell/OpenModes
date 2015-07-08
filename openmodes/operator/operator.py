@@ -179,14 +179,11 @@ class Operator(object):
         if self.frequency_derivatives:
             def Z_func(s):
                 Z = self.impedance(s, part, part, frequency_derivatives=True)
-                return Z.val().simple_view(), Z.frequency_derivative().simple_view()
+                return s*Z.val().simple_view(), Z.frequency_derivative_P().simple_view()
         else:
             def Z_func(s):
                 Z = self.impedance(s, part, part, frequency_derivatives=False)
-                return Z.val().simple_view()
-
-        if use_gram:
-            G = self.gram_matrix(part).simple_view()
+                return s*Z.val().simple_view()
 
         # Note that mode refers to the position in the array modes, which
         # at this point need not correspond to the original mode numbering
@@ -206,11 +203,6 @@ class Operator(object):
 
             mode_s[mode] = res['eigval']
             j_calc = res['eigvec']
-
-            if use_gram:
-                j_calc /= np.sqrt(j_calc.T.dot(G.dot(j_calc)))
-            else:
-                j_calc /= np.sqrt(np.sum(j_calc**2))
 
             mode_j[:, :, mode] = j_calc.reshape((len(self.unknowns), -1))
 
