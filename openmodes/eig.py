@@ -331,6 +331,10 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
     if not converged:
         raise ValueError("maximum iterations reached, no convergence")
 
+    # scale the eigenvector so that the eigenvalue derivative is 1
+    dz_ds = np.dot(x_s, np.dot(T_ds, x_s))
+    x_s /= np.sqrt(dz_ds)
+
     res = {'eigval': lambda_s, 'eigvec': x_s, 'iter_count': iter_count+1,
            'delta_lambda': delta_lambda}
 
