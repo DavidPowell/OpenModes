@@ -176,8 +176,7 @@ class Operator(object):
         # Adaptively check if the operator provides frequency derivatives, and
         # if so use them in the Newton iteration to find the poles.
         # TODO: Fix this nasty kludge
-        func_gives_der = self.__class__.__name__ == 'EfieOperator'
-        if func_gives_der:
+        if self.frequency_derivatives:
             def Z_func(s):
                 Z = self.impedance(s, part, part, frequency_derivatives=True)
                 return Z.val().simple_view(), Z.frequency_derivative().simple_view()
@@ -192,9 +191,11 @@ class Operator(object):
         # Note that mode refers to the position in the array modes, which
         # at this point need not correspond to the original mode numbering
         for mode in range(num_modes):
-            res = eig_newton(Z_func, estimate_s[mode], estimate_vr[:, :, mode].simple_view(),
+            res = eig_newton(Z_func, estimate_s[mode],
+                             estimate_vr[:, :, mode].simple_view(),
                              weight='max element', lambda_tol=rel_tol,
-                             max_iter=max_iter, func_gives_der=func_gives_der)
+                             max_iter=max_iter,
+                             func_gives_der=self.frequency_derivatives)
 
             logging.info("Converged after %d iterations\n"
                          "%+.4e %+.4ej (linearised solution)\n"

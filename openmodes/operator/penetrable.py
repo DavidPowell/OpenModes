@@ -63,6 +63,7 @@ class TOperator(Operator):
         self.sources = ("E", "H")
         self.extinction_fields = ("E", "H")
         self.impedance_class = PenetrableImpedanceMatrixLA
+        self.frequency_derivatives = False
 
     def impedance(self, s, parent_o, parent_s, frequency_derivatives=False,
                   metadata={}):

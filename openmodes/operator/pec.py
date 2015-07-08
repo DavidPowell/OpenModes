@@ -57,6 +57,7 @@ class EfieOperator(Operator):
             raise NotImplementedError("n x EFIE")
 
         self.extinction_fields = ("E",)
+        self.frequency_derivatives = True
 
         logging.info("Creating EFIE operator, tangential form: %s"
                      % str(tangential_form))
@@ -164,6 +165,7 @@ class MfieOperator(Operator):
             self.sources = ("nxH",)
 
         self.extinction_fields = ("E",)
+        self.frequency_derivatives = False
 
         logging.info("Creating MFIE operator, tangential form: %s"
                      % str(tangential_form))
@@ -248,6 +250,7 @@ class CfieOperator(Operator):
         self.sources = ("E+nxH",)
 
         self.extinction_fields = ("E",)
+        self.frequency_derivatives = False
 
     def source_vector(self, source_field, s, parent, extinction_field=False):
         "Calculate the relevant source vector for this operator"
