@@ -126,33 +126,27 @@ class ScalarModelResidues(object):
         # current vector to be real
         self.real_mode = abs(self.mode_s.imag) < 1e-2*abs(self.mode_s.real)
 
-        Z_func = lambda s: operator.impedance(s, part, part, frequency_derivatives=True)[part, part]
-        self.z_der = mode_j.dot(Z_func(mode_s).frequency_derivative_P().dot(mode_j))
         if self.real_mode:
             self.mode_s = mode_s.real
-            self.z_der = self.z_der.real
             self.mode_j = self.mode_j.real #  assumes already normalised
 
-        self.coefficients = [self.z_der, self.z_der.conjugate()]
-        logging.info("Creating residue expansion scalar model\n"
-                     "dlambda/ds = %+.4e %+.4e"
-                     % (self.z_der.real, self.z_der.imag))
+        logging.info("Creating residue expansion scalar model")
 
     def scalar_impedance(self, s):
         "The scalar impedance of this mode"
-        z = self.z_der*(s - self.mode_s)
+        z = (s - self.mode_s)
         if self.real_mode:
             return z/s
-        z_conj = self.z_der.conjugate()*(s - self.mode_s.conjugate())
+        z_conj = (s - self.mode_s.conjugate())
         return(1.0/(s/z + s/z_conj))
 
     def solve(self, s, V):
         "Solve the model for the current at arbitrary frequency"
-        z = self.z_der*(s - self.mode_s)
+        z = (s - self.mode_s)
         if self.real_mode:
             return self.mode_j*np.dot(self.mode_j, V[:])/z*s
 
-        z_conj = self.z_der.conjugate()*(s - self.mode_s.conjugate())
+        z_conj = (s - self.mode_s.conjugate())
 
         return (self.mode_j*np.dot(self.mode_j, V[:])/z +
                 self.mode_j.conj()*np.dot(self.mode_j.conj(), V[:])/z_conj)*s
