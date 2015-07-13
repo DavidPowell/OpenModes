@@ -108,7 +108,7 @@ class EfieOperator(Operator):
     def source_vector(self, source_field, s, parent, extinction_field):
         "Calculate the relevant source vector for this operator"
 
-        V = LookupArray((("E"), parent), self.basis_container,
+        V = LookupArray((("E"), (parent, self.basis_container)),
                         dtype=np.complex128)
 
         for part in parent.iter_single():
@@ -260,7 +260,7 @@ class CfieOperator(Operator):
 
         fields = ("E", "nxH")
 
-        V = LookupArray((fields, parent), self.basis_container,
+        V = LookupArray((fields, (parent, self.basis_container)),
                         dtype=np.complex128)
 
         # define the functions to interpolate over the mesh
@@ -283,7 +283,7 @@ class CfieOperator(Operator):
                 V[field, part] = basis.weight_function(field_func, self.integration_rule,
                                                        part.nodes, source_cross)
 
-        V_final = LookupArray((self.sources, parent), self.basis_container,
+        V_final = LookupArray((self.sources, (parent, self.basis_container)),
                               dtype=np.complex128)
         V_final[:] = self.alpha*V["E"]+(1.0-self.alpha)*V["nxH"]
 

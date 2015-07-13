@@ -543,7 +543,8 @@ class ImpedanceMatrixLA(object):
 
         if matrices is None:
             # create the empty matrices
-            self.matrices = {name: LookupArray((part_o, part_s), self.basis_container,
+            self.matrices = {name: LookupArray(((part_o, basis_container),
+                                                (part_s, basis_container)),
                                                dtype=np.complex128)
                              for name in self.matrix_names}
         else:
@@ -553,7 +554,8 @@ class ImpedanceMatrixLA(object):
         if derivatives is None:
             self.der = None
         elif derivatives is True:
-            self.der = {name: LookupArray((part_o, part_s), self.basis_container,
+            self.der = {name: LookupArray(((part_o, basis_container,),
+                                           (part_s, basis_container)),
                                           dtype=np.complex128)
                         for name in self.matrix_names}
         else:
@@ -562,8 +564,8 @@ class ImpedanceMatrixLA(object):
     def val(self):
         "The value of the impedance matrix"
         op = self.md['operator']
-        Z = LookupArray((op.sources, self.part_o, op.unknowns, self.part_s),
-                        self.basis_container, dtype=np.complex128)
+        Z = LookupArray((op.sources, (self.part_o, self.basis_container), op.unknowns,
+                         (self.part_s, self.basis_container)), dtype=np.complex128)
         Z.simple_view()[:] = self.matrices['Z']
         return Z
 
@@ -590,12 +592,12 @@ class ImpedanceMatrixLA(object):
         if isinstance(vec, LookupArray):
             vec = vec.simple_view()
 
-        lookup = (self.md['operator'].unknowns, self.part_s)
+        lookup = (self.md['operator'].unknowns, (self.part_s, self.basis_container))
 
         if len(vec.shape) > 1:
             lookup = lookup+(vec.shape[1],)
 
-        I = LookupArray(lookup, self.basis_container, dtype=np.complex128)
+        I = LookupArray(lookup, dtype=np.complex128)
         I_simp = I.simple_view()
         I_simp[:] = la.lu_solve(Z_lu, vec)
         return I
@@ -648,8 +650,9 @@ class EfieImpedanceMatrixLA(ImpedanceMatrixLA):
         "The value of the impedance matrix"
         s = self.md['s']
         op = self.md['operator']
-        Z = LookupArray((op.sources, self.part_o, op.unknowns, self.part_s),
-                        self.basis_container, dtype=np.complex128)
+        Z = LookupArray((op.sources, (self.part_o, self.basis_container),
+                         op.unknowns, (self.part_s, self.basis_container)),
+                        dtype=np.complex128)
         Z.simple_view()[:] = self.matrices['S']/s + s*self.matrices['L']
         return Z
 
@@ -676,8 +679,9 @@ class CfieImpedanceMatrixLA(ImpedanceMatrixLA):
         s = self.md['s']
         op = self.md['operator']
         alpha = self.md['alpha']
-        Z = LookupArray((op.sources, self.part_o, op.unknowns, self.part_s),
-                        self.basis_container, dtype=np.complex128)
+        Z = LookupArray((op.sources, (self.part_o, self.basis_container),
+                         op.unknowns, (self.part_s, self.basis_container)),
+                        dtype=np.complex128)
         Z.simple_view()[:] = (alpha*(self.matrices['S']/s + s*self.matrices['L']) +
                               (1.0-alpha)*self.matrices['M'])
         return Z
@@ -705,8 +709,9 @@ class PenetrableImpedanceMatrixLA(ImpedanceMatrixLA):
         w_MFIE_i = self.md['w_MFIE_i']
         w_MFIE_o = self.md['w_MFIE_o']
 
-        Z = LookupArray((("E", "H"), self.part_o, ("J", "M"), self.part_s),
-                        self.basis_container, dtype=np.complex128)
+        Z = LookupArray((("E", "H"), (self.part_o, self.basis_container),
+                         ("J", "M"), (self.part_s, self.basis_container)),
+                        dtype=np.complex128)
 
         # first calculate the external problem contributions
         Z["E", :, "J"] = eta_o*D_o*w_EFIE_o

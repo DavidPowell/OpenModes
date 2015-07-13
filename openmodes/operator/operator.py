@@ -71,8 +71,9 @@ class Operator(object):
     def gram_matrix(self, part):
         """Create a Gram matrix as a LookupArray"""
         G = self.basis_container[part].gram_matrix
-        Gp = LookupArray((self.unknowns, part, self.sources, part),
-                         self.basis_container, dtype=G.dtype)
+        Gp = LookupArray((self.unknowns, (part, self.basis_container),
+                          self.sources, (part, self.basis_container)),
+                         dtype=G.dtype)
         Gp[:] = 0.0
         for unknown, source in zip(self.unknowns, self.sources):
             Gp[unknown, :, source, :] = G
@@ -88,8 +89,8 @@ class Operator(object):
             Z = self.impedance(s_min, part, part)
             estimate_s, estimate_vr = eig_linearised(Z, modes)
             estimate_vr = view_lookuparray(estimate_vr,
-                                           (self.unknowns, part, len(estimate_s)),
-                                           self.basis_container)
+                                           (self.unknowns, (part, self.basis_container),
+                                            len(estimate_s)))
             result = {'s': estimate_s, 'vr': estimate_vr}
         else:
             N = len(self.basis_container[part])*len(self.unknowns)
@@ -170,8 +171,8 @@ class Operator(object):
                                            self.basis_container)
 
         mode_s = np.empty(num_modes, np.complex128)
-        mode_j = LookupArray((self.unknowns, part, num_modes),
-                             self.basis_container, dtype=np.complex128)
+        mode_j = LookupArray((self.unknowns, (part, self.basis_container), num_modes),
+                             dtype=np.complex128)
 
         # Adaptively check if the operator provides frequency derivatives, and
         # if so use them in the Newton iteration to find the poles.
@@ -216,7 +217,7 @@ class Operator(object):
         else:
             fields = self.sources
 
-        V = LookupArray((fields, parent), self.basis_container,
+        V = LookupArray((fields, (parent, self.basis_container)),
                         dtype=np.complex128)
 
         # define the functions to interpolate over the mesh

@@ -39,7 +39,8 @@ def test_indexing():
     basis = sim.basis_container[srr1]
     basis_len = len(basis)
 
-    A = LookupArray((group1, group2, 5, 3), sim.basis_container)
+    A = LookupArray(((group1, sim.basis_container),
+                     (group2, sim.basis_container), 5, 3))
 
     assert(A.shape == (2*basis_len, basis_len, 5, 3))
 
@@ -47,7 +48,7 @@ def test_indexing():
     assert(np.all(A[srr1, :] == 22.5))
     assert(np.all(A[srr2] == 22.5))
 
-    V = LookupArray((("E", "H"), sim.parts), sim.basis_container,
+    V = LookupArray((("E", "H"), (sim.parts, sim.basis_container)),
                     dtype=np.complex128)
 
     V["E", group1] = -4.7+22j
@@ -57,7 +58,6 @@ def test_indexing():
     assert(np.all(V["E", group1] == V["E"][group1]))
     assert(np.all(V["E", srr1] == -4.7+22j))
     assert(np.all(V["E", srr2].imag == 22))
-
 
 if __name__ == "__main__":
     test_indexing()
