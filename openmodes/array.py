@@ -23,6 +23,8 @@ from __future__ import division
 import numpy as np
 from openmodes.parts import Part
 import numbers
+import collections
+import six
 
 
 def part_ranges(parent_part, basis_container):
@@ -50,16 +52,18 @@ def part_ranges(parent_part, basis_container):
     return ranges
 
 
-def build_lookup(index_data, basis_container):
+def build_lookup(index_data):
     "Create the lookup table for a LookupArray"
     lookup = []
     shape = []
     for index in index_data:
-        if isinstance(index, Part):
+        if isinstance(index, collections.Iterable) and isinstance(index[0], Part):
             # a hierarchy of parts
-            ranges = part_ranges(index, basis_container)
-            lookup.append(ranges)
-            shape.append(ranges[index].stop)
+            basis_container = index[1]
+            part = index[0]
+            ranges = part_ranges(part, basis_container)
+            lookup.append((ranges, basis_container, part))
+            shape.append(ranges[part].stop)
         elif isinstance(index, numbers.Integral):
             # an integer for a specific length
             lookup.append(None)
@@ -91,24 +95,26 @@ class LookupArray(np.ndarray):
         - Indexing with ...
     """
 
-    def __new__(subtype, index_data, basis_container, dtype=float):
+    def __new__(subtype, index_data=None, lookup=None, shape=None, dtype=float):
         """Construct an empty vector which can be indexed by parts
 
         Parameters
         ----------
-        index_data : tuple
-            Tuple elements can be integer, for a fixed length, a Part, for
-            hierarchical indexing by Parts, or a tuple of strings.
-        basis_container : BasisContainer
-            The container with basis functions for each sub-part
-        dtype : dtype
+        index_data : tuple, optional
+            Tuple elements can be integer, for a fixed length,
+            a tuple (Part, BasisContainer), for hierarchical indexing by Parts,
+            or a tuple of strings, for quantities
+        lookup, shape: tuple, optional
+            Instead of providing index_data, these elements can be provided
+            directly if the lookup table is known in advance
+        dtype : dtype, optional
             The numpy data type of the vector
         """
 
-        lookup, shape = build_lookup(index_data, basis_container)
+        if lookup is None or shape is None:
+            lookup, shape = build_lookup(index_data)
         obj = np.ndarray.__new__(subtype, shape, dtype)
         obj.lookup = lookup
-        obj.basis_container = basis_container
 
         # Finally, we must return the newly created object:
         return obj
@@ -119,7 +125,6 @@ class LookupArray(np.ndarray):
             return
 
         # set default values for the custom attributes
-        self.basis_container = getattr(obj, 'basis_container', None)
         self.lookup = getattr(obj, 'lookup', None)
 
     def __setstate__(self, state):
@@ -128,14 +133,14 @@ class LookupArray(np.ndarray):
         Note that some metadata may be lost when unpickling."""
         base_state, extended_state = state
         super(LookupArray, self).__setstate__(base_state)
-        self.lookup, self.basis_container = extended_state
+        self.lookup, = extended_state
 
     def __reduce__(self):
         """Allow additional attributes of this array type to be pickled
 
         Note that some metadata may be lost when unpickling."""
         base_reduce = list(super(LookupArray, self).__reduce__(self))
-        full_state = (base_reduce[2], (self.lookup, self.basis_container))
+        full_state = (base_reduce[2], (self.lookup,))
         base_reduce[2] = full_state
         return tuple(base_reduce)
 
@@ -162,19 +167,18 @@ class LookupArray(np.ndarray):
 
         # try to lookup every part of the index to convert to a range
         for entry_num, entry in enumerate(idx):
-            try:
-                this_lookup = self.lookup[entry_num]
+            if isinstance(entry, Part):
+                # Need to pass this metadata to the sub-array for its
+                # lookup table
+                this_lookup, container, parent_part = self.lookup[entry_num]
+                sub_lookup.append((part_ranges(entry, container), container, entry))
                 new_idx.append(this_lookup[entry])
-
-                if isinstance(entry, Part):
-                    # Need to pass this metadata to the sub-array for its
-                    # lookup table
-                    sub_lookup.append(part_ranges(entry, self.basis_container))
-
+            elif isinstance(entry, six.string_types):
                 # If a string has been passed, then this dimension will have
                 # been flattened out, so no metadata is needed
-
-            except (KeyError, TypeError):
+                this_lookup = self.lookup[entry_num]
+                new_idx.append(this_lookup[entry])
+            else:
                 new_idx.append(entry)
 
                 if not isinstance(entry, numbers.Integral):
@@ -197,13 +201,12 @@ class LookupArray(np.ndarray):
             result = super(LookupArray, self).__getitem__(tuple(new_idx))
         except IndexError as exc:
             message = "Invalid index %s" % str(idx)
-            exc.args = (message,)+exc.args[1:]
+            exc.args = (message,)+tuple(str(n) for n in exc.args[1:])
             raise
 
         # May get a LookupArray or an array scalar back
         if isinstance(result, LookupArray):
             result.lookup = sub_lookup
-            result.basis_container = self.basis_container
 
         return result
 
@@ -218,22 +221,31 @@ class LookupArray(np.ndarray):
 
         # try to lookup every part of the index to convert to a range
         for entry_num, entry in enumerate(idx):
-            try:
+            if isinstance(entry, Part):
+                this_lookup, container, parent_part = self.lookup[entry_num]
+                new_idx.append(this_lookup[entry])
+            elif isinstance(entry, six.string_types):
                 this_lookup = self.lookup[entry_num]
                 new_idx.append(this_lookup[entry])
-
-            except (KeyError, TypeError):
+            else:
                 new_idx.append(entry)
 
         try:
             super(LookupArray, self).__setitem__(tuple(new_idx), value)
         except IndexError as exc:
             message = "Invalid index %s" % idx
-            exc.args = (message,)+exc.args[1:]
+            exc.args = (message,)+tuple(str(n) for n in exc.args[1:])
             raise
 
     def transpose(self, **args):
         raise NotImplementedError
+
+    @property
+    def T(self):
+        result = super(LookupArray, self).T
+        assert(type(result) == LookupArray)
+        result.lookup = list(reversed(self.lookup))
+        return result
 
     def simple_view(self):
         """Return a view where quantity dimensions (with string keys) are
@@ -248,13 +260,30 @@ class LookupArray(np.ndarray):
         new_shape.reverse()
         return self.reshape(new_shape).view(np.ndarray)
 
+    def dot(self, other):
+        """Matrix/vector multiplication with another LookupArray"""
+        if not isinstance(other, LookupArray):
+            assert(self.shape[-1] == other.shape[0])
+            new_lookup = self.lookup[:-1]+(None,)*(other.ndims-1)
+            new_shape = self.shape[:-1]+other.shape[1:]
+        elif self.lookup[-2:] == other.lookup[:2]:
+            new_lookup = self.lookup[:-2]+other.lookup[2:]
+            new_shape = self.shape[:-2]+other.shape[2:]
+            other = other.simple_view()
+        else:
+            raise NotImplementedError
 
-def view_lookuparray(original, index_data, basis_container):
+        new_array = LookupArray(lookup=new_lookup, shape=new_shape,
+                                dtype=np.promote_types(self.dtype, other.dtype))
+        new_array.simple_view()[:] = np.dot(self.simple_view(), other)
+        return new_array
+
+
+def view_lookuparray(original, index_data):
     """Convert an array to a LookupArray, where possible avoiding copying"""
-    lookup, shape = build_lookup(index_data, basis_container)
+    lookup, shape = build_lookup(index_data)
     result = original.reshape(shape).view(LookupArray)
     result.lookup = lookup
-    result.basis_container = basis_container
     return result
 
 

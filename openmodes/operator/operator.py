@@ -108,8 +108,7 @@ class Operator(object):
                     this_result = this_result[:, modes]
                 num_cols = this_result.shape[1]
                 result[key] = view_lookuparray(this_result,
-                                               (self.unknowns, part, num_cols),
-                                               self.basis_container)
+                                               (self.unknowns, (part, self.basis_container), num_cols))
             if modes is not None:
                 result['s'] = result['s'][modes]
 
@@ -167,8 +166,7 @@ class Operator(object):
             Z = self.impedance(s_start, part, part)[part, part]
             estimate_s, estimate_vr = eig_linearised(Z, modes)
             estimate_vr = view_lookuparray(estimate_vr,
-                                           (self.unknowns, part, len(estimate_s)),
-                                           self.basis_container)
+                                           (self.unknowns, (part, self.basis_container), len(estimate_s)))
 
         mode_s = np.empty(num_modes, np.complex128)
         mode_j = LookupArray((self.unknowns, (part, self.basis_container), num_modes),
