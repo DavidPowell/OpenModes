@@ -659,6 +659,45 @@ class LoopStarBasis(LinearTriangleBasis):
         return vector_transform.tocsr(), scalar_transform.tocsr()
 
 
+class MacroBasis(AbstractBasis):
+    """Macro basis functions defined from a set of solutions found on objects,
+    e.g. a set of natural modes"""
+
+    def __init__(self, part, **kwargs):
+        """
+        Parameters
+        ----------
+        solutions: dictionary
+            elements 'vr' and 'vl' are used as right and left vectors
+        """
+        super(MacroBasis, self).__init__()
+        self.right_basis = kwargs['right_basis']
+        self.left_basis = kwargs['left_basis']
+        self.part = part
+
+    @classmethod
+    def unique_key(cls, part, args):
+        # Note: does not capture identical groups of parts
+        return (cls, part.id, frozenset(args.items()))
+
+    def __len__(self):
+        "The length is the number of solution vectors considered"
+        return np.prod(self.right_basis[self.part]['vr'].shape[2:])
+
+    @cached_property
+    def gram_matrix(self):
+        """Calculate the Gram matrix which is the inner product between each
+        basis function
+
+        Returns
+        -------
+        G : ndarray
+            The Gram matrix, giving the inner product between each basis
+            function
+        """
+        return self.left_basis.dot(self.right_basis)
+
+
 class BasisContainer(object):
     """A container to hold the basis functions for a simulation, constructing
     them on the fly as they are required"""
