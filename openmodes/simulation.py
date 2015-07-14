@@ -37,7 +37,7 @@ from openmodes.operator import EfieOperator
 from openmodes.visualise import plot_mayavi, write_vtk, preprocess
 from openmodes.model import ScalarModelLeastSq
 from openmodes.mesh import TriangularSurfaceMesh
-from openmodes.helpers import Identified
+from openmodes.helpers import Identified, is_real_pole
 from openmodes.vector import VectorParts
 from openmodes.material import FreeSpace, PecMaterial
 from openmodes.projector import Projector
