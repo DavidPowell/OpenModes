@@ -30,6 +30,7 @@ from openmodes.helpers import (cached_property, inc_slice, Identified, memoize,
                                equivalence, MeshError)
 from openmodes.integration import triangle_centres
 from openmodes.external.ordered_set import OrderedSet
+from openmodes.parts import Part
 
 # A named tuple for holding the positive and negative triangles and nodes
 # which are used by both RWG and loop-star basis functions
@@ -122,9 +123,16 @@ class AbstractBasis(Identified):
 class LinearTriangleBasis(AbstractBasis):
     "An abstract base class for first order basis functions on triangles"
 
-    def __init__(self, mesh):
+    def __init__(self, part_or_mesh):
         super(LinearTriangleBasis, self).__init__()
-        self.mesh = mesh
+        if isinstance(part_or_mesh, Part):
+            self.mesh = part_or_mesh.mesh
+        else:
+            self.mesh = part_or_mesh
+
+    @classmethod
+    def unique_key(cls, part, args):
+        return (cls, part.mesh.id, frozenset(args.items()))
 
     def interpolate_function(self, linear_func,
                              integration_rule=triangle_centres,
@@ -287,13 +295,14 @@ class DivRwgBasis(LinearTriangleBasis):
     they can be re-used for the same mesh placed in a different location.
     """
 
-    def __init__(self, mesh):
+    def __init__(self, part_or_mesh):
         """Generate basis functions for a particular mesh. Note that the mesh
         will be referenced, so it should not be modified after generating the
         basis functions.
         """
-        super(DivRwgBasis, self).__init__(mesh)
+        super(DivRwgBasis, self).__init__(part_or_mesh)
         self.canonical_basis = DivRwgBasis
+        mesh = self.mesh
 
         edges, triangles_shared_by_edges = mesh.get_edges(True)
 
@@ -474,9 +483,10 @@ class LoopStarBasis(LinearTriangleBasis):
     vol. 51, no. 8, pp. 1855–1863, Aug. 2003.
     """
 
-    def __init__(self, mesh):
-        super(LoopStarBasis, self).__init__(mesh)
+    def __init__(self, part_or_mesh):
+        super(LoopStarBasis, self).__init__(part_or_mesh)
         self.canonical_basis = LoopStarBasis
+        mesh = self.mesh
 
         edges, triangles_shared_by_edges = mesh.get_edges(True)
 
