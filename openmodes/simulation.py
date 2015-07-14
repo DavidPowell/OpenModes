@@ -308,6 +308,24 @@ class Simulation(Identified):
                     cache[part.unique_id] = refined[part]
         return refined
 
+    def include_conjugates(self, original):
+        """Include the conjugate poles into a set of modes"""
+
+        try:
+            # first attempt for a single part
+            complex_poles = np.where(np.logical_not(is_real_pole(original['s'])))[0]
+            full = {'s': np.hstack((original['s'], original['s'][complex_poles].conjugate()))}
+            conjugate_right = original['vr'][:, :, complex_poles].conj()
+            full['vr'] = np.dstack((original['vr'], conjugate_right))
+
+            if 'vl' in full:
+                raise NotImplementedError
+
+        except KeyError:
+            # This is a dictionary of parts, so call recursively
+            full = {part: self.include_conjugates(modes) for part, modes in original.iteritems()}
+        return full
+
     def singularities(self, s_start, modes, part=None, use_gram=True,
                       rel_tol=1e-6, max_iter=200):
         """Find the poles of the response of a part

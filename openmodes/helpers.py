@@ -186,3 +186,9 @@ def wrap_if_constant(func):
         return func
     else:
         return lambda x: func
+
+
+def is_real_pole(s):
+    """Apply a threshold to determine if a pole should be treated as purely
+    real, in which case its conjugate should not be used in models"""
+    return abs(s.imag) < 1e-3*abs(s.real)
