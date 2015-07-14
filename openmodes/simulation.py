@@ -326,6 +326,23 @@ class Simulation(Identified):
             full = {part: self.include_conjugates(modes) for part, modes in original.iteritems()}
         return full
 
+    def filter_modes(self, original, criteria):
+        """Select a sub-set of modes based on the given criteria"""
+
+        # for now, criteria is just a list of mode numbers
+        new = {}
+        try:
+            # assume we have just a single part
+            new['part'] = original['part']
+            new['vr'] = original['vr'][:, :, criteria]
+            new['s'] = original['s'][criteria]
+        except KeyError:
+            # it is actually a dictionary of parts
+            for part, part_original in original.iteritems():
+                new[part] = self.filter_modes(part_original, criteria)
+
+        return new
+
     def singularities(self, s_start, modes, part=None, use_gram=True,
                       rel_tol=1e-6, max_iter=200):
         """Find the poles of the response of a part
