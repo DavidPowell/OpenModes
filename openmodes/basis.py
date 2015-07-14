@@ -663,39 +663,35 @@ class BasisContainer(object):
     """A container to hold the basis functions for a simulation, constructing
     them on the fly as they are required"""
 
-    def __init__(self, basis_class, default_args=dict()):
+    def __init__(self, basis_class, default_args=dict(), global_args=dict()):
         """Set the class of the basis functions, and the default arguments to
         pass when constructing them"""
         self.basis_class = basis_class
         self.args = dict()
         self.default_args = default_args
         self.cached_basis = {}
+        self.global_args = global_args
 
     def set_args(self, part, args):
         "Override the default basis function arguments for a particular part"
         self.args[part] = dict(args)
-        pass
 
     def __getitem__(self, part):
         """Return the basis functions for a particular part, constructing them
         if they do not already exist"""
 
         args = self.args.get(part, self.default_args)
-        if hasattr(part, "children"):
-            # This is some sort of combined part
-            sub_basis = [self[sub_part] for sub_part in part.iter_single()]
-            return get_combined_basis(sub_basis)
-        else:
-            unique_key = (part.mesh.id, self.basis_class, frozenset(args.items()))
-            try:
-                return self.cached_basis[unique_key]
-            except KeyError:
-                logging.debug("Constructing basis functions of class %s for "
-                              "mesh %s with args %s"
-                              % (self.basis_class, part.mesh, args))
-                result = self.basis_class(part.mesh, **args)
-                self.cached_basis[unique_key] = result
-                return result
+        unique_key = self.basis_class.unique_key(part, args)
+        try:
+            return self.cached_basis[unique_key]
+        except KeyError:
+            all_args = args.copy()
+            all_args.update(self.global_args)
+            logging.debug("Constructing basis functions with key %s "
+                          % str(unique_key))
+            result = self.basis_class(part, **all_args)
+            self.cached_basis[unique_key] = result
+            return result
 
 
 class CombinedBasis(AbstractBasis):
