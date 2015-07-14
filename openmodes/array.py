@@ -27,8 +27,41 @@ import collections
 import six
 
 
+def part_ranges_lowest(parent_part, basis_container):
+    """Construct the slice objects for the parent part, iterating down only
+    to the specified lowest level"""
+
+    lowest = getattr(basis_container, 'lowest_parts', None)
+
+    # get the size of each child part
+    sizes = [len(basis_container[part]) for part in parent_part.iter_lowest(lowest)]
+
+    offsets = np.cumsum([0]+sizes)
+
+    ranges = {}
+
+    # index of single parts to get the offsets
+    lowest_part_num = 0
+
+    # iterate with parents last, so they can get data from their child objects
+    for part in parent_part.iter_lowest(lowest, parent_order='after'):
+        if part in lowest:
+            ranges[part] = slice(offsets[lowest_part_num], offsets[lowest_part_num+1])
+            lowest_part_num += 1
+        else:
+            # take slice information from first and last child
+            start = ranges[part.children[0]].start
+            stop = ranges[part.children[-1]].stop
+            ranges[part] = slice(start, stop)
+
+    return ranges
+
+
 def part_ranges(parent_part, basis_container):
     "Construct the slice objects for the parent part and all of its children"
+    if hasattr(basis_container, 'lowest_parts'):
+        return part_ranges_lowest(parent_part, basis_container)
+
     # get the size of each child part
     sizes = [len(basis_container[part]) for part in parent_part.iter_single()]
     offsets = np.cumsum([0]+sizes)

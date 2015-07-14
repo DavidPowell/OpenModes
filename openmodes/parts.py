@@ -140,6 +140,12 @@ class SinglePart(Part):
         "Iterating over a single part just yields itself"
         yield self
 
+    def iter_lowest(self, lowest, parent_order=None):
+        "Iterating over a single part just yields itself"
+        if self not in lowest:
+            raise ValueError("Reached unexpected part")
+        yield self
+
 
 class CompositePart(Part):
     """A composite part containing sub-parts which can be treated as a
@@ -202,6 +208,29 @@ class CompositePart(Part):
                 yield sub_part
         if not parent_first:
             yield self
+
+    def iter_lowest(self, lowest, parent_order=None):
+        """Iterate through parts only down to the lowest level specified. An
+        error occurs if a child part is reached which is not in `lowest`.
+
+        Parameters
+        ----------
+        lowest: set
+            The lowest level parts to be iterated down to
+        parent_order : string, optional
+            If 'before', the a node is visited before all of its children,
+            if 'after' visited afterwards, otherwise not visited
+        """
+        if self in lowest:
+            yield self
+        else:
+            if parent_order == 'before':
+                yield self
+            for part in self.children:
+                for sub_part in part.iter_lowest(lowest, parent_order=parent_order):
+                    yield sub_part
+            if parent_order == 'after':
+                yield self
 
     def __contains__(self, key):
         """Check if the given part is stored within this tree of parts"""
