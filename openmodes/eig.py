@@ -85,7 +85,7 @@ def eig_linearised(Z, modes):
     return w_freq[which_modes], vr[:, which_modes]
 
 
-def poles_cauchy(Z_func, N, s_min, s_max, svd_threshold=1e-10,
+def poles_cauchy(Z_func, s_min, s_max, svd_threshold=1e-10,
                  integration_rule=GaussLegendreRule(20), previous_result=None):
     """Estimate location and residue of the poles of a matrix function by
     Cauchy integration. Uses a technique described in:
@@ -98,8 +98,6 @@ def poles_cauchy(Z_func, N, s_min, s_max, svd_threshold=1e-10,
     ----------
     Z : Matrix function
         The impedance matrix as a function of frequency s
-    N : integer
-        The size of the matrix
     s_min, s_max : complex
         The two corners of the integration region in the s-plane. Order doesn't
         matter, they will always be sorted to obtain the correct sense of
@@ -133,9 +131,6 @@ def poles_cauchy(Z_func, N, s_min, s_max, svd_threshold=1e-10,
 
         logging.info("Performing full cauchy integration")
 
-        C1 = np.zeros((N, N), np.complex128)
-        C2 = np.zeros((N, N), np.complex128)
-
         coordinates = (min_real+1j*min_imag, max_real+1j*min_imag,
                        max_real+1j*max_imag, min_real+1j*max_imag)
 
@@ -148,8 +143,14 @@ def poles_cauchy(Z_func, N, s_min, s_max, svd_threshold=1e-10,
             for x, w in integration_rule:
                 s = s_start + ds*x
                 Z_inv = la.inv(Z_func(s)[:])*w*ds
-                C1 += Z_inv
-                C2 += s*Z_inv
+                # This trick avoids having to know the size of C1 and C2 in
+                # advance
+                try:
+                    C1 += Z_inv
+                    C2 += s*Z_inv
+                except UnboundLocalError:
+                    C1 = Z_inv
+                    C2 = s*Z_inv
 
         C1_U, C1_S, C1_Vh = la.svd(C1)
         result = {'C2': C2,

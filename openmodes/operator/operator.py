@@ -93,13 +93,11 @@ class Operator(object):
                                             len(estimate_s)))
             result = {'s': estimate_s, 'vr': estimate_vr}
         else:
-            N = len(self.basis_container[part])*len(self.unknowns)
-
             def Z_func(s):
                 Z = self.impedance(s, part, part, frequency_derivatives=False)
                 return Z.val().simple_view()
 
-            result = poles_cauchy(Z_func, N, s_min, s_max, threshold,
+            result = poles_cauchy(Z_func, s_min, s_max, threshold,
                                   previous_result=previous_result)
             # reformat vectors in result into LookupArrays
             for key in ('vr', 'vl', 'vl_out', 'vr_out'):
