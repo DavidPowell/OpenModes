@@ -253,15 +253,14 @@ class Simulation(Identified):
                     # If an identical part's modes have already been calculated
                     # then reuse them
                     res[part] = cache[part.unique_id]
-                    continue
-
-                res[part] = self.operator.estimate_poles(s_min, s_max,
-                                                         part,
-                                                         threshold,
-                                                         previous_result,
-                                                         cauchy_integral,
-                                                         modes)
-                cache[part.unique_id] = res[part]
+                else:
+                    res[part] = self.operator.estimate_poles(s_min, s_max,
+                                                             part,
+                                                             threshold,
+                                                             previous_result,
+                                                             cauchy_integral,
+                                                             modes)
+                    cache[part.unique_id] = res[part]
             return res
         else:
             return self.operator.estimate_poles(s_min, s_max, parts,
@@ -303,16 +302,10 @@ class Simulation(Identified):
                     # If an identical part's modes have already been calculated
                     # then reuse them
                     refined[part] = cache[part.unique_id]
-                    continue
-
-                mode_s, mode_j = self.operator.poles(0, len(estimate['s']),
-                                                     part, use_gram=True,
-                                                     rel_tol=rel_tol,
-                                                     max_iter=max_iter,
-                                                     estimate_s=estimate['s'],
-                                                     estimate_vr=estimate['vr'])
-                refined[part] = {'s': mode_s, 'vr': mode_j}
-                cache[part.unique_id] = refined[part]
+                else:
+                    # Otherwise call self recursively
+                    refined[part] = self.refine_poles(estimate, rel_tol, max_iter)
+                    cache[part.unique_id] = refined[part]
         return refined
 
     def singularities(self, s_start, modes, part=None, use_gram=True,
