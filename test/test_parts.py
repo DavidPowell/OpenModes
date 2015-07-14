@@ -10,7 +10,7 @@ from __future__ import print_function
 import openmodes
 import os.path as osp
 import weakref
-import gc
+
 
 def test_part_references():
     """Check that weak and strong references to Parts work as expected"""
@@ -28,7 +28,7 @@ def test_part_references():
                              mesh_tol=mesh_tol)
         part = sim.place_part(mesh)
         return weakref.ref(part)
-               
+
     name = "SRR"
     mesh_tol = 1e-3
 
@@ -37,7 +37,7 @@ def test_part_references():
     print(weakref1, strongref1)
     assert('SinglePart' in repr(weakref1))
     assert('SinglePart' in repr(strongref1))
-    
+
     # create a reference to a part object which is already discarded
     weakref2 = discard_ref()
     print(weakref2)
@@ -49,4 +49,4 @@ def test_part_references():
     assert('dead' in repr(weakref1))
 
 if __name__ == "__main__":
-    test_part_weakref()
+    test_part_references()
