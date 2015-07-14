@@ -309,7 +309,7 @@ def loop_star_indices(x):
     indices_star = []
 
     for lookup_num, lookup in enumerate(x.lookup):
-        if isinstance(list(lookup.keys())[0], Part):
+        if isinstance(list(lookup[0].keys())[0], Part):
             # This index is a lookup for Parts, so find all the SingleParts
             # along this index and add the relevant ranges to the indexing
             # array
@@ -317,15 +317,15 @@ def loop_star_indices(x):
             loop_list = []
             star_list = []
             # First find the parent part, the one covering the largest range
-            part_list = list(lookup.keys())
+            part_list = list(lookup[0].keys())
             parent_part = part_list[np.argmax(lookup[n].stop-lookup[n].start
                                               for n in part_list)]
 
             # now iterate over all SingleParts of this parent part
             for part in parent_part.iter_single():
-                part_start = lookup[part].start
+                part_start = lookup[0][part].start
 
-                bf = x.basis_container[part]
+                bf = lookup[1][part]
                 loop_range = bf.loop_range
                 loop_list.append(np.arange(loop_range.start+part_start,
                                            loop_range.stop+part_start))
