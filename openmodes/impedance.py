@@ -534,12 +534,14 @@ class ImpedanceMatrixLA(object):
 
     matrix_names = ('Z',)
 
-    def __init__(self, part_o, part_s, basis_container, metadata={},
-                 matrices=None, derivatives=None):
+    def __init__(self, part_o, part_s, basis_container, sources, unknowns,
+                 metadata={}, matrices=None, derivatives=None):
         self.md = metadata
         self.part_o = part_o
         self.part_s = part_s
         self.basis_container = basis_container
+        self.sources = sources
+        self.unknowns = unknowns
 
         if matrices is None:
             # create the empty matrices
@@ -563,8 +565,7 @@ class ImpedanceMatrixLA(object):
 
     def val(self):
         "The value of the impedance matrix"
-        op = self.md['operator']
-        Z = LookupArray((op.sources, (self.part_o, self.basis_container), op.unknowns,
+        Z = LookupArray((self.sources, (self.part_o, self.basis_container), self.unknowns,
                          (self.part_s, self.basis_container)), dtype=np.complex128)
         Z.simple_view()[:] = self.matrices['Z']
         return Z
@@ -592,7 +593,7 @@ class ImpedanceMatrixLA(object):
         if isinstance(vec, LookupArray):
             vec = vec.simple_view()
 
-        lookup = (self.md['operator'].unknowns, (self.part_s, self.basis_container))
+        lookup = (self.unknowns, (self.part_s, self.basis_container))
 
         if len(vec.shape) > 1:
             lookup = lookup+(vec.shape[1],)
@@ -616,7 +617,8 @@ class ImpedanceMatrixLA(object):
         else:
             der = {key: val[ind1, ind2] for key, val in self.der.iteritems()}
 
-        return self.__class__(ind1, ind2, self.basis_container, metadata=self.md,
+        return self.__class__(ind1, ind2, self.basis_container, self.sources,
+                              self.unknowns, metadata=self.md,
                               matrices=matrices, derivatives=der)
 
     def __setitem__(self, index, other):
@@ -637,7 +639,8 @@ class ImpedanceMatrixLA(object):
         else:
             der = {key: val.T for key, val in self.der.iteritems()}
 
-        return self.__class__(self.part_s, self.part_o, self.basis_container, metadata=self.md,
+        return self.__class__(self.part_s, self.part_o, self.basis_container, 
+                              self.sources, self.unknowns, metadata=self.md,
                               matrices=matrices, derivatives=der)
 
 
@@ -649,9 +652,8 @@ class EfieImpedanceMatrixLA(ImpedanceMatrixLA):
     def val(self):
         "The value of the impedance matrix"
         s = self.md['s']
-        op = self.md['operator']
-        Z = LookupArray((op.sources, (self.part_o, self.basis_container),
-                         op.unknowns, (self.part_s, self.basis_container)),
+        Z = LookupArray((self.sources, (self.part_o, self.basis_container),
+                         self.unknowns, (self.part_s, self.basis_container)),
                         dtype=np.complex128)
         Z.simple_view()[:] = self.matrices['S']/s + s*self.matrices['L']
         return Z
@@ -677,10 +679,9 @@ class CfieImpedanceMatrixLA(ImpedanceMatrixLA):
     def val(self):
         "The value of the impedance matrix"
         s = self.md['s']
-        op = self.md['operator']
         alpha = self.md['alpha']
-        Z = LookupArray((op.sources, (self.part_o, self.basis_container),
-                         op.unknowns, (self.part_s, self.basis_container)),
+        Z = LookupArray((self.sources, (self.part_o, self.basis_container),
+                         self.unknowns, (self.part_s, self.basis_container)),
                         dtype=np.complex128)
         Z.simple_view()[:] = (alpha*(self.matrices['S']/s + s*self.matrices['L']) +
                               (1.0-alpha)*self.matrices['M'])

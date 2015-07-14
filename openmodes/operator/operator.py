@@ -51,6 +51,7 @@ class Operator(object):
         symmetric = self.reciprocal and (parent_o == parent_s)
 
         Z = self.impedance_class(parent_o, parent_s, self.basis_container,
+                                 self.sources, self.unknowns,
                                  derivatives=frequency_derivatives)
 
         # set the common metadata
