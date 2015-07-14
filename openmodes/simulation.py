@@ -40,6 +40,7 @@ from openmodes.mesh import TriangularSurfaceMesh
 from openmodes.helpers import Identified
 from openmodes.vector import VectorParts
 from openmodes.material import FreeSpace, PecMaterial
+from openmodes.projector import Projector
 
 
 class Simulation(Identified):
@@ -342,6 +343,14 @@ class Simulation(Identified):
                 new[part] = self.filter_modes(part_original, criteria)
 
         return new
+
+    def projector(self, modes, parent_part=None):
+        """Generate projection matrices which can be applied to an arbitrary
+        vector or matrix to project it onto these modes
+        """
+
+        parent_part = parent_part or self.parts
+        return Projector(modes, self.parts, self.operator, self.basis_container)
 
     def singularities(self, s_start, modes, part=None, use_gram=True,
                       rel_tol=1e-6, max_iter=200):
