@@ -39,12 +39,6 @@ class Projector(object):
                                                                          'left_basis': modes})
         self.basis_container.lowest_parts = set(modes.keys())
 
-        # The Macro basis functions should know which actual part they were
-        # defined on, because their solutions are defined on a per part basis
-#        for parent_part in modes.keys():
-#            for part in parent_part.iter_single():
-#                self.basis_container.set_args(part, {'part': part})#, 'parent_part': parent_part})
-
         # TODO: unknowns and sources can come from modes
         right = LookupArray((operator.unknowns, (parent_part, orig_container),
                              ('modes',), (parent_part, self.basis_container)),
@@ -57,11 +51,7 @@ class Projector(object):
 
         for part_num, (part, mode) in enumerate(modes.items()):
             right[:, part, :, part] = mode['vr'][:, :, None, :]
-            try:
-                left[:, part, :, part] = mode['vl'][None, :, :, :]
-            except KeyError:
-                old_shape = mode['vr'].shape
-                left[:, part, :, part] = mode['vr'].T.reshape((1, old_shape[2], old_shape[0], old_shape[1]))
+            left[:, part, :, part] = mode['vl'][None, :, :, :]
 
         self.left = left
         self.right = right
