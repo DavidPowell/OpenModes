@@ -100,16 +100,15 @@ class Operator(object):
 
             result = poles_cauchy(Z_func, s_min, s_max, threshold,
                                   previous_result=previous_result)
+
+            num_in = len(result['s'])
+            num_out = len(result['s_out'])
+
             # reformat vectors in result into LookupArrays
-            for key in ('vr', 'vl', 'vl_out', 'vr_out'):
-                this_result = result[key]
-                if modes is not None:
-                    this_result = this_result[:, modes]
-                num_cols = this_result.shape[1]
-                result[key] = view_lookuparray(this_result,
-                                               (self.unknowns, (part, self.basis_container), num_cols))
-            if modes is not None:
-                result['s'] = result['s'][modes]
+            result['vr']= view_lookuparray(result['vr'], (self.unknowns, (part, self.basis_container), num_in))
+            result['vr_out']= view_lookuparray(result['vr_out'], (self.unknowns, (part, self.basis_container), num_out))
+            result['vl']= view_lookuparray(result['vl'], (num_in, self.sources, (part, self.basis_container)))
+            result['vl_out']= view_lookuparray(result['vl_out'], (num_out, self.sources, (part, self.basis_container)))
 
         result['part'] = part
         return result

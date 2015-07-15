@@ -102,6 +102,8 @@ def poles_cauchy(Z_func, s_min, s_max, svd_threshold=1e-10,
         The two corners of the integration region in the s-plane. Order doesn't
         matter, they will always be sorted to obtain the correct sense of
         integration.
+    svd_threshold : float, optional
+        The threshold on singular values to determine the rank of the matrix
     integration_rule: object, optional
         The integration rule to use for each of the 4 line integrals of the
         contour
@@ -193,9 +195,9 @@ def poles_cauchy(Z_func, s_min, s_max, svd_threshold=1e-10,
     full_r = (V_r.dot(np.diag(S_r).dot(vl))).conjugate()
     # conjugate comes from scipy's vs my definition of left eigenvectors
 
-    result['vl'] = full_l[:, in_region]
+    result['vl'] = full_l[:, in_region].T
     result['vr'] = full_r[:, in_region]
-    result['vl_out'] = full_l[:, outside_region]
+    result['vl_out'] = full_l[:, outside_region].T
     result['vr_out'] = full_r[:, outside_region]
 
     return result
