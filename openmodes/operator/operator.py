@@ -113,6 +113,78 @@ class Operator(object):
         result['part'] = part
         return result
 
+    def refine_poles(self, estimates, rel_tol=1e-6, max_iter=200):
+        """Find the poles of the operator applied to a specified part
+
+        Parameters
+        ----------
+        estimates : dictionary
+            The data for the estimated poles
+        rel_tol : float, optional
+            The relative tolerance on the search for singularities
+        max_iter : integer, optional
+            The maximum number of iterations to use when searching for
+            singularities
+
+        Returns
+        -------
+        refined : dictionary
+            The refined poles
+        """
+
+        part = estimates['part']
+        logging.info("Finding poles for part %s" % str(part.id))
+
+        num_modes = len(estimates['s'])
+
+        refined = {'s': np.empty(num_modes, np.complex128)}
+        refined['vr'] = LookupArray((self.unknowns, (part, self.basis_container), num_modes),
+                                    dtype=np.complex128)
+        refined['vl'] = LookupArray((num_modes, self.sources, (part, self.basis_container)),
+                                    dtype=np.complex128)
+
+        # Adaptively check if the operator provides frequency derivatives, and
+        # if so use them in the Newton iteration to find the poles.
+        if self.frequency_derivatives:
+            def Z_func(s):
+                Z = self.impedance(s, part, part, frequency_derivatives=True)
+                return s*Z.val().simple_view(), Z.frequency_derivative_P().simple_view()
+        else:
+            def Z_func(s):
+                Z = self.impedance(s, part, part, frequency_derivatives=False)
+                return s*Z.val().simple_view()
+
+        symmetric = self.reciprocal
+
+        # weight_type = 'max element'
+        if symmetric:
+            weight_type = 'rayleigh symmetric'
+        else:
+            weight_type = 'rayleigh asymmetric'
+
+        # Note that mode refers to the position in the array modes, which
+        # at this point need not correspond to the original mode numbering
+        for mode in range(num_modes):
+            res = eig_newton(Z_func, estimates['s'][mode],
+                             estimates['vr'][:, :, mode].simple_view(),
+                             weight=weight_type, lambda_tol=rel_tol,
+                             max_iter=max_iter,
+                             func_gives_der=self.frequency_derivatives,
+                             y_0=estimates['vl'][mode, :, :].simple_view())
+
+            logging.info("Converged after %d iterations\n"
+                         "%+.4e %+.4ej (linearised solution)\n"
+                         "%+.4e %+.4ej (nonlinear solution)"
+                         % (res['iter_count'], estimates['s'][mode].real,
+                            estimates['s'][mode].imag,
+                            res['eigval'].real, res['eigval'].imag))
+
+            refined['s'][mode] = res['eigval']
+            refined['vr'][:, :, mode] = res['eigvec']
+            refined['vl'][mode, :, :] = res['eigvec_left']
+
+        return refined
+
     def poles(self, s_start, modes, part, use_gram=True,
               rel_tol=1e-6, max_iter=200, estimate_s=None, estimate_vr=None):
         """Find the poles of the operator applied to a specified part
