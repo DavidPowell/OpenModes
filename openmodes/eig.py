@@ -249,7 +249,7 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
 
         `eigval` : the eigenvalue
 
-        'eigvect' : the eigenvector
+        'eigvec' : the eigenvector
 
         'iter_count' : the number of iterations performed
 
@@ -268,7 +268,7 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
     x_s = x_0
     lambda_s = lambda_0
 
-    if weight.lower == 'rayleigh asymmetric':
+    if weight.lower() == 'rayleigh asymmetric':
         if y_0 is None:
             raise ValueError("Parameter y_0 must be supplied for asymmetric "
                              "case")
@@ -305,9 +305,9 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
             v_s = np.dot(T_s.T, x_s.conj())
         elif weight.lower() == 'rayleigh symmetric':
             v_s = np.dot(T_s.T, x_s)
-        elif weight.lower == 'rayleigh asymmetric':
+        elif weight.lower() == 'rayleigh asymmetric':
             y_s = la.lu_solve(T_s_lu, np.dot(T_ds, y_s), trans=1)
-            y_s /= np.sqrt(np.sum(abs(y_s)**2))
+            y_s /= np.sqrt(np.sum(np.abs(y_s)**2))
             v_s = np.dot(T_s.T, y_s)
         else:
             raise ValueError("Unknown weighting method %s" % weight)
@@ -334,15 +334,27 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
     if not converged:
         raise ValueError("maximum iterations reached, no convergence")
 
-    # scale the eigenvector so that the eigenvalue derivative is 1
-    dz_ds = np.dot(x_s, np.dot(T_ds, x_s))
-    x_s /= np.sqrt(dz_ds)
-
-    res = {'eigval': lambda_s, 'eigvec': x_s, 'iter_count': iter_count+1,
+    res = {'eigval': lambda_s, 'iter_count': iter_count+1,
            'delta_lambda': delta_lambda}
 
-    if weight.lower == 'rayleigh asymmetric':
+    if weight.lower() == 'rayleigh asymmetric':
+        # Scale both the left and right eigenvector identically first
+        y_s /= np.sqrt(np.vdot(y_s, y_s)/np.vdot(x_s, x_s))
+
+        # Then scale both to match the eigenvalue derivative
+        dz_ds = np.dot(y_s, np.dot(T_ds, x_s))
+        y_s /= np.sqrt(dz_ds)
         res['eigvec_left'] = y_s
+
+        x_s /= np.sqrt(dz_ds)
+        res['eigvec'] = x_s
+
+    else:
+        # scale the eigenvector so that the eigenvalue derivative is 1
+        dz_ds = np.dot(x_s, np.dot(T_ds, x_s))
+        x_s /= np.sqrt(dz_ds)
+        res['eigvec'] = x_s
+        res['eigvec_left'] = x_s
 
     return res
 
