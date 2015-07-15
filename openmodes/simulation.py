@@ -287,13 +287,7 @@ class Simulation(Identified):
         try:
             # This is just an estimate for a single part
             part = estimates['part']
-            mode_s, mode_j = self.operator.poles(0, len(estimates['s']), part,
-                                                 use_gram=True,
-                                                 rel_tol=rel_tol,
-                                                 max_iter=max_iter,
-                                                 estimate_s=estimates['s'],
-                                                 estimate_vr=estimates['vr'])
-            refined = {'s': mode_s, 'vr': mode_j}
+            refined = self.operator.refine_poles(estimates, rel_tol, max_iter)
         except KeyError:
             # Multiple parts have been estimated
             refined = {}
@@ -319,8 +313,9 @@ class Simulation(Identified):
             conjugate_right = original['vr'][:, :, complex_poles].conj()
             full['vr'] = np.dstack((original['vr'], conjugate_right))
 
-            if 'vl' in full:
-                raise NotImplementedError
+            if 'vl' in original:
+                conjugate_left = original['vl'][complex_poles, :, :].conj()
+                full['vl'] = np.vstack((original['vl'], conjugate_left))
 
         except KeyError:
             # This is a dictionary of parts, so call recursively
@@ -337,6 +332,9 @@ class Simulation(Identified):
             new['part'] = original['part']
             new['vr'] = original['vr'][:, :, criteria]
             new['s'] = original['s'][criteria]
+            if 'vl' in original:
+                new['vl'] = original['vl'][criteria, :, :]
+
         except KeyError:
             # it is actually a dictionary of parts
             for part, part_original in original.iteritems():
