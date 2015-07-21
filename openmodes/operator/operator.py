@@ -22,7 +22,7 @@ import numpy as np
 import logging
 
 from openmodes.eig import eig_linearised, eig_newton, poles_cauchy
-from openmodes.array import LookupArray, view_lookuparray
+from openmodes.array import LookupArray
 
 
 class Operator(object):
@@ -81,7 +81,8 @@ class Operator(object):
         return Gp
 
     def estimate_poles(self, s_min, s_max, part, threshold=1e-11,
-                       previous_result=None, cauchy_integral=True, modes=None):
+                       previous_result=None, cauchy_integral=True, modes=None,
+                       **kwargs):
         """Estimate pole location for an operator by Cauchy integration or
         the simpler quasi-static method"""
 
@@ -89,9 +90,6 @@ class Operator(object):
             # use the simpler quasi-static method
             Z = self.impedance(s_min, part, part)
             estimate_s, estimate_vr = eig_linearised(Z, modes)
-            estimate_vr = view_lookuparray(estimate_vr,
-                                           (self.unknowns, (part, self.basis_container),
-                                            len(estimate_s)))
             result = {'s': estimate_s, 'vr': estimate_vr}
         else:
             def Z_func(s):
@@ -99,21 +97,11 @@ class Operator(object):
                 return Z.val().simple_view()
 
             result = poles_cauchy(Z_func, s_min, s_max, threshold,
-                                  previous_result=previous_result)
+                                  previous_result=previous_result, **kwargs)
 
-            num_in = len(result['s'])
-            num_out = len(result['s_out'])
-
-            # reformat vectors in result into LookupArrays
-            result['vr']= view_lookuparray(result['vr'], (self.unknowns, (part, self.basis_container), num_in))
-            result['vr_out']= view_lookuparray(result['vr_out'], (self.unknowns, (part, self.basis_container), num_out))
-            result['vl']= view_lookuparray(result['vl'], (num_in, self.sources, (part, self.basis_container)))
-            result['vl_out']= view_lookuparray(result['vl_out'], (num_out, self.sources, (part, self.basis_container)))
-
-        result['part'] = part
         return result
 
-    def refine_poles(self, estimates, rel_tol=1e-6, max_iter=200):
+    def refine_poles(self, estimates, part, rel_tol=1e-6, max_iter=200):
         """Find the poles of the operator applied to a specified part
 
         Parameters
@@ -132,16 +120,14 @@ class Operator(object):
             The refined poles
         """
 
-        part = estimates['part']
+        #part = estimates['part']
         logging.info("Finding poles for part %s" % str(part.id))
 
         num_modes = len(estimates['s'])
 
         refined = {'s': np.empty(num_modes, np.complex128)}
-        refined['vr'] = LookupArray((self.unknowns, (part, self.basis_container), num_modes),
-                                    dtype=np.complex128)
-        refined['vl'] = LookupArray((num_modes, self.sources, (part, self.basis_container)),
-                                    dtype=np.complex128)
+        refined['vr'] = np.empty_like(estimates['vr'])
+        refined['vl'] = np.empty_like(estimates['vl'])
 
         # Adaptively check if the operator provides frequency derivatives, and
         # if so use them in the Newton iteration to find the poles.
@@ -166,11 +152,11 @@ class Operator(object):
         # at this point need not correspond to the original mode numbering
         for mode in range(num_modes):
             res = eig_newton(Z_func, estimates['s'][mode],
-                             estimates['vr'][:, :, mode].simple_view(),
+                             estimates['vr'][:, mode],
                              weight=weight_type, lambda_tol=rel_tol,
                              max_iter=max_iter,
                              func_gives_der=self.frequency_derivatives,
-                             y_0=estimates['vl'][mode, :, :].simple_view())
+                             y_0=estimates['vl'][mode, :])
 
             logging.info("Converged after %d iterations\n"
                          "%+.4e %+.4ej (linearised solution)\n"
@@ -180,8 +166,8 @@ class Operator(object):
                             res['eigval'].real, res['eigval'].imag))
 
             refined['s'][mode] = res['eigval']
-            refined['vr'][:, :, mode] = res['eigvec']
-            refined['vl'][mode, :, :] = res['eigvec_left']
+            refined['vr'][:, mode] = res['eigvec']
+            refined['vl'][mode, :] = res['eigvec_left']
 
         return refined
 
