@@ -102,12 +102,35 @@ def build_lookup(index_data):
             lookup.append(None)
             shape.append(index)
         else:
-            # Assumed to be a tuple of strings, although any sequence of
-            # immutable objects should be okay.
-            lookup.append({y: x for (x, y) in enumerate(index)})
+            # A tuple of strings representing quantities
+            this_lookup = {}
+            for (x, y) in enumerate(index):
+                if not isinstance(y, six.string_types):
+                    raise ValueError("Unknown index type %s" % str(y))
+                this_lookup[y] = x
+
+            lookup.append(this_lookup)
             shape.append(len(index))
 
     return lookup, shape
+
+
+def compatible_quantity_part(first, second):
+    "Determine if two parts of lookup lists are compatible quantities and parts"
+
+    a = first[0]
+    b = second[0]
+    if not (isinstance(a, dict) and isinstance(b, dict)):
+        return False
+    if set(a.values()) != set(b.values()):
+        return False
+
+    a = first[1]
+    b = second[1]
+    if not (isinstance(a[0], dict) and isinstance(b[0], dict)):
+        return False
+
+    return a[:2] == b[:2]
 
 
 class LookupArray(np.ndarray):
@@ -197,9 +220,10 @@ class LookupArray(np.ndarray):
 
         new_idx = []
         sub_lookup = []
+        entry_num = 0
 
         # try to lookup every part of the index to convert to a range
-        for entry_num, entry in enumerate(idx):
+        for entry in idx:
             if isinstance(entry, Part):
                 # Need to pass this metadata to the sub-array for its
                 # lookup table
@@ -218,8 +242,10 @@ class LookupArray(np.ndarray):
                     # Integers mean a dimension is dropped, in all other
                     # cases it is kept
                     if entry is None:
-                        # TODO: what if None/np.newaxis is passed?
-                        raise NotImplementedError
+                        # Need to record that a new dimension is added, so
+                        # keep the place in the lookup of the original
+                        sub_lookup.append(None)
+                        entry_num -= 1
                     elif isinstance(entry, slice) and entry == slice(None):
                         # If slicing the whole dimension, metadata can be kept
                         sub_lookup.append(self.lookup[entry_num])
@@ -227,8 +253,10 @@ class LookupArray(np.ndarray):
                         # In all other cases metadata is lost
                         sub_lookup.append(None)
 
+            entry_num += 1
+
         # now add lookup data for all the non-indexed dimensions
-        sub_lookup = sub_lookup+self.lookup[len(idx):]
+        sub_lookup = sub_lookup+self.lookup[entry_num:]
 
         try:
             result = super(LookupArray, self).__getitem__(tuple(new_idx))
@@ -297,24 +325,33 @@ class LookupArray(np.ndarray):
         """Matrix/vector multiplication with another LookupArray"""
         if not isinstance(other, LookupArray):
             assert(self.shape[-1] == other.shape[0])
-            new_lookup = self.lookup[:-1]+(None,)*(other.ndims-1)
+            new_lookup = self.lookup[:-1]+[None,]*(other.ndim-1)
             new_shape = self.shape[:-1]+other.shape[1:]
-        elif self.lookup[-2:] == other.lookup[:2]:
+        elif compatible_quantity_part(self.lookup[-2:], other.lookup[:2]):
             new_lookup = self.lookup[:-2]+other.lookup[2:]
             new_shape = self.shape[:-2]+other.shape[2:]
             other = other.simple_view()
         else:
             raise NotImplementedError
 
-        new_array = LookupArray(lookup=new_lookup, shape=new_shape,
-                                dtype=np.promote_types(self.dtype, other.dtype))
-        new_array.simple_view()[:] = np.dot(self.simple_view(), other)
+        if len(new_shape) == 0:
+            # handle the case of a scalar result
+            new_array = np.dot(self.simple_view(), other)
+        else:
+            new_array = LookupArray(lookup=new_lookup, shape=new_shape,
+                                    dtype=np.promote_types(self.dtype, other.dtype))
+            new_array.simple_view()[:] = np.dot(self.simple_view(), other)
         return new_array
 
+    def vdot(self, other):
+        "Conjugated dot product"
+        return self.conj().dot(other)
 
-def view_lookuparray(original, index_data):
+
+def view_lookuparray(original, index_data=None, lookup=None, shape=None):
     """Convert an array to a LookupArray, where possible avoiding copying"""
-    lookup, shape = build_lookup(index_data)
+    if lookup is None:
+        lookup, shape = build_lookup(index_data)
     result = original.reshape(shape).view(LookupArray)
     result.lookup = lookup
     return result
