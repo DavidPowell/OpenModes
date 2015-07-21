@@ -37,10 +37,10 @@ from openmodes.operator import EfieOperator
 from openmodes.visualise import plot_mayavi, write_vtk, preprocess
 from openmodes.model import ScalarModelLeastSq
 from openmodes.mesh import TriangularSurfaceMesh
-from openmodes.helpers import Identified, is_real_pole
+from openmodes.helpers import Identified
 from openmodes.vector import VectorParts
 from openmodes.material import FreeSpace, PecMaterial
-from openmodes.projector import Projector
+from openmodes.modes import Modes
 
 
 class Simulation(Identified):
@@ -219,7 +219,8 @@ class Simulation(Identified):
                                            extinction_field)
 
     def estimate_poles(self, s_min, s_max, parts=None, threshold=1e-11,
-                       previous_result=None, cauchy_integral=True, modes=None):
+                       previous_result=None, cauchy_integral=True, modes=None,
+                       **kwargs):
         """Estimate the location of poles and their modes by Cauchy integration
         or a simpler quasi-static method
 
@@ -246,6 +247,7 @@ class Simulation(Identified):
             modes = np.arange(modes)
 
         if isinstance(parts, collections.Iterable):
+            logging.info("Estimating poles of multiple parts")
             # a list of parts was given
             res = {}
             cache = {}
@@ -262,11 +264,21 @@ class Simulation(Identified):
                                                              cauchy_integral,
                                                              modes)
                     cache[part.unique_id] = res[part]
-            return res
+
+            if set(parts) == set(self.parts.children):
+                parent_part = self.parts
+            else:
+                raise NotImplementedError
         else:
-            return self.operator.estimate_poles(s_min, s_max, parts,
+            logging.info("Estimating poles of a single part")
+            res = {parts: self.operator.estimate_poles(s_min, s_max, parts,
                                                 threshold, previous_result,
-                                                cauchy_integral, modes)
+                                                cauchy_integral, modes)}
+            parent_part = parts
+           
+                                     
+        return Modes(parent_part, res, self.operator.unknowns, self.operator.sources,
+                     self.basis_container)
 
     def refine_poles(self, estimates, rel_tol=1e-8, max_iter=40):
         """Refine the location of poles by iterative search
@@ -284,71 +296,22 @@ class Simulation(Identified):
             given by the parts
         """
 
-        try:
-            # This is just an estimate for a single part
-            part = estimates['part']
-            refined = self.operator.refine_poles(estimates, rel_tol, max_iter)
-        except KeyError:
-            # Multiple parts have been estimated
-            refined = {}
-            cache = {}
-            for part, estimate in estimates.iteritems():
-                if part.unique_id in cache:
-                    # If an identical part's modes have already been calculated
-                    # then reuse them
-                    refined[part] = cache[part.unique_id]
-                else:
-                    # Otherwise call self recursively
-                    refined[part] = self.refine_poles(estimate, rel_tol, max_iter)
-                    cache[part.unique_id] = refined[part]
-        return refined
+        # Multiple parts have been estimated
+        refined = {}
+        cache = {}
+        for part, estimate in estimates.modes_of_parts.iteritems():
+            if part.unique_id in cache:
+                # If an identical part's modes have already been calculated
+                # then reuse them
+                refined[part] = cache[part.unique_id]
+            else:
+                # Otherwise call self recursively
+                refined[part] = self.operator.refine_poles(estimate, part, rel_tol, max_iter)
+                cache[part.unique_id] = refined[part]
 
-    def include_conjugates(self, original):
-        """Include the conjugate poles into a set of modes"""
-
-        try:
-            # first attempt for a single part
-            complex_poles = np.where(np.logical_not(is_real_pole(original['s'])))[0]
-            full = {'s': np.hstack((original['s'], original['s'][complex_poles].conjugate()))}
-            conjugate_right = original['vr'][:, :, complex_poles].conj()
-            full['vr'] = np.dstack((original['vr'], conjugate_right))
-
-            if 'vl' in original:
-                conjugate_left = original['vl'][complex_poles, :, :].conj()
-                full['vl'] = np.vstack((original['vl'], conjugate_left))
-
-        except KeyError:
-            # This is a dictionary of parts, so call recursively
-            full = {part: self.include_conjugates(modes) for part, modes in original.iteritems()}
-        return full
-
-    def filter_modes(self, original, criteria):
-        """Select a sub-set of modes based on the given criteria"""
-
-        # for now, criteria is just a list of mode numbers
-        new = {}
-        try:
-            # assume we have just a single part
-            new['part'] = original['part']
-            new['vr'] = original['vr'][:, :, criteria]
-            new['s'] = original['s'][criteria]
-            if 'vl' in original:
-                new['vl'] = original['vl'][criteria, :, :]
-
-        except KeyError:
-            # it is actually a dictionary of parts
-            for part, part_original in original.iteritems():
-                new[part] = self.filter_modes(part_original, criteria)
-
-        return new
-
-    def projector(self, modes, parent_part=None):
-        """Generate projection matrices which can be applied to an arbitrary
-        vector or matrix to project it onto these modes
-        """
-
-        parent_part = parent_part or self.parts
-        return Projector(modes, self.parts, self.operator, self.basis_container)
+        return Modes(estimates.parent_part, refined, self.operator.unknowns,
+                     self.operator.sources, self.basis_container,
+                     estimates.macro_container)
 
     def singularities(self, s_start, modes, part=None, use_gram=True,
                       rel_tol=1e-6, max_iter=200):

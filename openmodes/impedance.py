@@ -643,6 +643,13 @@ class ImpedanceMatrixLA(object):
                               self.sources, self.unknowns, metadata=self.md,
                               matrices=matrices, derivatives=der)
 
+    def weight(self, vr, vl):
+        "Weight the impedance matrix by right and left vectors"
+        new_matrices = {'Z': vl.dot(self.val().dot(vr)).simple_view()}
+        macro_container = vr.lookup[3][1]
+        return ImpedanceMatrixLA(self.part_o, self.part_s, macro_container,
+                                 ('modes',), ('modes',), self.md, new_matrices, self.der)
+
 
 class EfieImpedanceMatrixLA(ImpedanceMatrixLA):
     "An impedance matrix for metallic objects solved via EFIE"

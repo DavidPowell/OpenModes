@@ -671,9 +671,10 @@ class MacroBasis(AbstractBasis):
             elements 'vr' and 'vl' are used as right and left vectors
         """
         super(MacroBasis, self).__init__()
-        self.right_basis = kwargs['right_basis']
-        self.left_basis = kwargs['left_basis']
         self.part = part
+        modes = kwargs['modes_of_parts'][part]
+        self.vr = modes['vr']
+        self.vl = modes['vl']
 
     @classmethod
     def unique_key(cls, part, args):
@@ -682,7 +683,7 @@ class MacroBasis(AbstractBasis):
 
     def __len__(self):
         "The length is the number of solution vectors considered"
-        return np.prod(self.right_basis[self.part]['vr'].shape[2:])
+        return self.vr.shape[1]
 
     @cached_property
     def gram_matrix(self):
@@ -695,7 +696,7 @@ class MacroBasis(AbstractBasis):
             The Gram matrix, giving the inner product between each basis
             function
         """
-        return self.left_basis.dot(self.right_basis)
+        return self.vl.dot(self.vr)
 
 
 class BasisContainer(object):
