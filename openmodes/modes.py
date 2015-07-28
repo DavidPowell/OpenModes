@@ -91,7 +91,7 @@ class Modes(object):
         res[:] = 0.0
 
         for part, modes in self.modes_of_parts.items():
-            res[:, part, :, part] = modes['vr'][None, :, None, :]
+            res[:, part, :, part] = modes['vr'].reshape(res[:, part, :, part].shape)
         return res
 
     @cached_property
@@ -103,7 +103,7 @@ class Modes(object):
         res[:] = 0.0
 
         for part, modes in self.modes_of_parts.items():
-            res[:, part, :, part] = modes['vl'][None, :, None, :]
+            res[:, part, :, part] = modes['vl'].reshape(res[:, part, :, part].shape)
 
         return res
 
