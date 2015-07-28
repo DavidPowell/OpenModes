@@ -94,7 +94,7 @@ class Operator(object):
         else:
             def Z_func(s):
                 Z = self.impedance(s, part, part, frequency_derivatives=False)
-                return Z.val().simple_view()
+                return s*Z.val().simple_view()
 
             result = poles_cauchy(Z_func, s_min, s_max, threshold,
                                   previous_result=previous_result, **kwargs)
