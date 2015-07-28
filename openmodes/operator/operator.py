@@ -95,7 +95,7 @@ class Operator(object):
         else:
             def Z_func(s):
                 Z = self.impedance(s, part, part)
-                return s*Z.val().simple_view()
+                return Z.val().simple_view()
 
             result = poles_cauchy(Z_func, contour, threshold,
                                   previous_result=previous_result, **kwargs)
@@ -136,12 +136,12 @@ class Operator(object):
             logging.info("Using exact impedance derivatives")
             def Z_func(s):
                 Z = self.impedance(s, part, part)
-                return s*Z.val().simple_view(), Z.frequency_derivative_P().simple_view()
+                return Z.val().simple_view(), Z.frequency_derivative().simple_view()
         else:
             logging.info("Using approximate impedance derivatives")
             def Z_func(s):
                 Z = self.impedance(s, part, part)
-                return s*Z.val().simple_view()
+                return Z.val().simple_view()
 
         symmetric = self.reciprocal
 
