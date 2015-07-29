@@ -27,6 +27,10 @@ from openmodes.integration import GaussLegendreRule
 from openmodes.array import loop_star_indices
 
 
+class ConvergenceError(Exception):
+    pass
+
+
 def eig_linearised(Z, modes):
     """Solves a linearised approximation to the eigenvalue problem from
     the impedance calculated at some fixed frequency.
@@ -332,7 +336,7 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
         logging.debug("%+.4e %+.4ej" % (lambda_s.real, lambda_s.imag))
 
     if not converged:
-        raise ValueError("maximum iterations reached, no convergence")
+        raise ConvergenceError("maximum iterations reached, no convergence")
 
     res = {'eigval': lambda_s, 'iter_count': iter_count+1,
            'delta_lambda': delta_lambda}
@@ -454,7 +458,7 @@ def eig_newton_linear(Z, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
             break
 
     if not converged:
-        raise ValueError("maximum iterations reached, no convergence")
+        raise ConvergenceError("maximum iterations reached, no convergence")
 
     res = {'eigval': lambda_s, 'eigvec': x_s, 'iter_count': iter_count+1,
            'delta_lambda': delta_lambda}
@@ -584,7 +588,7 @@ def eig_newton_bordered(A, w_0, vr_0, vl_0=None, w_tol=1e-8,
             break
 
     if not converged:
-        raise ValueError("maximum iterations reached, no convergence")
+        raise ConvergenceError("maximum iterations reached, no convergence")
 
     return {'w': w_s, 'vr': vr_s, 'iter_count': iter_count+1,
             'delta_w': delta_w, 'vl': vl_s}
@@ -729,7 +733,7 @@ def eig_bordered_nonlinear(func, w_0, vr_0, vl_0=None, w_tol=1e-8,
             break
 
     if not converged:
-        raise ValueError("maximum iterations reached, no convergence")
+        raise ConvergenceError("maximum iterations reached, no convergence")
 
     return {'w': w_s, 'vr': vr_s1, 'iter_count': iter_count+1,
             'delta_w': delta_w, 'vl': vl_s1}
