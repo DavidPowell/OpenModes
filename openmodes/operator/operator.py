@@ -21,7 +21,8 @@
 import numpy as np
 import logging
 
-from openmodes.eig import eig_linearised, eig_newton, poles_cauchy
+from openmodes.eig import (eig_linearised, eig_newton, poles_cauchy,
+                           ConvergenceError)
 from openmodes.array import LookupArray
 
 
@@ -101,16 +102,16 @@ class Operator(object):
 
         return result
 
-    def refine_poles(self, estimates, part, rel_tol=1e-6, max_iter=200):
+    def refine_poles(self, estimates, part, rel_tol, max_iter):
         """Find the poles of the operator applied to a specified part
 
         Parameters
         ----------
         estimates : dictionary
             The data for the estimated poles
-        rel_tol : float, optional
+        rel_tol : float
             The relative tolerance on the search for singularities
-        max_iter : integer, optional
+        max_iter : integer
             The maximum number of iterations to use when searching for
             singularities
 
@@ -125,9 +126,9 @@ class Operator(object):
 
         num_modes = len(estimates['s'])
 
-        refined = {'s': np.empty(num_modes, np.complex128)}
-        refined['vr'] = np.empty_like(estimates['vr'])
-        refined['vl'] = np.empty_like(estimates['vl'])
+        refined = {'s': []}
+        refined['vr'] = []
+        refined['vl'] = []
 
         # Adaptively check if the operator provides frequency derivatives, and
         # if so use them in the Newton iteration to find the poles.
@@ -151,12 +152,17 @@ class Operator(object):
         # Note that mode refers to the position in the array modes, which
         # at this point need not correspond to the original mode numbering
         for mode in range(num_modes):
-            res = eig_newton(Z_func, estimates['s'][mode],
-                             estimates['vr'][:, mode],
-                             weight=weight_type, lambda_tol=rel_tol,
-                             max_iter=max_iter,
-                             func_gives_der=self.frequency_derivatives,
-                             y_0=estimates['vl'][mode, :])
+            logging.info("Searching for mode %d"%mode)
+            try:
+                res = eig_newton(Z_func, estimates['s'][mode],
+                                 estimates['vr'][:, mode],
+                                 weight=weight_type, lambda_tol=rel_tol,
+                                 max_iter=max_iter,
+                                 func_gives_der=self.frequency_derivatives,
+                                 y_0=estimates['vl'][mode, :])
+            except ConvergenceError:
+                logging.info("Convergence failed, mode discarded")
+                continue
 
             logging.info("Converged after %d iterations\n"
                          "%+.4e %+.4ej (linearised solution)\n"
@@ -165,10 +171,14 @@ class Operator(object):
                             estimates['s'][mode].imag,
                             res['eigval'].real, res['eigval'].imag))
 
-            refined['s'][mode] = res['eigval']
-            refined['vr'][:, mode] = res['eigvec']
-            refined['vl'][mode, :] = res['eigvec_left']
+            refined['s'].append(res['eigval'])
+            refined['vr'].append(res['eigvec'])
+            refined['vl'].append(res['eigvec_left'])
 
+        # convert lists to arrays
+        refined['s'] = np.array(refined['s'])
+        refined['vr'] = np.array(refined['vr']).T
+        refined['vl'] = np.array(refined['vl'])
         return refined
 
     def source_vector(self, source_field, s, parent, extinction_field=False):
