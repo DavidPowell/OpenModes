@@ -29,7 +29,7 @@ import shutil
 import collections
 import numbers
 
-from openmodes import gmsh
+from openmodes.mesh import gmsh
 from openmodes.integration import DunavantRule
 from openmodes.parts import SinglePart, CompositePart
 from openmodes.basis import LoopStarBasis, BasisContainer
