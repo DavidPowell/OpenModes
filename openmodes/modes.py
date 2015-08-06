@@ -156,3 +156,25 @@ class Modes(object):
 
         return Modes(self.parent_part, new, self.unknowns, self.sources,
                      self.orig_container)
+
+
+def match_degenerate_modes(modes, threshold=1e-2):
+    "Determine which modes are degenerate, within a certain threshold"
+    # TODO: should only be done for a single Part
+
+    s = modes.s[0]
+    matched = []
+    unmatched = range(len(s))
+
+    while len(unmatched) > 0:
+        current = unmatched.pop()
+        ds = np.abs((s[current]-s[unmatched])/s[current])
+        matches = np.where(ds < threshold)[0]
+        current_group = [current]
+        # Traverse in reverse order so that popping does not invalidate other
+        # elements
+        for m in reversed(matches):
+            current_group.append(unmatched[m])
+            unmatched.pop(m)
+        matched.append(current_group)
+    return matched
