@@ -123,37 +123,43 @@ class TOperator(Operator):
         eta_i = np.sqrt((mu_i*mu_0)/(eps_i*epsilon_0))
         eta_o = np.sqrt((mu_o*mu_0)/(eps_o*epsilon_0)),
 
+        is_self_term = part_o == part_s
+
+        matrix_names = ('L_o', 'S_o', 'K_o')
         if isinstance(basis_o, LinearTriangleBasis):
-            L_i, S_i = rwg.impedance_G(s, self.integration_rule, basis_o,
-                                       part_o.nodes, basis_s, part_s.nodes,
-                                       part_o == part_s, eps_i, mu_i,
-                                       self.num_singular_terms,
-                                       self.singularity_accuracy)
+            if is_self_term:
+                L_i, S_i = rwg.impedance_G(s, self.integration_rule, basis_o,
+                                           part_o.nodes, basis_s, part_s.nodes,
+                                           is_self_term, eps_i, mu_i,
+                                           self.num_singular_terms,
+                                           self.singularity_accuracy)
+                L_i /= c_i
+                S_i *= c_i
+
+                # note opposite sign of normals for interior problem
+                K_i = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
+                                           part_o.nodes, basis_s, part_s.nodes,
+                                           -normals, is_self_term, eps_i, mu_i,
+                                           self.num_singular_terms,
+                                           self.singularity_accuracy,
+                                           tangential_form=True)
+
+                matrix_names += ('L_i', 'S_i', 'K_i')
 
             L_o, S_o = rwg.impedance_G(s, self.integration_rule, basis_o,
                                        part_o.nodes, basis_s, part_s.nodes,
-                                       part_o == part_s, eps_o, mu_o,
+                                       is_self_term, eps_o, mu_o,
                                        self.num_singular_terms,
                                        self.singularity_accuracy)
 
             # This scaling ensures that this operator has the same definition
             # as cursive D defined by Yla-Oijala, Radio Science 2005.
-            L_i /= c_i
-            S_i *= c_i
             L_o /= c_o
             S_o *= c_o
 
-            # note opposite sign of normals for interior problem
-            K_i = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
-                                       part_o.nodes, basis_s, part_s.nodes,
-                                       -normals, part_o == part_s, eps_i, mu_i,
-                                       self.num_singular_terms,
-                                       self.singularity_accuracy,
-                                       tangential_form=True)
-
             K_o = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
                                        part_o.nodes, basis_s, part_s.nodes,
-                                       normals, part_o == part_s, eps_o, mu_o,
+                                       normals, is_self_term, eps_o, mu_o,
                                        self.num_singular_terms,
                                        self.singularity_accuracy,
                                        tangential_form=True)
@@ -164,7 +170,7 @@ class TOperator(Operator):
         # object from the locally defined variables. This relies on them having
         # the correct name in this function.
         loc = locals()
-        for name in self.impedance_class.matrix_names:
+        for name in matrix_names:
             Z.matrices[name][part_o, part_s] = loc[name]
 
     def source_vector(self, source_field, s, parent, extinction_field=False):
