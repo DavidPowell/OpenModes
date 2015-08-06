@@ -124,8 +124,8 @@ class Modes(object):
         for part, original in self.modes_of_parts.iteritems():
             new[part] = {}
             new[part]['s'] = original['s'][criteria]
-            new[part]['vr'] = original['vr'][:, :, criteria]
-            new[part]['vl'] = original['vl'][criteria, :, :]
+            new[part]['vr'] = original['vr'][:, criteria]
+            new[part]['vl'] = original['vl'][criteria, :]
 
         return Modes(self.parent_part, new, self.unknowns, self.sources,
                      self.orig_container)
