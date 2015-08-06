@@ -257,10 +257,14 @@ class Simulation(Identified):
                     # then reuse them
                     res[part] = cache[part.unique_id]
                 else:
+                    if previous_result is None:
+                        previous = None
+                    else:
+                        previous = previous_result.modes_of_parts[part]
                     res[part] = self.operator.estimate_poles(s_min, s_max,
                                                              part,
                                                              threshold,
-                                                             previous_result,
+                                                             previous,
                                                              cauchy_integral,
                                                              modes)
                     cache[part.unique_id] = res[part]
@@ -271,6 +275,8 @@ class Simulation(Identified):
                 raise NotImplementedError
         else:
             logging.info("Estimating poles of a single part")
+            if previous_result is not None:
+                previous_result = previous_result.modes_of_parts[parts]
             res = {parts: self.operator.estimate_poles(s_min, s_max, parts,
                                                 threshold, previous_result,
                                                 cauchy_integral, modes)}
