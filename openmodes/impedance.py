@@ -656,6 +656,13 @@ class EfieImpedanceMatrixLA(ImpedanceMatrixLA):
 
     matrix_names = ('L', 'S')
 
+    def __init__(self, part_o, part_s, basis_container, sources, unknowns,
+                 metadata={}, matrices=None, derivatives=None):
+        super(EfieImpedanceMatrixLA, self).__init__(part_o, part_s,
+                                                    basis_container,
+                                                    sources, unknowns,
+                                                    metadata, matrices, True)
+
     def val(self):
         "The value of the impedance matrix"
         s = self.md['s']
