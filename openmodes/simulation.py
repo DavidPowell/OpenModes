@@ -316,8 +316,7 @@ class Simulation(Identified):
                 cache[part.unique_id] = refined[part]
 
         return Modes(estimates.parent_part, refined, self.operator.unknowns,
-                     self.operator.sources, self.basis_container,
-                     estimates.macro_container)
+                     self.operator.sources, self.basis_container)
 
     def singularities(self, s_start, modes, part=None, use_gram=True,
                       rel_tol=1e-6, max_iter=200):
