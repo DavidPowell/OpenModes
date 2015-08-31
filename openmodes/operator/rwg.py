@@ -52,11 +52,11 @@ def impedance_curl_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
             raise ValueError("NaN returned in singular impedance terms")
 
         num_faces_s = num_faces_o
-        Z_faces = z_mfie_faces_self(nodes_o, basis_o.mesh.polygons,
-                                    basis_o.mesh.polygon_areas, gamma_0,
-                                    integration_rule.xi_eta,
-                                    integration_rule.weights, normals,
-                                    tangential_form, *singular_terms)
+        res = z_mfie_faces_self(nodes_o, basis_o.mesh.polygons,
+                                basis_o.mesh.polygon_areas, gamma_0,
+                                integration_rule.xi_eta,
+                                integration_rule.weights, normals,
+                                tangential_form, *singular_terms)
 
         transform_s = transform_o
 
@@ -64,13 +64,15 @@ def impedance_curl_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
         # calculate mutual impedance
         num_faces_s = len(basis_s.mesh.polygons)
 
-        Z_faces = z_mfie_faces_mutual(nodes_o, basis_o.mesh.polygons,
-                                      nodes_s, basis_s.mesh.polygons,
-                                      gamma_0, integration_rule.xi_eta,
-                                      integration_rule.weights, normals,
-                                      tangential_form)
+        res = z_mfie_faces_mutual(nodes_o, basis_o.mesh.polygons,
+                                  nodes_s, basis_s.mesh.polygons,
+                                  gamma_0, integration_rule.xi_eta,
+                                  integration_rule.weights, normals,
+                                  tangential_form)
 
         transform_s, _ = basis_s.transformation_matrices
+
+    Z_faces, Z_dgamma_faces = res
 
     if np.any(np.isnan(Z_faces)):
         raise ValueError("NaN returned in impedance matrix")
@@ -78,7 +80,12 @@ def impedance_curl_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
     Z = transform_o.dot(transform_s.dot(Z_faces.reshape(num_faces_o*3,
                                                         num_faces_s*3,
                                                         order='C').T).T)
-    return Z
+
+    Z_dgamma = transform_o.dot(transform_s.dot(Z_dgamma_faces.reshape(num_faces_o*3,
+                                                        num_faces_s*3,
+                                                        order='C').T).T)
+
+    return Z, Z_dgamma
 
 
 def impedance_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,

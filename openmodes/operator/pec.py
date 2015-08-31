@@ -197,7 +197,7 @@ class MfieOperator(Operator):
         normals = basis_o.mesh.surface_normals
 
         if isinstance(basis_o, LinearTriangleBasis):
-            Zv = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
+            Zv, _ = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
                                       part_o.nodes, basis_s, part_s.nodes,
                                       normals, part_o == part_s, eps, mu,
                                       self.num_singular_terms,
@@ -327,7 +327,7 @@ class CfieOperator(Operator):
                                    self.num_singular_terms,
                                    self.singularity_accuracy)
 
-            M = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
+            M, _ = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
                                      part_o.nodes, basis_s, part_s.nodes,
                                      normals, part_o == part_s, eps, mu,
                                      self.num_singular_terms,

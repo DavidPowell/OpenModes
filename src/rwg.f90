@@ -87,7 +87,7 @@ module core_for
         end subroutine
 
         subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
-                weights_o, nodes_o_in, gamma_0, normal, T_form, num_singular_terms, I_Z)
+                weights_o, nodes_o_in, gamma_0, normal, T_form, num_singular_terms, I_Z, I_Z_dgamma)
             ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
             ! NB: includes the 1/4A**2 prefactor
             !
@@ -114,7 +114,7 @@ module core_for
             logical, intent(in) :: T_form
             integer, intent(in) :: num_singular_terms
         
-            complex(WP), intent(out), dimension(3, 3) :: I_z
+            complex(WP), intent(out), dimension(3, 3) :: I_z, I_z_dgamma
         end subroutine
 
 
@@ -983,7 +983,7 @@ end subroutine face_integrals_yla_oijala
 
 
 subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_o, &
-        weights_o, nodes_o_in, gamma_0, normal, T_form, num_singular_terms, I_Z)
+        weights_o, nodes_o_in, gamma_0, normal, T_form, num_singular_terms, I_Z, I_Z_dgamma)
     ! Fully integrated over source and observer, vector kernel of the MOM for RWG basis functions
     ! NB: includes the 1/4A**2 prefactor
     !
@@ -1011,12 +1011,12 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
     logical, intent(in) :: T_form
     integer, intent(in) :: num_singular_terms
 
-    complex(WP), intent(out), dimension(3, 3) :: I_z
+    complex(WP), intent(out), dimension(3, 3) :: I_z, I_Z_dgamma
 
     real(WP) :: xi_s, eta_s, zeta_s, xi_o, eta_o, zeta_o, R, w_s, w_o
     real(WP), dimension(3) :: r_s, r_o
     real(WP), dimension(3, 3) :: rho_s, rho_o
-    complex(WP) :: g
+    complex(WP) :: g, g_dgamma
     integer :: count_s, count_o, uu, vv
     real(WP), dimension(3, 3) :: nodes_s, nodes_o
 
@@ -1025,7 +1025,7 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
 
     ! explictly copying the output arrays gives some small speedup,
     ! possibly by avoiding access to the shared target array
-    complex(WP), dimension(3, 3) :: I_Z_int
+    complex(WP), dimension(3, 3) :: I_Z_int, I_Z_dgamma_int
 
     
     ! transpose for speed
@@ -1083,13 +1083,21 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
                 g = (1.0 + gamma_0*R)*exp(-gamma_0*R)/R**3
             end if
 
+            g_dgamma = -gamma_0*exp(-R*gamma_0)/R
+
             if (T_form) then
                 ! The tang RWG form
                 forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
                     dot_product(rho_o(:, uu), cross_product(r_o - r_s, rho_s(:, vv))))
+
+                forall (uu=1:3, vv=1:3) I_Z_dgamma_int(uu, vv) = I_Z_dgamma_int(uu, vv) + w_o*w_s*g_dgamma*( &
+                    dot_product(rho_o(:, uu), cross_product(r_o - r_s, rho_s(:, vv))))
             else     
                 ! The n x RWG form
                 forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
+                    dot_product(rho_o(:, uu), cross_product(normal, cross_product(r_o - r_s, rho_s(:, vv)))))
+
+                forall (uu=1:3, vv=1:3) I_Z_dgamma_int(uu, vv) = I_Z_dgamma_int(uu, vv) + w_o*w_s*g_dgamma*( &
                     dot_product(rho_o(:, uu), cross_product(normal, cross_product(r_o - r_s, rho_s(:, vv)))))
             end if
 
@@ -1097,6 +1105,7 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
     end do
 
     I_Z = I_Z_int
+    I_Z_dgamma = I_Z_dgamma_int
 
 end subroutine face_integral_MFIE
 
@@ -1176,7 +1185,7 @@ end subroutine face_unit_integral
 
 subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_singular, degree_singular, nodes, triangle_nodes, &
                                 triangle_areas, gamma_0, xi_eta, weights, normals, T_form, Z_precalc, &
-                                indices_precalc, indptr_precalc, Z_face)
+                                indices_precalc, indptr_precalc, Z_face, Z_face_dgamma)
     ! Calculate the face to face interaction terms used to build the impedance matrix
     !
     ! As per Rao, Wilton, Glisson, IEEE Trans AP-30, 409 (1982)
@@ -1210,10 +1219,10 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
     integer, intent(in), dimension(0:num_singular-1) :: indices_precalc
     integer, intent(in), dimension(0:num_triangles) :: indptr_precalc
 
-    complex(WP), intent(out), dimension(0:num_triangles-1, 0:2, 0:num_triangles-1, 0:2) :: Z_face
+    complex(WP), intent(out), dimension(0:num_triangles-1, 0:2, 0:num_triangles-1, 0:2) :: Z_face, Z_face_dgamma
     
     real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
-    complex(WP), dimension(3, 3) :: I_Z
+    complex(WP), dimension(3, 3) :: I_Z, I_Z_dgamma
 
     integer :: p, q, index_singular
 
@@ -1229,11 +1238,12 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
                 ! diagonal self terms
                 call face_unit_integral(num_integration, xi_eta, weights, nodes_p, normals(p, :), T_form, I_Z)
                 I_Z = I_Z/4.0/triangle_areas(p)
+                I_Z_dgamma = 0.0
 
             elseif (any(triangle_nodes(p, :) == triangle_nodes(q, :))) then
                 ! triangles have one or two common nodes, perform singularity extraction
                 call face_integral_MFIE(num_integration, xi_eta, weights, nodes_q, &
-                                    num_integration, xi_eta, weights, nodes_p, gamma_0, normals(p, :), T_form, 1, I_Z)
+                                    num_integration, xi_eta, weights, nodes_p, gamma_0, normals(p, :), T_form, 1, I_Z, I_Z_dgamma)
                 ! the singular components are pre-calculated
                 index_singular = scr_index(p, q, indices_precalc, indptr_precalc)
 
@@ -1254,12 +1264,13 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
                 ! As per RWG, triangle area must be cancelled in the integration
                 ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
                 call face_integral_MFIE(num_integration, xi_eta, weights, nodes_q, &
-                                    num_integration, xi_eta, weights, nodes_p, gamma_0, normals(p, :), T_form, 0, I_Z)
+                                    num_integration, xi_eta, weights, nodes_p, gamma_0, normals(p, :), T_form, 0, I_Z, I_Z_dgamma)
                 I_Z = I_Z/4.0/pi
             end if
 
             ! there is no symmetry for MFIE
             Z_face(p, :, q, :) = I_Z
+            Z_face_dgamma(p, :, q, :) = I_Z_dgamma/4.0/pi
 
         end do
     end do
@@ -1270,7 +1281,7 @@ end subroutine Z_MFIE_faces_self
 
 subroutine Z_MFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_triangles_s, num_integration, nodes_o, triangles_o, &
                                 nodes_s, triangles_s, gamma_0, xi_eta, weights, normals_o, T_form, &
-                                Z_face)
+                                Z_face, Z_face_dgamma)
     ! Calculate the face to face interaction terms used to build the impedance matrix
     !
     ! As per Rao, Wilton, Glisson, IEEE Trans AP-30, 409 (1982)
@@ -1300,10 +1311,10 @@ subroutine Z_MFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
     real(WP), intent(in), dimension(0:num_triangles_o-1, 0:2) :: normals_o
     logical, intent(in) :: T_form
 
-    complex(WP), intent(out), dimension(0:num_triangles_o-1, 0:2, 0:num_triangles_s-1, 0:2) :: Z_face
+    complex(WP), intent(out), dimension(0:num_triangles_o-1, 0:2, 0:num_triangles_s-1, 0:2) :: Z_face, Z_face_dgamma
     
     real(WP), dimension(0:2, 0:2) :: nodes_p, nodes_q
-    complex(WP), dimension(3, 3) :: I_Z
+    complex(WP), dimension(3, 3) :: I_Z, I_Z_dgamma
 
     integer :: p, q
 
@@ -1319,10 +1330,11 @@ subroutine Z_MFIE_faces_mutual(num_nodes_o, num_triangles_o, num_nodes_s, num_tr
                 ! As per RWG, triangle area must be cancelled in the integration
                 ! for non-singular terms the weights are unity and we DON't want to scale to triangle area
                 call face_integral_MFIE(num_integration, xi_eta, weights, nodes_q, &
-                                    num_integration, xi_eta, weights, nodes_p, gamma_0, normals_o(p, :), T_form, 0, I_Z)
+                                    num_integration, xi_eta, weights, nodes_p, gamma_0, normals_o(p, :), T_form, 0, I_Z, I_Z_dgamma)
                 I_Z = I_Z/4.0/pi
 
             Z_face(p, :, q, :) = I_Z
+            Z_face_dgamma(p, :, q, :) = I_Z_dgamma/4.0/pi
 
         end do
     end do
