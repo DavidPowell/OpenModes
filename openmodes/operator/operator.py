@@ -30,7 +30,7 @@ class Operator(object):
     "A base class for operator equations"
 
     def impedance(self, s, parent_o, parent_s, frequency_derivatives=False,
-                  metadata={}):
+                  metadata=None):
         """Evaluate the self and mutual impedances of all parts in the
         simulation. Return an `ImpedancePart` object which can calculate
         several derived impedance quantities
@@ -49,6 +49,7 @@ class Operator(object):
             the object in several ways.
         """
 
+        metadata = metadata or dict()
         symmetric = self.reciprocal and (parent_o == parent_s)
 
         Z = self.impedance_class(parent_o, parent_s, self.basis_container,

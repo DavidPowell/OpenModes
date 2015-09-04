@@ -535,8 +535,8 @@ class ImpedanceMatrixLA(object):
     matrix_names = ('Z',)
 
     def __init__(self, part_o, part_s, basis_container, sources, unknowns,
-                 metadata={}, matrices=None, derivatives=None):
-        self.md = metadata
+                 metadata=None, matrices=None, derivatives=None):
+        self.md = metadata or dict()
         self.part_o = part_o
         self.part_s = part_s
         self.basis_container = basis_container
@@ -657,7 +657,7 @@ class EfieImpedanceMatrixLA(ImpedanceMatrixLA):
     matrix_names = ('L', 'S')
 
     def __init__(self, part_o, part_s, basis_container, sources, unknowns,
-                 metadata={}, matrices=None, derivatives=None):
+                 metadata=None, matrices=None, derivatives=True):
         super(EfieImpedanceMatrixLA, self).__init__(part_o, part_s,
                                                     basis_container,
                                                     sources, unknowns,
