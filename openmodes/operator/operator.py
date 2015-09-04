@@ -160,7 +160,7 @@ class Operator(object):
                                  max_iter=max_iter,
                                  func_gives_der=self.frequency_derivatives,
                                  y_0=estimates['vl'][mode, :])
-            except ConvergenceError:
+            except (ConvergenceError, ValueError):
                 logging.info("Convergence failed, mode discarded")
                 continue
 
