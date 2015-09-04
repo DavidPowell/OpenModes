@@ -371,6 +371,10 @@ subroutine EFIE_face_integrals(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta
     I_A_int = 0.0
     I_phi_int = 0.0
 
+    I_A_dgamma_int = 0.0
+    I_phi_dgamma_int = 0.0
+
+
     ! The loop over the source is repeated many times. Therefore pre-calculate the source
     ! quantities to optimise speed (gives minor benefit)
 
