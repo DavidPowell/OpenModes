@@ -37,7 +37,8 @@ def impedance_curl_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
     transform_o, _ = basis_o.transformation_matrices
     num_faces_o = len(basis_o.mesh.polygons)
 
-    gamma_0 = s/c*np.sqrt(epsilon*mu)
+    c_mat = c/np.sqrt(epsilon*mu)
+    gamma_0 = s/c_mat
 
     if self_impedance:
         # calculate self impedance
@@ -85,7 +86,7 @@ def impedance_curl_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
                                                         num_faces_s*3,
                                                         order='C').T).T)
 
-    return Z, Z_dgamma
+    return Z, Z_dgamma/c_mat
 
 
 def impedance_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,

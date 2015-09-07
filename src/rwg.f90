@@ -1037,6 +1037,7 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
     nodes_o = transpose(nodes_o_in)
 
     I_Z_int = 0.0
+    I_Z_dgamma_int = 0.0
 
     ! The loop over the source is repeated many times. Therefore pre-calculate the source
     ! quantities to optimise speed (gives minor benefit)

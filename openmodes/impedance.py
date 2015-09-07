@@ -570,6 +570,13 @@ class ImpedanceMatrixLA(object):
         Z.simple_view()[:] = self.matrices['Z']
         return Z
 
+    def frequency_derivative(self):
+        # TODO: return LookupArray?
+        return self.der['Z']
+
+    def frequency_derivative_P(self):
+        return self.md['s']*self.der['Z'] + self.matrices['Z']
+
     def clear_cached(self):
         "Clear any cached data"
         if hasattr(self, "lu_factored"):

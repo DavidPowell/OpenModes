@@ -197,16 +197,17 @@ class MfieOperator(Operator):
         normals = basis_o.mesh.surface_normals
 
         if isinstance(basis_o, LinearTriangleBasis):
-            Zv, _ = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
-                                      part_o.nodes, basis_s, part_s.nodes,
-                                      normals, part_o == part_s, eps, mu,
-                                      self.num_singular_terms,
-                                      self.singularity_accuracy,
-                                      self.tangential_form)
+            res = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
+                                       part_o.nodes, basis_s, part_s.nodes,
+                                       normals, part_o == part_s, eps, mu,
+                                       self.num_singular_terms,
+                                       self.singularity_accuracy,
+                                       self.tangential_form)
         else:
             raise NotImplementedError
 
-        Z.matrices['Z'][part_o, part_s] = Zv
+        Z.matrices['Z'][part_o, part_s] = res[0]
+        Z.der['Z'][part_o, part_s] = res[1]
 
 
 class TMfieOperator(MfieOperator):
