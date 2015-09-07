@@ -554,8 +554,6 @@ class ImpedanceMatrixLA(object):
 
         # create the frequency derivatives of the matrices
         if derivatives is None:
-            self.der = None
-        elif derivatives is True:
             self.der = {name: LookupArray(((part_o, basis_container,),
                                            (part_s, basis_container)),
                                           dtype=np.complex128)
@@ -662,13 +660,6 @@ class EfieImpedanceMatrixLA(ImpedanceMatrixLA):
     "An impedance matrix for metallic objects solved via EFIE"
 
     matrix_names = ('L', 'S')
-
-    def __init__(self, part_o, part_s, basis_container, sources, unknowns,
-                 metadata=None, matrices=None, derivatives=True):
-        super(EfieImpedanceMatrixLA, self).__init__(part_o, part_s,
-                                                    basis_container,
-                                                    sources, unknowns,
-                                                    metadata, matrices, True)
 
     def val(self):
         "The value of the impedance matrix"

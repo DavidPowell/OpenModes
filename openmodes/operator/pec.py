@@ -62,8 +62,7 @@ class EfieOperator(Operator):
         logging.info("Creating EFIE operator, tangential form: %s"
                      % str(tangential_form))
 
-    def impedance_single_parts(self, Z, s, part_o, part_s,
-                               frequency_derivatives):
+    def impedance_single_parts(self, Z, s, part_o, part_s):
         """Calculate a self or mutual impedance matrix at a given complex
         frequency
 
@@ -164,8 +163,7 @@ class MfieOperator(Operator):
         logging.info("Creating MFIE operator, tangential form: %s"
                      % str(tangential_form))
 
-    def impedance_single_parts(self, Z, s, part_o, part_s=None,
-                               frequency_derivatives=False):
+    def impedance_single_parts(self, Z, s, part_o, part_s=None):
         """Calculate a self or mutual impedance matrix at a given complex
         frequency
 
@@ -181,9 +179,6 @@ class MfieOperator(Operator):
 
         # if source part is not given, default to observer part
         part_s = part_s or part_o
-
-        if frequency_derivatives:
-            raise NotImplementedError("Frequency derivatives for MFIE")
 
         basis_o = self.basis_container[part_o]
         basis_s = self.basis_container[part_s]
@@ -284,13 +279,11 @@ class CfieOperator(Operator):
 
         return V_final
 
-    def impedance(self, s, parent_o, parent_s, frequency_derivatives=False):
+    def impedance(self, s, parent_o, parent_s):
         metadata = {'alpha': self.alpha}
-        return super(CfieOperator, self).impedance(s, parent_o, parent_s,
-                                                   frequency_derivatives, metadata)
+        return super(CfieOperator, self).impedance(s, parent_o, parent_s, metadata)
 
-    def impedance_single_parts(self, Z, s, part_o, part_s=None,
-                               frequency_derivatives=False):
+    def impedance_single_parts(self, Z, s, part_o, part_s=None):
         """Calculate a self or mutual impedance matrix at a given complex
         frequency
 
@@ -306,9 +299,6 @@ class CfieOperator(Operator):
 
         # if source part is not given, default to observer part
         part_s = part_s or part_o
-
-        if frequency_derivatives:
-            raise NotImplementedError("Frequency derivatives for CFIE")
 
         basis_o = self.basis_container[part_o]
         basis_s = self.basis_container[part_s]

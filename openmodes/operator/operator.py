@@ -29,8 +29,7 @@ from openmodes.array import LookupArray
 class Operator(object):
     "A base class for operator equations"
 
-    def impedance(self, s, parent_o, parent_s, frequency_derivatives=False,
-                  metadata=None):
+    def impedance(self, s, parent_o, parent_s,  metadata=None):
         """Evaluate the self and mutual impedances of all parts in the
         simulation. Return an `ImpedancePart` object which can calculate
         several derived impedance quantities
@@ -53,8 +52,7 @@ class Operator(object):
         symmetric = self.reciprocal and (parent_o == parent_s)
 
         Z = self.impedance_class(parent_o, parent_s, self.basis_container,
-                                 self.sources, self.unknowns,
-                                 derivatives=frequency_derivatives)
+                                 self.sources, self.unknowns)
 
         # set the common metadata
         Z.md['s'] = s
@@ -67,7 +65,7 @@ class Operator(object):
                 if symmetric and count_s < count_o:
                     Z[part_o, part_s] = Z[part_s, part_o].T
                 else:
-                    self.impedance_single_parts(Z, s, part_o, part_s, frequency_derivatives)
+                    self.impedance_single_parts(Z, s, part_o, part_s)
         return Z
 
 
@@ -95,7 +93,7 @@ class Operator(object):
             result = {'s': estimate_s, 'vr': estimate_vr}
         else:
             def Z_func(s):
-                Z = self.impedance(s, part, part, frequency_derivatives=False)
+                Z = self.impedance(s, part, part)
                 return s*Z.val().simple_view()
 
             result = poles_cauchy(Z_func, s_min, s_max, threshold,
@@ -135,11 +133,11 @@ class Operator(object):
         # if so use them in the Newton iteration to find the poles.
         if self.frequency_derivatives:
             def Z_func(s):
-                Z = self.impedance(s, part, part, frequency_derivatives=True)
+                Z = self.impedance(s, part, part)
                 return s*Z.val().simple_view(), Z.frequency_derivative_P().simple_view()
         else:
             def Z_func(s):
-                Z = self.impedance(s, part, part, frequency_derivatives=False)
+                Z = self.impedance(s, part, part)
                 return s*Z.val().simple_view()
 
         symmetric = self.reciprocal
