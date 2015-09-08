@@ -80,15 +80,16 @@ class Operator(object):
             Gp[unknown, :, source, :] = G
         return Gp
 
-    def estimate_poles(self, s_min, s_max, part, threshold=1e-11,
+    def estimate_poles(self, contour, part, threshold=1e-11,
                        previous_result=None, cauchy_integral=True, modes=None,
                        **kwargs):
         """Estimate pole location for an operator by Cauchy integration or
         the simpler quasi-static method"""
 
         if not cauchy_integral:
-            # use the simpler quasi-static method
-            Z = self.impedance(s_min, part, part)
+            # Use the simpler quasi-static method (contour will actually
+            # just be a starting frequency)
+            Z = self.impedance(contour, part, part)
             estimate_s, estimate_vr = eig_linearised(Z, modes)
             result = {'s': estimate_s, 'vr': estimate_vr}
         else:
@@ -96,7 +97,7 @@ class Operator(object):
                 Z = self.impedance(s, part, part)
                 return s*Z.val().simple_view()
 
-            result = poles_cauchy(Z_func, s_min, s_max, threshold,
+            result = poles_cauchy(Z_func, contour, threshold,
                                   previous_result=previous_result, **kwargs)
 
         return result

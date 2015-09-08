@@ -218,7 +218,7 @@ class Simulation(Identified):
         return self.operator.source_vector(source_field, s, parent,
                                            extinction_field)
 
-    def estimate_poles(self, s_min, s_max, parts=None, threshold=1e-11,
+    def estimate_poles(self, contour, parts=None, threshold=1e-11,
                        previous_result=None, cauchy_integral=True, modes=None,
                        **kwargs):
         """Estimate the location of poles and their modes by Cauchy integration
@@ -226,9 +226,8 @@ class Simulation(Identified):
 
         Parameters
         ----------
-        s_min, s_max: complex
-            The corners of the rectangular region in the s-plane around which
-            the integration will be performed
+        contour: Contour
+            The object describing the complex integration contour
         parts: Part or list, optional
             Which particular part or parts to calculate poles for. If not
             specified, then the whole system will be used
@@ -261,7 +260,7 @@ class Simulation(Identified):
                         previous = None
                     else:
                         previous = previous_result.modes_of_parts[part]
-                    res[part] = self.operator.estimate_poles(s_min, s_max,
+                    res[part] = self.operator.estimate_poles(contour,
                                                              part,
                                                              threshold,
                                                              previous,
@@ -277,7 +276,7 @@ class Simulation(Identified):
             logging.info("Estimating poles of a single part")
             if previous_result is not None:
                 previous_result = previous_result.modes_of_parts[parts]
-            res = {parts: self.operator.estimate_poles(s_min, s_max, parts,
+            res = {parts: self.operator.estimate_poles(contour, parts,
                                                 threshold, previous_result,
                                                 cauchy_integral, modes)}
             parent_part = parts

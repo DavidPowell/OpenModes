@@ -26,6 +26,7 @@ import scipy.special
 
 
 from openmodes.helpers import Identified
+from openmodes.external.point_in_polygon import wn_PnPoly
 
 
 class DunavantRule(Identified):
@@ -177,93 +178,121 @@ def sphere_fibonacci(num_points, cartesian=False):
         return theta, phi
 
 
-def rectangular_contour(s_min, s_max, integration_rule=GaussLegendreRule(20)):
-    """Defines a rectangular contour in the complex frequency plane
+class Contour(object):
+    """A contour for line integration in the complex plane"""
     
-    Parameters
-    ----------
-    s_min, s_max: complex
-        The corners of the rectangule
+    def points_inside(self, points):
+        "Check each point to see whether it lies within the contour"
+        vertices = np.array([x for x, w in self])
+        vertices = np.hstack((vertices.real[:, None], vertices.imag[:, None]))
+        inside = np.empty(np.product(points.shape), dtype=np.bool)
+
+        for point_num, point in enumerate(points.flat):
+            inside[point_num] = wn_PnPoly((point.real, point.imag), vertices)
+
+        return inside
+
+class RectangularContour(Contour):
+    """A rectangular contour in the complex frequency plane"""
+    def __init__(self, s_min, s_max, integration_rule=GaussLegendreRule(20)):
+        """        
+        Parameters
+        ----------
+        s_min, s_max: complex
+            The corners of the rectangule
+        """
+        min_real, max_real = sorted((s_min.real, s_max.real))
+        min_imag, max_imag = sorted((s_min.imag, s_max.imag))
     
-    Returns
-    -------
-    gen: generator
-        A generator which yields (s, w), where s is the complex frequency
-        and w is the integration weight
-    """
-    min_real, max_real = sorted((s_min.real, s_max.real))
-    min_imag, max_imag = sorted((s_min.imag, s_max.imag))
+        self.integration_rule = integration_rule
+        self.coordinates = (min_real+1j*min_imag, max_real+1j*min_imag,
+                            max_real+1j*max_imag, min_real+1j*max_imag)
 
-    coordinates = (min_real+1j*min_imag, max_real+1j*min_imag,
-                   max_real+1j*max_imag, min_real+1j*max_imag)
+    def __iter__(self):
+        """    
+        Returns
+        -------
+        gen: generator
+            A generator which yields (s, w), where s is the complex frequency
+            and w is the integration weight
+        """
+        # integrate over all 4 lines
+        for line_count in range(4):
+            s_start = self.coordinates[line_count]
+            s_end = self.coordinates[(line_count+1) % 4]
+    
+            ds = s_end-s_start
+            for x, w in self.integration_rule:
+                s = s_start + ds*x
+                yield(s, w*ds)
 
-    # integrate over all 4 lines
-    for line_count in range(4):
-        s_start = coordinates[line_count]
-        s_end = coordinates[(line_count+1) % 4]
 
-        ds = s_end-s_start
-        for x, w in integration_rule:
-            s = s_start + ds*x
-            yield(s, w*ds)
-
-
-def elliptical_contour(radius_real, radius_imag, offset_real, offset_imag,
+class EllipticalContour(Contour):
+    """A quarter ellipse contour in the complex frequency plane"""
+    def __init__(self, radius_real, radius_imag, offset_real, offset_imag,
                      integration_rule=GaussLegendreRule(20)):
-    """Defines a quarter ellipse contour in the complex frequency plane
+        """
+        Parameters
+        ----------
+        radius_real, radius_imag: real
+            The radii of the real and imaginary parts. The signs of these determine
+            which quadrant of the complex plane the quarter ellipse will be in
+        offset_real, offset_imag: real
+            The offsets of the straight line parts from the real and imaginary
+            axes. Must be smaller in magnitude than the corresponding radii.
+        """
+
+        self.radius_real = radius_real
+        self.radius_imag = radius_imag
+        self.offset_imag = offset_imag
+        self.offset_real = offset_real
+        self.integration_rule = integration_rule
     
-    Parameters
-    ----------
-    radius_real, radius_imag: real
-        The radii of the real and imaginary parts. The signs of these determine
-        which quadrant of the complex plane the quarter ellipse will be in
-    offset_real, offset_imag: real
-        The offsets of the straight line parts from the real and imaginary
-        axes. Must be smaller in magnitude than the corresponding radii.
+    def __iter__(self):
+        """
+        Returns
+        -------
+        gen: generator
+            A generator which yields (s, w), where s is the complex frequency
+            and w is the integration weight
+        """
+        radius_real = self.radius_real
+        radius_imag = self.radius_imag
+        offset_imag = self.offset_imag
+        offset_real = self.offset_real
     
-    Returns
-    -------
-    gen: generator
-        A generator which yields (s, w), where s is the complex frequency
-        and w is the integration weight
-    """
-
-    # correct for the direction of rotation changing
-    sign = -np.sign(radius_real/radius_imag)
-
-    # the points of maximum real and imag (different from radius due to offsets)
-    max_real = radius_real*np.sqrt(1.0 - (offset_imag/radius_imag)**2)
-    max_imag = radius_imag*np.sqrt(1.0 - (offset_real/radius_real)**2)
-
-    # the line parallel to the real axis
-    s_start = max_real+1j*offset_imag
-    s_end = offset_real+1j*offset_imag
-    ds = s_end-s_start
-    for x, w in integration_rule:
-        s = s_start + ds*x
-        yield(s, w*ds*sign)
-
-
-    # the line parallel to the imaginary axis
-    s_start = offset_real+1j*offset_imag
-    s_end = offset_real+1j*max_imag
-    ds = s_end-s_start
-    for x, w in integration_rule:
-        s = s_start + ds*x
-        yield(s, w*ds*sign)
-
-    t_start = np.arcsin(offset_real/radius_real)   
-    t_end = np.arccos(offset_imag/radius_imag)
+        # correct for the direction of rotation changing
+        sign = -np.sign(radius_real/radius_imag)
     
-    #s_func = lambda t: radius_real*np.sin(t) + 1j*radius_imag*np.cos(t)
-    #from scipy.integrate import quad
-    #ds = quad(np.abs(s_func), t_start, t_end)
-    dt = t_end-t_start
-
-    for x, w in integration_rule:
-        t = t_start + dt*x
-        s = radius_real*np.sin(t) + 1j*radius_imag*np.cos(t)
-        ds_dt = radius_real*np.cos(t) - 1j*radius_imag*np.sin(t)
-        yield(s, w*ds_dt*dt*sign)
-
+        # the points of maximum real and imag (different from radius due to offsets)
+        max_real = radius_real*np.sqrt(1.0 - (offset_imag/radius_imag)**2)
+        max_imag = radius_imag*np.sqrt(1.0 - (offset_real/radius_real)**2)
+    
+        # the line parallel to the real axis
+        s_start = max_real+1j*offset_imag
+        s_end = offset_real+1j*offset_imag
+        ds = s_end-s_start
+        for x, w in self.integration_rule:
+            s = s_start + ds*x
+            yield(s, w*ds*sign)
+    
+        # the line parallel to the imaginary axis
+        s_start = offset_real+1j*offset_imag
+        s_end = offset_real+1j*max_imag
+        ds = s_end-s_start
+        for x, w in self.integration_rule:
+            s = s_start + ds*x
+            yield(s, w*ds*sign)
+    
+        t_start = np.arcsin(offset_real/radius_real)   
+        t_end = np.arccos(offset_imag/radius_imag)
         
+        dt = t_end-t_start
+    
+        for x, w in self.integration_rule:
+            t = t_start + dt*x
+            s = radius_real*np.sin(t) + 1j*radius_imag*np.cos(t)
+            ds_dt = radius_real*np.cos(t) - 1j*radius_imag*np.sin(t)
+            yield(s, w*ds_dt*dt*sign)
+    
+            

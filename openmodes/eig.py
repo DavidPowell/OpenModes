@@ -89,8 +89,7 @@ def eig_linearised(Z, modes):
     return w_freq[which_modes], vr[:, which_modes]
 
 
-def poles_cauchy(Z_func, contour, svd_threshold=1e-10,
-                 previous_result=None):
+def poles_cauchy(Z_func, contour, svd_threshold=1e-10, previous_result=None):
     """Estimate location and residue of the poles of a matrix function by
     Cauchy integration. Uses a technique described in:
 
@@ -102,15 +101,10 @@ def poles_cauchy(Z_func, contour, svd_threshold=1e-10,
     ----------
     Z : Matrix function
         The impedance matrix as a function of frequency s
-    s_min, s_max : complex
-        The two corners of the integration region in the s-plane. Order doesn't
-        matter, they will always be sorted to obtain the correct sense of
-        integration.
+    contour: Contour
+        The object describing the contour integration path and rule
     svd_threshold : float, optional
         The threshold on singular values to determine the rank of the matrix
-    integration_rule: object, optional
-        The integration rule to use for each of the 4 line integrals of the
-        contour
     previous_result: dictionary, optional
         By passing a dictionary previously returned by poles_cauchy, it is
         possible to refine the svd_threshold without having to repeat the
@@ -169,8 +163,7 @@ def poles_cauchy(Z_func, contour, svd_threshold=1e-10,
     # solved the reduced eigenvalue problem
     mode_s, vl, vr = la.eig(Uh_r.dot(result['C2'].dot(V_r)), np.diag(S_r), left=True)    
 
-    in_region = np.logical_and(np.logical_and(mode_s.real > min_real, mode_s.real < max_real),
-                               np.logical_and(mode_s.imag > min_imag, mode_s.imag < max_imag))
+    in_region = contour.points_inside(mode_s)
     outside_region = np.logical_not(in_region)
 
     # sort modes inside the region by frequency
