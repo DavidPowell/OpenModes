@@ -175,3 +175,95 @@ def sphere_fibonacci(num_points, cartesian=False):
     else:
         phi = np.arctan2(sphi, cphi)
         return theta, phi
+
+
+def rectangular_contour(s_min, s_max, integration_rule=GaussLegendreRule(20)):
+    """Defines a rectangular contour in the complex frequency plane
+    
+    Parameters
+    ----------
+    s_min, s_max: complex
+        The corners of the rectangule
+    
+    Returns
+    -------
+    gen: generator
+        A generator which yields (s, w), where s is the complex frequency
+        and w is the integration weight
+    """
+    min_real, max_real = sorted((s_min.real, s_max.real))
+    min_imag, max_imag = sorted((s_min.imag, s_max.imag))
+
+    coordinates = (min_real+1j*min_imag, max_real+1j*min_imag,
+                   max_real+1j*max_imag, min_real+1j*max_imag)
+
+    # integrate over all 4 lines
+    for line_count in range(4):
+        s_start = coordinates[line_count]
+        s_end = coordinates[(line_count+1) % 4]
+
+        ds = s_end-s_start
+        for x, w in integration_rule:
+            s = s_start + ds*x
+            yield(s, w*ds)
+
+
+def elliptical_contour(radius_real, radius_imag, offset_real, offset_imag,
+                     integration_rule=GaussLegendreRule(20)):
+    """Defines a quarter ellipse contour in the complex frequency plane
+    
+    Parameters
+    ----------
+    radius_real, radius_imag: real
+        The radii of the real and imaginary parts. The signs of these determine
+        which quadrant of the complex plane the quarter ellipse will be in
+    offset_real, offset_imag: real
+        The offsets of the straight line parts from the real and imaginary
+        axes. Must be smaller in magnitude than the corresponding radii.
+    
+    Returns
+    -------
+    gen: generator
+        A generator which yields (s, w), where s is the complex frequency
+        and w is the integration weight
+    """
+
+    # correct for the direction of rotation changing
+    sign = -np.sign(radius_real/radius_imag)
+
+    # the points of maximum real and imag (different from radius due to offsets)
+    max_real = radius_real*np.sqrt(1.0 - (offset_imag/radius_imag)**2)
+    max_imag = radius_imag*np.sqrt(1.0 - (offset_real/radius_real)**2)
+
+    # the line parallel to the real axis
+    s_start = max_real+1j*offset_imag
+    s_end = offset_real+1j*offset_imag
+    ds = s_end-s_start
+    for x, w in integration_rule:
+        s = s_start + ds*x
+        yield(s, w*ds*sign)
+
+
+    # the line parallel to the imaginary axis
+    s_start = offset_real+1j*offset_imag
+    s_end = offset_real+1j*max_imag
+    ds = s_end-s_start
+    for x, w in integration_rule:
+        s = s_start + ds*x
+        yield(s, w*ds*sign)
+
+    t_start = np.arcsin(offset_real/radius_real)   
+    t_end = np.arccos(offset_imag/radius_imag)
+    
+    #s_func = lambda t: radius_real*np.sin(t) + 1j*radius_imag*np.cos(t)
+    #from scipy.integrate import quad
+    #ds = quad(np.abs(s_func), t_start, t_end)
+    dt = t_end-t_start
+
+    for x, w in integration_rule:
+        t = t_start + dt*x
+        s = radius_real*np.sin(t) + 1j*radius_imag*np.cos(t)
+        ds_dt = radius_real*np.cos(t) - 1j*radius_imag*np.sin(t)
+        yield(s, w*ds_dt*dt*sign)
+
+        

@@ -89,8 +89,8 @@ def eig_linearised(Z, modes):
     return w_freq[which_modes], vr[:, which_modes]
 
 
-def poles_cauchy(Z_func, s_min, s_max, svd_threshold=1e-10,
-                 integration_rule=GaussLegendreRule(20), previous_result=None):
+def poles_cauchy(Z_func, contour, svd_threshold=1e-10,
+                 previous_result=None):
     """Estimate location and residue of the poles of a matrix function by
     Cauchy integration. Uses a technique described in:
 
@@ -128,35 +128,23 @@ def poles_cauchy(Z_func, s_min, s_max, svd_threshold=1e-10,
         'C1_s' : The singular values of C1
     """
 
-    min_real, max_real = sorted((s_min.real, s_max.real))
-    min_imag, max_imag = sorted((s_min.imag, s_max.imag))
-
     if previous_result is not None:
         result = previous_result
     else:
 
         logging.info("Performing full cauchy integration")
 
-        coordinates = (min_real+1j*min_imag, max_real+1j*min_imag,
-                       max_real+1j*max_imag, min_real+1j*max_imag)
-
-        # integrate over all 4 lines
-        for line_count in range(4):
-            s_start = coordinates[line_count]
-            s_end = coordinates[(line_count+1) % 4]
-
-            ds = s_end-s_start
-            for x, w in integration_rule:
-                s = s_start + ds*x
-                Z_inv = la.inv(Z_func(s)[:])*w*ds
-                # This trick avoids having to know the size of C1 and C2 in
-                # advance
-                try:
-                    C1 += Z_inv
-                    C2 += s*Z_inv
-                except UnboundLocalError:
-                    C1 = Z_inv
-                    C2 = s*Z_inv
+        # integrate over the entire contour
+        for s, w in contour:
+            Z_inv = la.inv(Z_func(s)[:], overwrite_a=True)*w
+            # This trick avoids having to know the size of C1 and C2 in
+            # advance
+            try:
+                C1 += Z_inv
+                C2 += s*Z_inv
+            except UnboundLocalError:
+                C1 = Z_inv
+                C2 = s*Z_inv
 
         C1_U, C1_S, C1_Vh = la.svd(C1)
         result = {'C2': C2,
