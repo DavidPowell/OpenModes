@@ -218,7 +218,7 @@ class Simulation(Identified):
         return self.operator.source_vector(source_field, s, parent,
                                            extinction_field)
 
-    def estimate_poles(self, contour, parts=None, threshold=1e-11,
+    def estimate_poles(self, contour, parts=None, threshold=1e-14,
                        previous_result=None, cauchy_integral=True, modes=None,
                        **kwargs):
         """Estimate the location of poles and their modes by Cauchy integration
