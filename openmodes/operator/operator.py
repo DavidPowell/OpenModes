@@ -133,10 +133,12 @@ class Operator(object):
         # Adaptively check if the operator provides frequency derivatives, and
         # if so use them in the Newton iteration to find the poles.
         if self.frequency_derivatives:
+            logging.info("Using exact impedance derivatives")
             def Z_func(s):
                 Z = self.impedance(s, part, part)
                 return s*Z.val().simple_view(), Z.frequency_derivative_P().simple_view()
         else:
+            logging.info("Using approximate impedance derivatives")
             def Z_func(s):
                 Z = self.impedance(s, part, part)
                 return s*Z.val().simple_view()
