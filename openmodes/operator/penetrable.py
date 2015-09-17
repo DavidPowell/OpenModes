@@ -65,8 +65,9 @@ class TOperator(Operator):
         self.impedance_class = PenetrableImpedanceMatrixLA
         self.frequency_derivatives = False
 
-    def impedance(self, s, parent_o, parent_s, frequency_derivatives=False,
-                  metadata={}):
+    def impedance(self, s, parent_o, parent_s, metadata=None):
+        
+        metadata = metadata or dict()
 
         metadata['eta_o'] = self.background_material.eta_r(s)
         metadata['eta_i'] = {}
@@ -78,11 +79,9 @@ class TOperator(Operator):
             metadata['eta_i'][part] = part.material.eta_r(s)
             metadata['w_EFIE_i'][part], metadata['w_MFIE_i'][part] = self.weights_i(s, part)
 
-        return super(TOperator, self).impedance(s, parent_o, parent_s,
-                                                frequency_derivatives, metadata)
+        return super(TOperator, self).impedance(s, parent_o, parent_s, metadata)
 
-    def impedance_single_parts(self, Z, s, part_o, part_s=None,
-                               frequency_derivatives=False):
+    def impedance_single_parts(self, Z, s, part_o, part_s=None):
         """Calculate a self or mutual impedance matrix at a given complex
         frequency. Note that this abstract function should be called by
         sub-classes, not by the user.
@@ -96,9 +95,6 @@ class TOperator(Operator):
         part_s : SinglePart, optional
             The source part, if not specified will default to observing part
         """
-
-        if frequency_derivatives:
-            raise NotImplementedError("Frequency derivatives for penetrable")
 
         # TODO: Handle the mutual impedance case
 
@@ -128,25 +124,26 @@ class TOperator(Operator):
         matrix_names = ('L_o', 'S_o', 'K_o')
         if isinstance(basis_o, LinearTriangleBasis):
             if is_self_term:
-                L_i, S_i = rwg.impedance_G(s, self.integration_rule, basis_o,
-                                           part_o.nodes, basis_s, part_s.nodes,
-                                           is_self_term, eps_i, mu_i,
-                                           self.num_singular_terms,
-                                           self.singularity_accuracy)
-                L_i /= c_i
-                S_i *= c_i
+                res = rwg.impedance_G(s, self.integration_rule, basis_o,
+                                      part_o.nodes, basis_s, part_s.nodes,
+                                      is_self_term, eps_i, mu_i,
+                                      self.num_singular_terms,
+                                      self.singularity_accuracy)
+                L_i = res[0]/c_i
+                S_i = res[1]*c_i
 
                 # note opposite sign of normals for interior problem
-                K_i = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
+                res = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
                                            part_o.nodes, basis_s, part_s.nodes,
                                            -normals, is_self_term, eps_i, mu_i,
                                            self.num_singular_terms,
                                            self.singularity_accuracy,
                                            tangential_form=True)
+                K_i = res[0]
 
                 matrix_names += ('L_i', 'S_i', 'K_i')
 
-            L_o, S_o = rwg.impedance_G(s, self.integration_rule, basis_o,
+            res = rwg.impedance_G(s, self.integration_rule, basis_o,
                                        part_o.nodes, basis_s, part_s.nodes,
                                        is_self_term, eps_o, mu_o,
                                        self.num_singular_terms,
@@ -154,15 +151,16 @@ class TOperator(Operator):
 
             # This scaling ensures that this operator has the same definition
             # as cursive D defined by Yla-Oijala, Radio Science 2005.
-            L_o /= c_o
-            S_o *= c_o
+            L_o = res[0]/c_o
+            S_o = res[1]*c_o
 
-            K_o = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
+            res = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
                                        part_o.nodes, basis_s, part_s.nodes,
                                        normals, is_self_term, eps_o, mu_o,
                                        self.num_singular_terms,
                                        self.singularity_accuracy,
                                        tangential_form=True)
+            K_o = res[0]
         else:
             raise NotImplementedError
 
