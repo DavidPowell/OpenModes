@@ -997,7 +997,7 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
     ! gamma_0 - *complex* free space wavenumber, j*k_0
     ! nodes - the position of the triangle nodes
 
-    use core_for
+    use constants
     use vectors
     implicit none
 
@@ -1018,9 +1018,9 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
     complex(WP), intent(out), dimension(3, 3) :: I_z, I_Z_dgamma
 
     real(WP) :: xi_s, eta_s, zeta_s, xi_o, eta_o, zeta_o, R, w_s, w_o
-    real(WP), dimension(3) :: r_s, r_o
+    real(WP), dimension(3) :: r_s, r_o, n_x_R_x_rho
     real(WP), dimension(3, 3) :: rho_s, rho_o
-    complex(WP) :: g, g_dgamma
+    complex(WP) :: g, g_dgamma, exp_gr
     integer :: count_s, count_o, uu, vv
     real(WP), dimension(3, 3) :: nodes_s, nodes_o
 
@@ -1080,15 +1080,17 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
               
             R = sqrt(sum((r_s - r_o)**2))
 
+            exp_gr = exp(-R*gamma_0)
+
             if (num_singular_terms == 1) then
-                g = ((1.0 + gamma_0*R)*exp(-gamma_0*R) - 1.0)/R**3
+                g = ((1.0 + gamma_0*R)*exp_gr - 1.0)/R**3
             elseif (num_singular_terms == 2) then
-                g = ((1.0 + gamma_0*R)*exp(-gamma_0*R) - 1.0 + 0.5*(gamma_0*R)**2)/R**3
+                g = ((1.0 + gamma_0*R)*exp_gr - 1.0 + 0.5*(gamma_0*R)**2)/R**3
             else
-                g = (1.0 + gamma_0*R)*exp(-gamma_0*R)/R**3
+                g = (1.0 + gamma_0*R)*exp_gr/R**3
             end if
 
-            g_dgamma = -gamma_0*exp(-R*gamma_0)/R
+            g_dgamma = -gamma_0*exp_gr/R
 
             if (T_form) then
                 ! The tang RWG form
@@ -1099,11 +1101,18 @@ subroutine face_integral_MFIE(n_s, xi_eta_s, weights_s, nodes_s_in, n_o, xi_eta_
                     dot_product(rho_o(:, uu), cross_product(r_o - r_s, rho_s(:, vv))))
             else     
                 ! The n x RWG form
-                forall (uu=1:3, vv=1:3) I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*( &
-                    dot_product(rho_o(:, uu), cross_product(normal, cross_product(r_o - r_s, rho_s(:, vv)))))
+                do uu = 1,3
+                    do vv = 1,3
+                        !n_x_R_x_rho = cross_product(normal, cross_product(r_o - r_s, rho_s(:, vv)))
+                        n_x_R_x_rho = dot_product(normal, rho_s(:, vv))*(r_o - r_s) - &
+                                      dot_product(normal, (r_o - r_s))*rho_s(:, vv)
 
-                forall (uu=1:3, vv=1:3) I_Z_dgamma_int(uu, vv) = I_Z_dgamma_int(uu, vv) + w_o*w_s*g_dgamma*( &
-                    dot_product(rho_o(:, uu), cross_product(normal, cross_product(r_o - r_s, rho_s(:, vv)))))
+                        I_Z_int(uu, vv) = I_Z_int(uu, vv) + w_o*w_s*g*(dot_product(rho_o(:, uu), n_x_R_x_rho))
+
+                        I_Z_dgamma_int(uu, vv) = I_Z_dgamma_int(uu, vv) + w_o*w_s*g_dgamma*(&
+                            dot_product(rho_o(:, uu), n_x_R_x_rho))
+                    end do
+                end do
             end if
 
         end do
@@ -1124,7 +1133,7 @@ subroutine face_unit_integral(n, xi_eta, weights, nodes_in, normal, n_cross, I_Z
     ! normal - the vector of the triangle normal
     ! n_cross - if true, n x RWG is used as the source function 
 
-    use core_for
+    use constants
     use vectors
     implicit none
 
