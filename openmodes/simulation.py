@@ -317,43 +317,6 @@ class Simulation(Identified):
         return Modes(estimates.parent_part, refined, self.operator.unknowns,
                      self.operator.sources, self.basis_container)
 
-    def singularities(self, s_start, modes, part=None, use_gram=True,
-                      rel_tol=1e-6, max_iter=200):
-        """Find the poles of the response of a part
-
-        Parameters
-        ----------
-        s_start : complex
-            The complex frequency at which to perform the estimate. Should be
-            within the band of interest
-        num_modes : integer or list
-            An integer specifying the number of modes to find, or a list of
-            mode numbers to find
-        part : Part, optional
-            The part to solve for. If not specified, the singularities of the
-            full system will be solved for
-        use_gram : boolean, optional
-            Use the Gram matrix to scale the eigenvectors, so that the
-            eigenvalues will be independent of the basis functions.
-        rel_tol : float, optional
-            The relative tolerance on the search for singularities
-        max_iter : integer, optional
-            The maximum number of iterations to use when searching for
-            singularities
-
-        Returns
-        -------
-        mode_s : ndarray (num_modes)
-            The location of the singularities
-        mode_j : ndarray (num_basis, num_modes)
-            The current distributions at the singularities
-        """
-
-        part = part or self.parts
-
-        return self.operator.poles(s_start, modes, part, use_gram, rel_tol,
-                                   max_iter)
-
     def construct_models(self, mode_s, mode_j, part=None,
                          model_class=ScalarModelLeastSq):
         """Construct a scalar models from the modes of a part
