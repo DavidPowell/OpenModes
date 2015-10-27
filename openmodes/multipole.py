@@ -24,27 +24,25 @@ import scipy.special
 from openmodes.constants import c
 
 
-def spherical_multipoles(max_l, jk, points, charge, current):
+def spherical_multipoles(max_l, gamma, points, weights, current, exp_phi=None):
     """Calculate the multipole coefficients in a spherical basis
 
-    Using the formulas from Jackson, Sect 9.10, currently neglecting the
-    magnetic polarisation.
-
-    Moments are calculated under the assumption of a free-space background.
+    Using the formulas from:
+    P. Grahn, A. Shevchenko, and M. Kaivola, “Electromagnetic multipole theory
+    for optical nanomaterials,” New Journal of Physics,
+    vol. 14, no. 9, pp. 093033–093033, Jun. 2012.
 
     Parameters
     ----------
     max_l : integer
-        The maximum order of l to consider
-    jk : complex
-        The complex wave-number
+        The maximum order of multipole to consider
+    gamma : complex
+        The complex wave-number in the background medium
     points : array
         The array of points at which to integrate
     weights : array
         The weights which should be applied to each point, will have units
         of area so that final integral is dimensionally correct
-    charge : array
-        The charge calculated at each point
     current : array
         The current vector calculated at each point
 
@@ -56,30 +54,40 @@ def spherical_multipoles(max_l, jk, points, charge, current):
         The magnetic multipole coefficients of order l, m for m > 0
     """
 
-    raise NotImplementedError
-
     num_l = max_l + 1
+    a_e = np.empty((num_l, num_l), np.complex128)
+    a_m = np.empty((num_l, num_l), np.complex128)
 
-    # convert cartesian to (r, theta, phi) spherical coordinates
-    spherical = np.empty_like(points)
-    spherical[:, 0] = np.sqrt(np.sum(points**2, axis=1))
-    spherical[:, 1] = np.arccos(points[:, 2]/spherical[:, 0])
-    spherical[:, 2] = np.arctan2(points[:, 1], points[:, 0])
+    l = np.arange(max_l)
 
-    # calculate the spherical Bessel functions
-    l_terms_e = np.empty((len(points), num_l), np.complex128)
-    l_terms_m = np.empty_like(l_terms_e)
-    #Y_lmc = np.empty((len(points), num_l, 2*num_l+1), np.complex128)
+    for point in points:
+        # convert cartesian to (r, theta, phi) spherical coordinates
+        r = np.sqrt(np.sum(point**2))
+        theta = np.arccos(point[2]/r)
+        phi = np.arctan2(point[1], point[0])
 
-    for n, r in enumerate(spherical[:, 0]):
-        jl, djl = scipy.special.sph_jn(-1j*jk*r)
+        # calculate the unit vectors on the sphere
+        st = np.sin(theta)
+        ct = np.cos(theta)
+        sp = np.sin(phi)
+        cp = np.cos(phi)
+        
+        r_hat = point/r
+        theta_hat = np.array((ct*cp, ct*sp, -st))
+        phi_hat = np.array(-sp, cp, np.zeros(len(points)))
+
+        kr = gamma*r/1j
+        jl, djl = scipy.special.sph_jn(kr)
+        
+        # index l
+        ric_plus_second = (l*(l+1))*jl/kr
+        ric_der = jl[:-1] + jl/kr
+        
         l_terms_e[n] = (c*charge[n]*(r*jl + djl) + jk*np.dot(points[n], current[n])*jl)
         #Y_lmc[n] =
         #cos_theta = points[n, 2]/spherical[n, 0]
         #legendre = scipy.special.lpmn(cos_theta
 
-    a_e = np.zeros((num_l, num_l), np.complex128)
-    a_m = np.zeros_like(a_e)
 
 
 def cartesian_multipoles(points, charge, current, s, electric_order=1,
