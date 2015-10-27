@@ -146,11 +146,11 @@ class Modes(object):
                                         original['s'][complex_poles],
                                         original['s'][complex_poles].conj()))
 
-            new[part]['vr'] = np.hstack((original['vr'][:, real_poles].real,
+            new[part]['vr'] = np.hstack((original['vr'][:, real_poles],
                                          original['vr'][:, complex_poles],
                                          original['vr'][:, complex_poles].conj()))
 
-            new[part]['vl'] = np.vstack((original['vl'][real_poles, :].real,
+            new[part]['vl'] = np.vstack((original['vl'][real_poles, :],
                                          original['vl'][complex_poles, :],
                                          original['vl'][complex_poles, :].conj()))
 
