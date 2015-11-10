@@ -56,7 +56,7 @@ def test_horseshoe_modes(plot=False, skip_asserts=False,
 
     s_start = 2j*np.pi*10e9
 
-    mode_s, mode_j = sim.singularities(s_start, 3)
+    mode_s, mode_j = sim.estimate_poles(s_start, modes=3, cauchy_integral=False)
     print("Singularities found at", mode_s)
 
     if write_reference:
