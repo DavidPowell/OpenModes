@@ -26,6 +26,7 @@ from distutils.util import get_platform
 import os.path as osp
 import os
 
+from pkg_resources import parse_version
 
 try:
     import numpy
@@ -34,7 +35,7 @@ except ImportError:
 else:
     numpy_installed = True
 
-if not numpy_installed or (numpy.__version__ < '1.6.2'):
+if not numpy_installed or (parse_version(numpy.__version__) < parse_version('1.6.2')):
     raise ValueError("Numpy 1.6.2 or greater required")
 
 from numpy.distutils.core import Extension, setup
