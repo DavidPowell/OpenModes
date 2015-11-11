@@ -115,11 +115,11 @@ class ImpedanceMatrixLA(object):
             ind1 = index
             ind2 = self.part_s
 
-        matrices = {key: val[ind1, ind2] for key, val in self.matrices.iteritems()}
+        matrices = {key: val[ind1, ind2] for key, val in self.matrices.items()}
         if self.der in (None, False):
             der = self.der
         else:
-            der = {key: val[ind1, ind2] for key, val in self.der.iteritems()}
+            der = {key: val[ind1, ind2] for key, val in self.der.items()}
 
         return self.__class__(ind1, ind2, self.basis_container, self.sources,
                               self.unknowns, metadata=self.md,
@@ -136,12 +136,12 @@ class ImpedanceMatrixLA(object):
 
     @property
     def T(self):
-        matrices = {key: val.T for key, val in self.matrices.iteritems()}
+        matrices = {key: val.T for key, val in self.matrices.items()}
 
         if self.der in (None, False):
             der = self.der
         else:
-            der = {key: val.T for key, val in self.der.iteritems()}
+            der = {key: val.T for key, val in self.der.items()}
 
         return self.__class__(self.part_s, self.part_o, self.basis_container, 
                               self.sources, self.unknowns, metadata=self.md,

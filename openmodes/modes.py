@@ -121,7 +121,7 @@ class Modes(object):
 
         # for now, criteria is just a list of mode numbers
         new = {}
-        for part, original in self.modes_of_parts.iteritems():
+        for part, original in self.modes_of_parts.items():
             new[part] = {}
             new[part]['s'] = original['s'][criteria]
             new[part]['vr'] = original['vr'][:, criteria]
@@ -136,7 +136,7 @@ class Modes(object):
         poles have already been added"""
 
         new = {}
-        for part, original in self.modes_of_parts.iteritems():
+        for part, original in self.modes_of_parts.items():
             # first attempt for a single part
             real_poles = is_real_pole(original['s'])
             complex_poles = np.logical_not(real_poles)

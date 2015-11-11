@@ -304,7 +304,7 @@ class Simulation(Identified):
         # Multiple parts have been estimated
         refined = {}
         cache = {}
-        for part, estimate in estimates.modes_of_parts.iteritems():
+        for part, estimate in estimates.modes_of_parts.items():
             if part.unique_id in cache:
                 # If an identical part's modes have already been calculated
                 # then reuse them
