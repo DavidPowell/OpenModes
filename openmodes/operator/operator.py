@@ -91,7 +91,7 @@ class Operator(object):
             # just be a starting frequency)
             Z = self.impedance(contour, part, part)
             estimate_s, estimate_vr = eig_linearised(Z, modes)
-            result = {'s': estimate_s, 'vr': estimate_vr}
+            result = {'s': estimate_s, 'vr': estimate_vr, 'vl': estimate_vr}
         else:
             def Z_func(s):
                 Z = self.impedance(s, part, part)
