@@ -56,7 +56,9 @@ def test_horseshoe_modes(plot=False, skip_asserts=False,
 
     s_start = 2j*np.pi*10e9
 
-    mode_s, mode_j = sim.estimate_poles(s_start, modes=3, cauchy_integral=False)
+    modes = sim.estimate_poles(s_start, modes=3, cauchy_integral=False)
+    mode_s = modes.s
+    mode_j = modes.vr
     print("Singularities found at", mode_s)
 
     if write_reference:
@@ -72,20 +74,20 @@ def test_horseshoe_modes(plot=False, skip_asserts=False,
     j_2_ref = read_1d_complex(osp.join(reference_dir, 'eigenvector_2.txt'))
 
     if not skip_asserts:
-        assert_allclose(mode_s, [-2.585729e+09 + 3.156438e+10j,
+        assert_allclose(mode_s[0], [-2.585729e+09 + 3.156438e+10j,
                                  -1.887518e+10 + 4.500579e+10j,
                                  -1.991163e+10 + 6.846221e+10j],
                         rtol=1e-3)
-        assert_allclose_sign(mode_j["J", :, 0], j_0_ref, rtol=1e-2)
-        assert_allclose_sign(mode_j["J", :, 1], j_1_ref, rtol=1e-2)
-        assert_allclose_sign(mode_j["J", :, 2], j_2_ref, rtol=1e-2)
+        assert_allclose_sign(mode_j["J", :, 'modes', 0], j_0_ref, rtol=1e-2)
+        assert_allclose_sign(mode_j["J", :, 'modes', 1], j_1_ref, rtol=1e-2)
+        assert_allclose_sign(mode_j["J", :, 'modes', 2], j_2_ref, rtol=1e-2)
 
     if plot:
-        sim.plot_3d(solution=mode_j["J", :, 0], output_format='mayavi',
+        sim.plot_3d(solution=mode_j["J", :, 'modes', 0], output_format='mayavi',
                     compress_scalars=3)
-        sim.plot_3d(solution=mode_j["J", :, 1], output_format='mayavi',
+        sim.plot_3d(solution=mode_j["J", :, 'modes', 1], output_format='mayavi',
                     compress_scalars=3)
-        sim.plot_3d(solution=mode_j["J", :, 2], output_format='mayavi',
+        sim.plot_3d(solution=mode_j["J", :, 'modes', 2], output_format='mayavi',
                     compress_scalars=3)
 
 

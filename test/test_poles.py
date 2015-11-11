@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import openmodes
 from openmodes.basis import DivRwgBasis, LoopStarBasis
 from openmodes.operator import EfieOperator
+from openmodes.integration import RectangularContour
 
 import logging
 logging.getLogger().setLevel(logging.INFO)
@@ -43,18 +44,18 @@ def test_srr_pair_combined_poles(plot_figures=False):
                                    s_max.real, s_min.real))
 
     # calculate modes of the SRR pair
-    result = sim.estimate_poles(s_min, s_max)
+    result = sim.estimate_poles(RectangularContour(s_min, s_max))
     refined = sim.refine_poles(result)
 
-    s_estimate = result['s']
-    s_refined = refined['s']
+    s_estimate = result.s
+    s_refined = refined.s
 
     s_reference = [-1.18100087e+09 + 4.30266982e+10j,
                    -1.34656915e+07 + 4.74170628e+10j,
                    -3.05500910e+10 + 8.60872257e+10j,
                    -7.57094449e+08 + 9.52970974e+10j]
 
-    assert_allclose(s_refined, s_reference, rtol=1e-5)
+    assert_allclose(s_refined[0], s_reference, rtol=1e-5)
 
     if plot_figures:
         plt.figure(figsize=(6, 4))
@@ -85,15 +86,16 @@ def test_srr_pair_separate_poles(plot_figures=False):
                                    s_max.real, s_min.real))
 
     # calculate modes of the SRR pair
-    result = sim.estimate_poles(s_min, s_max, parts=[srr1, srr2])
+    result = sim.estimate_poles(RectangularContour(s_min, s_max),
+                                parts=[srr1, srr2])
     refined = sim.refine_poles(result)
 
-    s_estimate = result[srr1]['s']
-    s_refined = refined[srr1]['s']
+    s_estimate = result[srr1].s
+    s_refined = refined[srr1].s
 
     s_reference = [-1.07078080e+09 + 4.44309178e+10j,
                    -2.46067038e+10 + 9.46785130e+10j]
-    assert_allclose(s_refined, s_reference, rtol=1e-5)
+    assert_allclose(s_refined[0], s_reference, rtol=1e-5)
 
     if plot_figures:
         plt.figure(figsize=(6, 4))

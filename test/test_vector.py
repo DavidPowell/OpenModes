@@ -11,8 +11,7 @@ from openmodes.sources import PlaneWaveSource
 
 import os
 import os.path as osp
-import dill
-import pickle
+import dill as pickle
 import tempfile
 
 
