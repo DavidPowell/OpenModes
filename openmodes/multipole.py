@@ -20,11 +20,32 @@
 
 import numpy as np
 import scipy.special
+from scipy.special import factorial
 
-from openmodes.constants import c
+from openmodes.constants import c, eta_0
+
+def currents_sphere(m_max, n_max, eo, points):
+    """
+    Modal currents on a sphere    
+    
+    Parameters
+    ----------
+    m : integer
+    n : integer
+    eo : integer
+        0 for even, 1 for odd
+
+    Formulas from Tai, p 200"""
+
+    cos_theta = np.cos(theta)
+
+    scipy.special.lpmn(m_max, n_max, cos_theta)
+    
+    if not eo:
+        -m/np.sin(theta)
 
 
-def spherical_multipoles(max_l, gamma, points, weights, current, exp_phi=None):
+def spherical_multipoles(max_l, gamma, points, current, eta=eta_0):
     """Calculate the multipole coefficients in a spherical basis
 
     Using the formulas from:
@@ -40,11 +61,9 @@ def spherical_multipoles(max_l, gamma, points, weights, current, exp_phi=None):
         The complex wave-number in the background medium
     points : array
         The array of points at which to integrate
-    weights : array
-        The weights which should be applied to each point, will have units
-        of area so that final integral is dimensionally correct
     current : array
-        The current vector calculated at each point
+        The current vector calculated at each point. Any weights from
+        the integration rule should already be applied.
 
     Returns
     -------
@@ -52,15 +71,19 @@ def spherical_multipoles(max_l, gamma, points, weights, current, exp_phi=None):
         The electric multipole coefficients of order l, m for m > 0
     a_m : (max_l+1 x max_l+1) array
         The magnetic multipole coefficients of order l, m for m > 0
+
+    Note that k^2 factor is not included
     """
 
     num_l = max_l + 1
-    a_e = np.empty((num_l, num_l), np.complex128)
-    a_m = np.empty((num_l, num_l), np.complex128)
+    # indices l, m
+    a_e = np.zeros((num_l, num_l), np.complex128)
+    a_m = np.zeros((num_l, num_l), np.complex128)
 
-    l = np.arange(max_l)
+    l = np.arange(num_l)[:, None]
+    m = np.arange(num_l)[None, :]
 
-    for point in points:
+    for J, point in zip(current, points):
         # convert cartesian to (r, theta, phi) spherical coordinates
         r = np.sqrt(np.sum(point**2))
         theta = np.arccos(point[2]/r)
@@ -71,23 +94,48 @@ def spherical_multipoles(max_l, gamma, points, weights, current, exp_phi=None):
         ct = np.cos(theta)
         sp = np.sin(phi)
         cp = np.cos(phi)
-        
+
         r_hat = point/r
         theta_hat = np.array((ct*cp, ct*sp, -st))
-        phi_hat = np.array(-sp, cp, np.zeros(len(points)))
+        phi_hat = np.array((-sp, cp, 0))
 
         kr = gamma*r/1j
-        jl, djl = scipy.special.sph_jn(kr)
-        
-        # index l
-        ric_plus_second = (l*(l+1))*jl/kr
-        ric_der = jl[:-1] + jl/kr
-        
-        l_terms_e[n] = (c*charge[n]*(r*jl + djl) + jk*np.dot(points[n], current[n])*jl)
-        #Y_lmc[n] =
-        #cos_theta = points[n, 2]/spherical[n, 0]
-        #legendre = scipy.special.lpmn(cos_theta
+        jl, djl = scipy.special.sph_jn(max_l, kr)
+        # reshape to be size (num_l x 1)
+        jl = jl[:, None]
+        djl = djl[:, None]
 
+        # Riccati Bessel function plus its second derivative
+        ric_plus_second = (l*(l+1) + 2*kr**2)*jl/kr
+        # First derivative, divided by kr
+        ric_der = (jl/kr + djl)
+
+        # associated Legendre function and its derivative
+        P_lm, dP_lm = scipy.special.lpmn(max_l, max_l, ct)
+        P_lm = P_lm.T
+        dP_lm = dP_lm.T
+
+        # theta derivative of P_lm(cos\theta)
+        tau_lm = -st*dP_lm
+        pi_lm = P_lm*m/st
+
+        exp_imp = np.exp(-1j*m*phi)
+
+        # components of current
+        J_r = np.dot(r_hat, J)
+        J_theta = np.dot(theta_hat, J)
+        J_phi = np.dot(phi_hat, J)
+
+        a_e += exp_imp*(ric_plus_second*P_lm*J_r +
+                        ric_der*(tau_lm*J_theta - 1j*pi_lm*J_phi))
+
+        a_m += exp_imp*jl*(1j*pi_lm*J_theta + tau_lm*J_phi)
+
+    common_factor = eta*(gamma/1j)/(2*np.pi)/np.sqrt(l*(l+1))*np.sqrt(factorial(l-m)/factorial(l+m))
+
+    a_e *= (-1j)**(l-1)*common_factor
+    a_m *= (-1j)**(l+1)*common_factor
+    return a_e, a_m
 
 
 def cartesian_multipoles(points, charge, current, s, electric_order=1,
