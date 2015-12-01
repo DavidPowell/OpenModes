@@ -66,6 +66,11 @@ class DunavantRule(Identified):
         return "%s.%s(%d)" % (type(self).__module__, type(self).__name__,
                               self.order)
 
+    def __iter__(self):
+        "Iterate over all integration points and weights"
+        for xi_eta, w in zip(self.xi_eta, self.weights):
+            yield xi_eta, w
+
 
 # This makes a useful default e.g. for interpolation
 triangle_centres = DunavantRule(1)
