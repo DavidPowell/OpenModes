@@ -37,62 +37,6 @@ from openmodes.parts import Part
 RWG = namedtuple('RWG', ('tri_p', 'tri_m', 'node_p', 'node_m'))
 
 
-def interpolate_triangle_mesh(mesh, tri_func, num_tri, integration_rule,
-                              flatten=True, nodes=None):
-    """Interpolate a function on a triangular mesh with linear basis functions
-    on each face
-
-    Parameters
-    ----------
-    mesh : LinearTriangleMesh
-        The mesh which the triangle belong to
-    tri_func : array
-        The function to interpolate, one coefficient per triangle
-    num_tri : integer
-        The number of triangles
-    integration_rule : object
-        The integration over the triangle, in barycentric coordinates
-    flatten : boolean, optional
-        Return a 2D array, instead of a 3D array
-    nodes : array(num_nodes, 3), optional
-        Override the nodes positions defined in the mesh
-    """
-
-    if nodes is None:
-        nodes = mesh.nodes
-    points_per_tri = len(integration_rule)
-
-    r = np.empty((num_tri, points_per_tri, 3), mesh.nodes.dtype)
-    vector_func = np.zeros((num_tri, points_per_tri, 3), tri_func.dtype)
-    scalar_func = np.zeros((num_tri, points_per_tri), tri_func.dtype)
-
-    for tri_count, node_nums in enumerate(mesh.polygons):
-        for point_count, (xi, eta) in enumerate(integration_rule.xi_eta):
-            # Barycentric coordinates of the observer
-            zeta = 1.0 - eta - xi
-
-            # Cartesian coordinates of the point
-            r[tri_count, point_count] = (xi*nodes[node_nums][0] +
-                                         eta*nodes[node_nums][1] +
-                                         zeta*nodes[node_nums][2])
-
-            scalar_func[tri_count, point_count] = sum(tri_func[tri_count])
-
-            for node_count in range(3):
-                # Vector rho within the observer triangle
-                rho = r[tri_count, point_count] - nodes[node_nums][node_count]
-
-                vector_func[tri_count, point_count] += rho*tri_func[tri_count,
-                                                                    node_count]
-
-    if flatten:
-        r = r.reshape((num_tri*points_per_tri, 3))
-        vector_func = vector_func.reshape((num_tri*points_per_tri, 3))
-        scalar_func = scalar_func.reshape((num_tri*points_per_tri,))
-
-    return r, vector_func, scalar_func
-
-
 def inner_product_triangle_face(nodes):
     """Inner product of linear basis functions sharing the same triangle,
     integrated by sympy"""
@@ -137,7 +81,7 @@ class LinearTriangleBasis(AbstractBasis):
     def interpolate_function(self, linear_func,
                              integration_rule=triangle_centres,
                              flatten=True, return_scalar=False, nodes=None,
-                             scale_area=True):
+                             int_weight=False):
         """Interpolate a function defined in RWG or loop-star basis over the
         complete mesh
 
@@ -155,10 +99,9 @@ class LinearTriangleBasis(AbstractBasis):
         nodes : array, optional
             Nodes of the Part, if they are not equal to the original nodes
             of the mesh.
-        scale_area : boolean, optional
-            Whether to include scaling by area. Normally this should be `True`,
-            however when integrating it should be `False` as the area
-            is already normalised out in the weights.
+        int_weight : boolean, optional
+            Whether to include the weights on the function for easier
+            integration.
 
         Returns
         -------
@@ -173,12 +116,41 @@ class LinearTriangleBasis(AbstractBasis):
         tri_func = vector_transform.T.dot(linear_func)
         tri_func = tri_func.reshape((num_tri, 3))
 
-        if scale_area:
+        if not int_weight:
             tri_func /= 2*self.mesh.polygon_areas[:, None]
 
-        r, vector_func, scalar_func = interpolate_triangle_mesh(self.mesh,
-                                            tri_func, num_tri,
-                                            integration_rule, flatten, nodes)
+        if nodes is None:
+            nodes = self.mesh.nodes
+        points_per_tri = len(integration_rule)
+
+        r = np.empty((num_tri, points_per_tri, 3), self.mesh.nodes.dtype)
+        vector_func = np.zeros((num_tri, points_per_tri, 3), tri_func.dtype)
+        scalar_func = np.zeros((num_tri, points_per_tri), tri_func.dtype)
+
+        for tri_count, node_nums in enumerate(self.mesh.polygons):
+            for point_count, ((xi, eta), w) in enumerate(integration_rule):
+                # Barycentric coordinates of the observer
+                zeta = 1.0 - eta - xi
+
+                if not int_weight:
+                    w = 1
+
+                # Cartesian coordinates of the point
+                r[tri_count, point_count] = (xi*nodes[node_nums][0] +
+                                             eta*nodes[node_nums][1] +
+                                             zeta*nodes[node_nums][2])
+
+                scalar_func[tri_count, point_count] = sum(tri_func[tri_count])*w
+
+                for node_count in range(3):
+                    # Vector rho within the observer triangle
+                    rho = r[tri_count, point_count] - nodes[node_nums][node_count]
+                    vector_func[tri_count, point_count] += rho*tri_func[tri_count, node_count]*w
+
+        if flatten:
+            r = r.reshape((num_tri*points_per_tri, 3))
+            vector_func = vector_func.reshape((num_tri*points_per_tri, 3))
+            scalar_func = scalar_func.reshape((num_tri*points_per_tri,))
 
         if return_scalar:
             return r, vector_func, scalar_func
