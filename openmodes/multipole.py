@@ -67,21 +67,22 @@ def spherical_multipoles(max_l, gamma, points, current, eta=eta_0):
 
     Returns
     -------
-    a_e : (max_l+1 x max_l+1) array
+    a_e : (max_l+1 x 2*max_l+1) array
         The electric multipole coefficients of order l, m for m > 0
-    a_m : (max_l+1 x max_l+1) array
+    a_m : (max_l+1 x 2*max_l+1) array
         The magnetic multipole coefficients of order l, m for m > 0
-
+        
     Note that k^2 factor is not included
     """
 
     num_l = max_l + 1
+    num_m = 2*max_l + 1
     # indices l, m
-    a_e = np.zeros((num_l, num_l), np.complex128)
-    a_m = np.zeros((num_l, num_l), np.complex128)
+    a_e = np.zeros((num_l, num_m), np.complex128)
+    a_m = np.zeros((num_l, num_m), np.complex128)
 
     l = np.arange(num_l)[:, None]
-    m = np.arange(num_l)[None, :]
+    m = np.hstack((np.arange(num_l), np.arange(-max_l, 0)))[None, :]
 
     for J, point in zip(current, points):
         # convert cartesian to (r, theta, phi) spherical coordinates
@@ -104,7 +105,7 @@ def spherical_multipoles(max_l, gamma, points, current, eta=eta_0):
         # reshape to be size (num_l x 1)
         jl = jl[:, None]
         djl = djl[:, None]
-
+        
         # Riccati Bessel function plus its second derivative
         ric_plus_second = (l*(l+1) + 2*kr**2)*jl/kr
         # First derivative, divided by kr
@@ -112,9 +113,13 @@ def spherical_multipoles(max_l, gamma, points, current, eta=eta_0):
 
         # associated Legendre function and its derivative
         P_lm, dP_lm = scipy.special.lpmn(max_l, max_l, ct)
-        P_lm = P_lm.T
-        dP_lm = dP_lm.T
+        
+        # also for negative values of m
+        P_lmn, dP_lmn = scipy.special.lpmn(-max_l, max_l, ct)
 
+        P_lm  = np.hstack((P_lm.T,  P_lmn.T))[:, :-1]
+        dP_lm = np.hstack((dP_lm.T, dP_lmn.T))[:, :-1]
+        
         # theta derivative of P_lm(cos\theta)
         tau_lm = -st*dP_lm
         pi_lm = P_lm*m/st
@@ -132,7 +137,7 @@ def spherical_multipoles(max_l, gamma, points, current, eta=eta_0):
         a_m += exp_imp*jl*(1j*pi_lm*J_theta + tau_lm*J_phi)
 
     common_factor = eta*(gamma/1j)/(2*np.pi)/np.sqrt(l*(l+1))*np.sqrt(factorial(l-m)/factorial(l+m))
-
+        
     a_e *= (-1j)**(l-1)*common_factor
     a_m *= (-1j)**(l+1)*common_factor
     return a_e, a_m
