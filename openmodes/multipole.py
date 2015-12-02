@@ -45,7 +45,7 @@ def currents_sphere(m_max, n_max, eo, points):
         -m/np.sin(theta)
 
 
-def spherical_multipoles(max_l, gamma, points, current, eta=eta_0):
+def spherical_multipoles(max_l, k, points, current, eta=eta_0):
     """Calculate the multipole coefficients in a spherical basis
 
     Using the formulas from:
@@ -57,8 +57,8 @@ def spherical_multipoles(max_l, gamma, points, current, eta=eta_0):
     ----------
     max_l : integer
         The maximum order of multipole to consider
-    gamma : complex
-        The complex wave-number in the background medium
+    k : complex
+        The wave-number in the background medium
     points : array
         The array of points at which to integrate
     current : array
@@ -68,16 +68,17 @@ def spherical_multipoles(max_l, gamma, points, current, eta=eta_0):
     Returns
     -------
     a_e : (max_l+1 x 2*max_l+1) array
-        The electric multipole coefficients of order l, m for m > 0
+        The electric multipole coefficients of order l, m
     a_m : (max_l+1 x 2*max_l+1) array
-        The magnetic multipole coefficients of order l, m for m > 0
-        
-    Note that k^2 factor is not included
+        The magnetic multipole coefficients of order l, m
     """
 
     num_l = max_l + 1
     num_m = 2*max_l + 1
-    # indices l, m
+
+    # indices l, m.
+    # Note that for m, negative indices are used for negative m,
+    # and values with |m| > l should be ignored
     a_e = np.zeros((num_l, num_m), np.complex128)
     a_m = np.zeros((num_l, num_m), np.complex128)
 
@@ -85,7 +86,9 @@ def spherical_multipoles(max_l, gamma, points, current, eta=eta_0):
     m = np.hstack((np.arange(num_l), np.arange(-max_l, 0)))[None, :]
 
     for J, point in zip(current, points):
-        # convert cartesian to (r, theta, phi) spherical coordinates
+
+        # Convert cartesian to (r, theta, phi) spherical coordinates
+        # Convention as per Jackson, Figure 3.1
         r = np.sqrt(np.sum(point**2))
         theta = np.arccos(point[2]/r)
         phi = np.arctan2(point[1], point[0])
@@ -100,26 +103,27 @@ def spherical_multipoles(max_l, gamma, points, current, eta=eta_0):
         theta_hat = np.array((ct*cp, ct*sp, -st))
         phi_hat = np.array((-sp, cp, 0))
 
-        kr = gamma*r/1j
+        kr = k*r
         jl, djl = scipy.special.sph_jn(max_l, kr)
         # reshape to be size (num_l x 1)
         jl = jl[:, None]
         djl = djl[:, None]
-        
+
         # Riccati Bessel function plus its second derivative
-        ric_plus_second = (l*(l+1) + 2*kr**2)*jl/kr
+        ric_plus_second = l*(l+1)*jl/kr
         # First derivative, divided by kr
         ric_der = (jl/kr + djl)
 
         # associated Legendre function and its derivative
         P_lm, dP_lm = scipy.special.lpmn(max_l, max_l, ct)
-        
+
         # also for negative values of m
+        # TODO: calculate from positive values
         P_lmn, dP_lmn = scipy.special.lpmn(-max_l, max_l, ct)
 
-        P_lm  = np.hstack((P_lm.T,  P_lmn.T))[:, :-1]
-        dP_lm = np.hstack((dP_lm.T, dP_lmn.T))[:, :-1]
-        
+        P_lm = np.hstack((P_lm.T,  P_lmn.T[:, :0:-1]))
+        dP_lm = np.hstack((dP_lm.T, dP_lmn.T[:, :0:-1]))
+
         # theta derivative of P_lm(cos\theta)
         tau_lm = -st*dP_lm
         pi_lm = P_lm*m/st
@@ -131,15 +135,16 @@ def spherical_multipoles(max_l, gamma, points, current, eta=eta_0):
         J_theta = np.dot(theta_hat, J)
         J_phi = np.dot(phi_hat, J)
 
-        a_e += exp_imp*(ric_plus_second*P_lm*J_r +
-                        ric_der*(tau_lm*J_theta - 1j*pi_lm*J_phi))
-
+        a_e += exp_imp*(ric_plus_second*P_lm*J_r + ric_der*(tau_lm*J_theta - 1j*pi_lm*J_phi))
         a_m += exp_imp*jl*(1j*pi_lm*J_theta + tau_lm*J_phi)
 
-    common_factor = eta*(gamma/1j)/(2*np.pi)/np.sqrt(l*(l+1))*np.sqrt(factorial(l-m)/factorial(l+m))
-        
-    a_e *= (-1j)**(l-1)*common_factor
-    a_m *= (-1j)**(l+1)*common_factor
+    # Ignore divide by zero and resulting NaN, which will occur for invalid
+    # combinations of l, m
+    with np.errstate(invalid='ignore', divide='ignore'):
+        common_factor = eta*k**2/(2*np.pi)*np.sqrt(factorial(l-m)/factorial(l+m))/np.sqrt(l*(l+1))        
+        a_e *= (-1j)**(l-1)*common_factor
+        a_m *= (-1j)**(l+1)*common_factor
+
     return a_e, a_m
 
 
