@@ -174,9 +174,12 @@ class TOperator(Operator):
     def source_vector(self, source_field, s, parent, extinction_field=False):
         V = super(TOperator, self).source_vector(source_field, s, parent,
                                                  extinction_field)
-        w_EFIE_o, w_MFIE_o = self.weights_o(s)
-        V["E"] *= w_EFIE_o
-        V["H"] *= eta_0*w_MFIE_o
+        if extinction_field:
+            V["E"] /= eta_0
+        else:
+            w_EFIE_o, w_MFIE_o = self.weights_o(s)
+            V["E"] *= w_EFIE_o
+            V["H"] *= eta_0*w_MFIE_o
         return V
 
 
