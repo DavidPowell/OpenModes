@@ -38,7 +38,6 @@ from openmodes.visualise import plot_mayavi, write_vtk, preprocess
 from openmodes.model import ScalarModelLeastSq
 from openmodes.mesh import TriangularSurfaceMesh
 from openmodes.helpers import Identified
-from openmodes.vector import VectorParts
 from openmodes.material import FreeSpace, PecMaterial
 from openmodes.modes import Modes
 from openmodes.multipole import spherical_multipoles
@@ -213,7 +212,7 @@ class Simulation(Identified):
 
         Returns
         -------
-        V : VectorParts
+        V : LookupArray
             The source vector, which can be indexed by `Part` objects to find
             the field on each part.
         """
@@ -350,24 +349,6 @@ class Simulation(Identified):
         for s_n, j_n in zip(mode_s, mode_j.T):
             scalar_models.append(model_class(part, s_n, j_n, self.operator))
         return scalar_models
-
-    def empty_vector(self, part=None, cols=None):
-        """
-        Create a zero vector of the appropriate size to contain solutions for
-        all of the parts, or a single part and its sub-parts
-
-        Parameters
-        ----------
-        part : Part, optional
-            The part for which to create the vector. If not specified, the full
-            simulation
-        cols : integer, optional
-            If specified, this many columns will be included
-        """
-
-        part = part or self.parts
-        return VectorParts(part, self.basis_container, dtype=np.complex128,
-                           cols=cols)
 
     def plot_3d(self, solution=None, part=None, output_format='webgl',
                 filename=None, compress_scalars=None,
