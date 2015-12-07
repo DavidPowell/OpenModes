@@ -20,11 +20,12 @@
 "Classes which represent possible distributions of the incident field"
 
 import numpy as np
-from openmodes.constants import eta_0, c
+from openmodes.constants import c
+from openmodes.material import FreeSpace
 
 
 class PlaneWaveSource(object):
-    def __init__(self, e_inc, k_hat, n=1, eta=eta_0):
+    def __init__(self, e_inc, k_hat, material=FreeSpace, p_inc=None):
         """Generate a plane wave with a given direction of propagation and
         magnitude and direction of the electric field
 
@@ -39,14 +40,17 @@ class PlaneWaveSource(object):
         eta: real, optional
             Characteristic impedance of background medium, defaults to free
             space
+        p_inc: real, optional
+            If specified, the incident power will be scaled to ensure constant
+            power.
         """
 
         self.e_inc = np.asarray(e_inc)
-        k_hat = np.array(k_hat)
-        self.k_hat = k_hat/np.sqrt(np.sum(np.abs(k_hat)**2))
-        self.eta = eta
-        self.c = c/n
-        self.h_inc = np.cross(k_hat, e_inc)/eta
+        k_hat = np.asarray(k_hat)
+        self.k_hat = k_hat/np.sqrt(np.dot(k_hat, k_hat))
+        self.material = material
+        self.h_inc = np.cross(k_hat, self.e_inc)  # unscaled
+        self.p_inc = p_inc
 
     def electric_field(self, s, r):
         """Calculate the electric field distribution at a given frequency
@@ -66,12 +70,15 @@ class PlaneWaveSource(object):
             An array with the same dimensions as r, giving the field at each
             point
         """
-        jk = self.k_hat*s/self.c
+        jk = self.k_hat*self.material.n(s)*s/c
 
-        # TODO: check sign of jk!!!
-        # dimensions are expanded so that r can have an arbitrary number
+        e_inc = self.e_inc
+        if self.p_inc is not None:
+            e_inc = e_inc*self.p_inc/np.sqrt(np.vdot(e_inc, e_inc)/self.material.eta(s))
+
+        # Dimensions are expanded so that r can have an arbitrary number
         # of dimensions
-        return self.e_inc*np.exp(np.dot(r, -jk))[..., None]
+        return e_inc*np.exp(np.dot(r, -jk))[..., None]
 
     def magnetic_field(self, s, r):
         """Calculate the magnetic field distribution at a given frequency
@@ -91,6 +98,12 @@ class PlaneWaveSource(object):
             An array with the same dimensions as r, giving the field at each
             point
         """
-        jk = self.k_hat*s/self.c
+        jk = self.k_hat*self.material.n(s)*s/c
+
+        h_inc = self.h_inc
+        if self.h_inc is None:
+            h_inc = h_inc/self.material.eta(s)
+        else:
+            h_inc = h_inc*self.p_inc/np.sqrt(np.vdot(h_inc, h_inc)*self.material.eta(s))
 
         return self.h_inc*np.exp(np.dot(r, -jk))[..., None]
