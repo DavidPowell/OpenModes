@@ -155,7 +155,7 @@ def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0):
     # Ignore divide by zero and resulting NaN, which will occur for invalid
     # combinations of l, m
     with np.errstate(invalid='ignore', divide='ignore'):
-        common_factor = eta*k**2/(2*np.pi)*np.sqrt(factorial(l-m)/factorial(l+m))/np.sqrt(l*(l+1))        
+        common_factor = np.sqrt(eta)*k**2/(2*np.pi)*np.sqrt(factorial(l-m)/factorial(l+m))/np.sqrt(l*(l+1))        
         a_e *= (-1j)**(l-1)*common_factor
         a_m *= (-1j)**(l+1)*common_factor
 
