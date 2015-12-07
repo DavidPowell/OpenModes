@@ -45,7 +45,7 @@ def currents_sphere(m_max, n_max, eo, points):
         -m/np.sin(theta)
 
 
-def spherical_multipoles(max_l, k, points, current, eta=eta_0):
+def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0):
     """Calculate the multipole coefficients in a spherical basis
 
     Using the formulas from:
@@ -64,6 +64,9 @@ def spherical_multipoles(max_l, k, points, current, eta=eta_0):
     current : array
         The current vector calculated at each point. Any weights from
         the integration rule should already be applied.
+    current_M : array
+        The equivalent magnetic current for surface equivalent description of
+        dielectrics
 
     Returns
     -------
@@ -83,9 +86,10 @@ def spherical_multipoles(max_l, k, points, current, eta=eta_0):
     a_m = np.zeros((num_l, num_m), np.complex128)
 
     l = np.arange(num_l)[:, None]
-    m = np.hstack((np.arange(num_l), np.arange(-max_l, 0)))[None, :]
+    m_pos = np.arange(num_l)[None, :]
+    m = np.hstack((m_pos, np.arange(-max_l, 0)[None, :]))
 
-    for J, point in zip(current, points):
+    for J, M, point in zip(current, current_M, points):
 
         # Convert cartesian to (r, theta, phi) spherical coordinates
         # Convention as per Jackson, Figure 3.1
@@ -116,13 +120,18 @@ def spherical_multipoles(max_l, k, points, current, eta=eta_0):
 
         # associated Legendre function and its derivative
         P_lm, dP_lm = scipy.special.lpmn(max_l, max_l, ct)
+        P_lm = P_lm.T
+        dP_lm = dP_lm.T
 
-        # also for negative values of m
-        # TODO: calculate from positive values
+        # Calculate negative values of m from positive
         P_lmn, dP_lmn = scipy.special.lpmn(-max_l, max_l, ct)
+        P_neg = (-1)**m_pos*factorial(l-m_pos)/factorial(l+m_pos)
+        P_lmn = P_neg*P_lm
+        dP_lmn = P_neg*dP_lm
 
-        P_lm = np.hstack((P_lm.T,  P_lmn.T[:, :0:-1]))
-        dP_lm = np.hstack((dP_lm.T, dP_lmn.T[:, :0:-1]))
+        # combine positive and negative P_lmn
+        P_lm = np.hstack((P_lm,  P_lmn[:, :0:-1]))
+        dP_lm = np.hstack((dP_lm, dP_lmn[:, :0:-1]))
 
         # theta derivative of P_lm(cos\theta)
         tau_lm = -st*dP_lm
@@ -134,9 +143,14 @@ def spherical_multipoles(max_l, k, points, current, eta=eta_0):
         J_r = np.dot(r_hat, J)
         J_theta = np.dot(theta_hat, J)
         J_phi = np.dot(phi_hat, J)
+        M_r = np.dot(r_hat, M)
+        M_theta = np.dot(theta_hat, M)
+        M_phi = np.dot(phi_hat, M)
 
         a_e += exp_imp*(ric_plus_second*P_lm*J_r + ric_der*(tau_lm*J_theta - 1j*pi_lm*J_phi))
+        a_e += exp_imp*jl*(1j*pi_lm*M_theta + tau_lm*M_phi)
         a_m += exp_imp*jl*(1j*pi_lm*J_theta + tau_lm*J_phi)
+        a_m += exp_imp*(ric_plus_second*P_lm*M_r + ric_der*(tau_lm*M_theta - 1j*pi_lm*M_phi))
 
     # Ignore divide by zero and resulting NaN, which will occur for invalid
     # combinations of l, m

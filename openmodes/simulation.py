@@ -41,6 +41,8 @@ from openmodes.helpers import Identified
 from openmodes.vector import VectorParts
 from openmodes.material import FreeSpace, PecMaterial
 from openmodes.modes import Modes
+from openmodes.multipole import spherical_multipoles
+from openmodes.constants import c
 
 
 class Simulation(Identified):
@@ -490,3 +492,63 @@ class Simulation(Identified):
             return parts[0]
         else:
             return parts
+
+    def multipole_decomposition(self, solution, order, s, origin=None):
+        """
+        Perform a multipole decomposition of a current distribution
+
+        Currently only spherical multipole decomposition is supported. The
+        absolute phase of these coefficients has not been checked, but relative
+        phase between electric and magnetic should produce correct scattering
+        cross-section.
+
+        Parameters
+        ----------
+        solution : LookupArray
+            The solution to decompose. It must include electric current "J",
+            and may optionally also include magnetic current "M".
+        order: integer
+            The order of the multipole expansion to perform
+        s : complex
+            The complex frequency at which to perform the decomposition
+        origin : array (len 3), optional
+            The origin about which to calculate the expansion. If not
+            specified, the global coordinate origin is used.
+
+        Returns
+        -------
+        a_e, a_m : complex arrays of size (order+1, 2*order+1)
+            The spherical multipole coefficients, with indices l, m.
+            Note that vales of |m| > l are invalid, so these parts of the
+            arrays are undefined. Negative m are obtained with negative
+            array indices.
+        """
+        container, parent_part = solution.lookup[1][1:]
+
+        a_e = np.zeros((order+1, 2*order+1), np.complex128)
+        a_m = np.zeros_like(a_e)
+
+        k = (s/c/1j)
+        if np.isreal(k):
+            # Suppress false warnings when dropping an imaginary part of 0
+            k = k.real
+
+        for part in parent_part.iter_single():
+            basis = self.basis_container[part]
+
+            points, current_J = basis.interpolate_function(solution["J"].simple_view(),
+                                                           int_weight=True, integration_rule=self.integration_rule)
+            try:
+                points, current_M = basis.interpolate_function(solution["M"].simple_view(),
+                                                               int_weight=True, integration_rule=self.integration_rule)
+            except KeyError:
+                current_M = np.zeros_like(current_J)
+
+            if origin is not None:
+                points -= origin
+
+            n_e, n_m = spherical_multipoles(order, k, points, current_J, 1j*current_M)
+            a_e += n_e
+            a_m += n_m
+
+        return a_e, a_m
