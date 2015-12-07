@@ -72,7 +72,9 @@ class Simulation(Identified):
         basis_args: dictionary, optional
             Arguments to be passed when constructing basis functions
         background_material: IsotropicMaterial, optional
-            The material containing all simulation objects
+            The material containing all simulation objects. Please note that
+            background materials other than free space have not been fully
+            tested yet, so YMMV.
         """
 
         super(Simulation, self).__init__()
