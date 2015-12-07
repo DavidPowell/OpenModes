@@ -43,6 +43,10 @@ class IsotropicMaterial(Identified):
         "Impedance of the material relative to free space"
         return np.sqrt(self.mu_r(s)/self.epsilon_r(s))
 
+    def n(self, s):
+        "Refractive index of the material"
+        return np.sqrt(self.mu_r(s)*self.epsilon_r(s))
+
 # a constant for free space
 FreeSpace = IsotropicMaterial("Free space", 1.0, 1.0)
 
