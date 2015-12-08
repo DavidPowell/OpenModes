@@ -65,7 +65,7 @@ copyright = u'2012-2014, David Powell'
 # The short X.Y version.
 
 # run the script to find the version
-execfile(join("openmodes", "version.py"))
+exec(open(join("openmodes", "version.py")).read())
 
 version = __version__
 # The full version, including alpha/beta/rc tags.
