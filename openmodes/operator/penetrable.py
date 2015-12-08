@@ -66,7 +66,7 @@ class TOperator(Operator):
         self.frequency_derivatives = False
 
     def impedance(self, s, parent_o, parent_s, metadata=None):
-        
+
         metadata = metadata or dict()
 
         metadata['eta_o'] = self.background_material.eta_r(s)
@@ -116,8 +116,6 @@ class TOperator(Operator):
         mu_o = self.background_material.mu_r(s)
         c_i = c/np.sqrt(eps_i*mu_i)
         c_o = c/np.sqrt(eps_o*mu_o)
-        eta_i = np.sqrt((mu_i*mu_0)/(eps_i*epsilon_0))
-        eta_o = np.sqrt((mu_o*mu_0)/(eps_o*epsilon_0)),
 
         is_self_term = part_o == part_s
 
@@ -129,8 +127,8 @@ class TOperator(Operator):
                                       is_self_term, eps_i, mu_i,
                                       self.num_singular_terms,
                                       self.singularity_accuracy)
-                L_i = res[0]/c_i
-                S_i = res[1]*c_i
+                L_i = res[0]/c_i*eta_0
+                S_i = res[1]*c_i*eta_0
 
                 # note opposite sign of normals for interior problem
                 res = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
@@ -139,7 +137,7 @@ class TOperator(Operator):
                                            self.num_singular_terms,
                                            self.singularity_accuracy,
                                            tangential_form=True)
-                K_i = res[0]
+                K_i = res[0]*eta_0
 
                 matrix_names += ('L_i', 'S_i', 'K_i')
 
@@ -151,8 +149,8 @@ class TOperator(Operator):
 
             # This scaling ensures that this operator has the same definition
             # as cursive D defined by Yla-Oijala, Radio Science 2005.
-            L_o = res[0]/c_o
-            S_o = res[1]*c_o
+            L_o = res[0]/c_o*eta_0
+            S_o = res[1]*c_o*eta_0
 
             res = rwg.impedance_curl_G(s, self.integration_rule, basis_o,
                                        part_o.nodes, basis_s, part_s.nodes,
@@ -160,7 +158,7 @@ class TOperator(Operator):
                                        self.num_singular_terms,
                                        self.singularity_accuracy,
                                        tangential_form=True)
-            K_o = res[0]
+            K_o = res[0]*eta_0
         else:
             raise NotImplementedError
 
@@ -175,7 +173,7 @@ class TOperator(Operator):
         V = super(TOperator, self).source_vector(source_field, s, parent,
                                                  extinction_field)
         if extinction_field:
-            V["E"] /= eta_0
+            V["H"] *= eta_0
         else:
             w_EFIE_o, w_MFIE_o = self.weights_o(s)
             V["E"] *= w_EFIE_o
@@ -231,4 +229,3 @@ class CTFOperator(TOperator):
         "Weights for inner EFIE and MFIE problems, part specific"
         eta_i = part.material.eta_r(s)
         return 1.0/eta_i, eta_i
-
