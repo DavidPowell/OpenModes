@@ -73,8 +73,12 @@ class PlaneWaveSource(object):
         jk = self.k_hat*self.material.n(s)*s/c
 
         e_inc = self.e_inc
+
         if self.p_inc is not None:
-            e_inc = e_inc*self.p_inc/np.sqrt(np.vdot(e_inc, e_inc)/self.material.eta(s))
+            # scale the incident power if requested
+            h_inc = self.h_inc/self.material.eta(s)
+            p_unscaled = np.sqrt(np.sum(np.cross(e_inc, h_inc.conj()).real)**2)
+            e_inc = e_inc*np.sqrt(self.p_inc/p_unscaled)
 
         # Dimensions are expanded so that r can have an arbitrary number
         # of dimensions
@@ -100,10 +104,11 @@ class PlaneWaveSource(object):
         """
         jk = self.k_hat*self.material.n(s)*s/c
 
-        h_inc = self.h_inc
-        if self.h_inc is None:
-            h_inc = h_inc/self.material.eta(s)
-        else:
-            h_inc = h_inc*self.p_inc/np.sqrt(np.vdot(h_inc, h_inc)*self.material.eta(s))
+        h_inc = self.h_inc/self.material.eta(s)
+        if self.p_inc is not None:
+            # scale the incident power if requested
+            h_inc = self.h_inc/self.material.eta(s)
+            p_unscaled = np.sqrt(np.sum(np.cross(self.e_inc, h_inc.conj()).real)**2)
+            h_inc = h_inc*np.sqrt(self.p_inc/p_unscaled)
 
-        return self.h_inc*np.exp(np.dot(r, -jk))[..., None]
+        return h_inc*np.exp(np.dot(r, -jk))[..., None]
