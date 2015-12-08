@@ -22,6 +22,7 @@
 import numpy as np
 from openmodes.constants import c
 from openmodes.material import FreeSpace
+from numpy import sin, cos
 
 
 class PlaneWaveSource(object):
@@ -112,3 +113,37 @@ class PlaneWaveSource(object):
             h_inc = h_inc*np.sqrt(self.p_inc/p_unscaled)
 
         return h_inc*np.exp(np.dot(r, -jk))[..., None]
+
+
+def planewave_angles(theta, phi, alpha, degrees=True, material=FreeSpace,
+                     p_inc=1.0):
+    """Create a plane-wave with direction and (linear) polarisation specified
+    by angles. By default, it is scaled to unit intensity.
+
+    Parameters
+    ----------
+    theta: float
+        Propagation vector, declination from z axis
+    phi: float
+        Propagation vector, azimuthal angle with respect to x axis
+    alpha: float
+        Polarisation angle of uncertain interpretation
+    degrees: bool, optional
+        If True, angles are in degrees, otherwise in radians
+    material: Material, optional
+        The background material
+    p_inc: integer or None, optional
+        The scaling to apply to the incident field
+    """
+    if degrees:
+        theta = np.deg2rad(theta)
+        phi = np.deg2rad(phi)
+        alpha = np.deg2rad(alpha)
+
+    k_hat = [-sin(theta)*cos(phi), -sin(theta)*sin(phi), -cos(theta)]
+
+    e = [cos(phi)*cos(theta)*cos(alpha)-sin(phi)*sin(alpha),
+         sin(phi)*cos(theta)*cos(alpha)+cos(phi)*sin(alpha),
+         -sin(theta)*cos(alpha)]
+
+    return PlaneWaveSource(e, k_hat, material, p_inc=p_inc)
