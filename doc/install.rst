@@ -14,7 +14,7 @@ Quick Install Instructions
    You can install Anaconda without administrator access, and
    it is available for Windows, Linux and Mac OSX.
    
-   You can choose either Python 2.7 or 3.4 installation.
+   Python 3.5 is recommended, and Python 2.7 will continue to be supported.
 
 2. Install `gmsh`_ **version 2.8.4 or later**
 

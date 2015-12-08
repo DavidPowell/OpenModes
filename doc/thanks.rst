@@ -29,3 +29,6 @@ Incorporated Software
 
 * Code for an `ordered set <https://github.com/LuminosoInsight/ordered-set>`_ originally written by
   Raymond Hettiger is incorporated under the MIT license.
+
+* Code for testing whether a point is within a polygon by softsurfer has been used, converted to
+  python by Maciej Kalisiak. Adapted from <http://www.dgp.toronto.edu/~mac/e-stuff/>`_.
