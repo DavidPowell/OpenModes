@@ -148,7 +148,8 @@ def plot_3d(parts_list, charges, currents, centres, width=700, height=500,
                                          'canvas_width': width,
                                          'canvas_height': height,
                                          'initial_wireframe': wireframe,
-                                         'skip_webgl': skip_webgl})
+                                         'skip_webgl': skip_webgl,
+                                         'current_vector_len': np.median(full_mesh.edge_lens)})
 
     display(HTML(html_generated))
 

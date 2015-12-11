@@ -1,5 +1,5 @@
 function openmodes_three_plot(three_container, json_geo, width, height, initial_wireframe,
-                              format_select, arrow_length, skip_webgl) {
+                              format_select, arrow_length, skip_webgl, current_vector_len) {
     var renderer;
     if ( !skip_webgl && Detector.webgl )
         renderer = new THREE.WebGLRenderer( {antialias:true} );
@@ -101,7 +101,7 @@ function openmodes_three_plot(three_container, json_geo, width, height, initial_
             format = format_select.value;
             geometry.faces = faces[format];
             geometry.colorsNeedUpdate = true;
-            var length_i, arrowLengthScale = arrow_length.value/currentMax, arrowWidthScale = arrowLengthScale*0.25;
+            var length_i, arrowLengthScale = arrow_length.value/currentMax/100*current_vector_len, arrowWidthScale = arrowLengthScale*0.25;
             
             var current_function = json_geo.current[format];
             if (typeof current_function === 'undefined') {
@@ -112,7 +112,6 @@ function openmodes_three_plot(three_container, json_geo, width, height, initial_
                     length_i = current_function[i][0];
                     arrowDir = new THREE.Vector3(current_function[i][1], current_function[i][2], current_function[i][3]);
                     arrowMeshes[i].quaternion.setFromUnitVectors(unitY, arrowDir);
-                    arrowMeshes[i].useQuaternion = true;
                     arrowMeshes[i].scale.set(length_i*arrowWidthScale, length_i*arrowLengthScale, length_i*arrowWidthScale);
                     arrowMeshes[i].visible = true;
                  }

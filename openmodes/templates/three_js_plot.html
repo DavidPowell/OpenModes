@@ -10,7 +10,7 @@
         </select>
     </span>
     <span style="margin:10px;display:inline-block">Arrow Length
-        <input id="arrow_length_{{geometry_name}}" type="range" min="5" max="500" value="100"/>
+        <input id="arrow_length_{{geometry_name}}" type="range" min="5" max="500" value="150"/>
     </span>
 </div>
 
@@ -32,6 +32,7 @@
 
     openmodes_three_plot(three_container, {{ geometry_name }}, {{ canvas_width }}, {{ canvas_height }},
                         {{ initial_wireframe|lower }}, document.getElementById("format_{{ geometry_name}}"), 
-                        document.getElementById("arrow_length_{{geometry_name}}"), {{ skip_webgl|lower }} );
+                        document.getElementById("arrow_length_{{geometry_name}}"), {{ skip_webgl|lower }},
+                        {{ current_vector_len }});
 })();
 </script>
