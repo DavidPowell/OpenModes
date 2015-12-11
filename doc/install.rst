@@ -15,6 +15,8 @@ Quick Install Instructions
    it is available for Windows, Linux and Mac OSX.
    
    Python 3.5 is recommended, and Python 2.7 will continue to be supported.
+   Python versions 3.3 and 3.4 should work, but these python versions do not
+   have pre-compiled windows binaries.
 
 2. Install `gmsh`_ **version 2.8.4 or later**
 
@@ -33,11 +35,16 @@ If installation was successful, the next step is to try the examples, see the :d
 Upgrading to a Newer Version
 ----------------------------
 
-It's usually a good idea to update all your other Python packages first with
+If you are using windows and are using the recommended Anaconda distribution,
+please upgrade your Anaconda distribution to python 3.5, if you haven't already.
+If you need to upgrade your python distribution, then just perform a fresh install
+of OpenModes as normal.
+
+Otherwise, first update all your other Python packages with
 
     ``conda update --all``
 
-You can upgrade your installed version from the command-line, using the command
+You can upgrade your installed version of OpenModes from the command-line, using the command
 
     ``pip install --upgrade --no-deps openmodes``
    
