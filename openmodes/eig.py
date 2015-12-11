@@ -174,10 +174,8 @@ def poles_cauchy(Z_func, contour, svd_threshold=1e-10, previous_result=None):
     result['s_out'] = mode_s[outside_region]
 
     # Return the left and right eigenvectors in the full problem space.
-    # Notation left and right are relative to original operator Z, which are
-    # opposite to Z^-1
-    full_l = U_r.dot(np.diag(S_r).dot(vr))
-    full_r = (V_r.dot(np.diag(S_r).dot(vl))).conjugate()
+    full_r = U_r.dot(np.diag(S_r).dot(vr))
+    full_l = (V_r.dot(np.diag(S_r).dot(vl))).conjugate()
     # conjugate comes from scipy's vs my definition of left eigenvectors
 
     result['vl'] = full_l[:, in_region].T
@@ -291,7 +289,7 @@ def eig_newton(func, lambda_0, x_0, lambda_tol=1e-8, max_iter=20,
         elif weight.lower() == 'rayleigh symmetric':
             v_s = np.dot(T_s.T, x_s)
         elif weight.lower() == 'rayleigh asymmetric':
-            y_s = la.lu_solve(T_s_lu, np.dot(T_ds, y_s), trans=1)
+            y_s = la.lu_solve(T_s_lu, np.dot(T_ds.T, y_s), trans=1)
             y_s /= np.sqrt(np.sum(np.abs(y_s)**2))
             v_s = np.dot(T_s.T, y_s)
         else:
