@@ -71,9 +71,6 @@ class ImpedanceMatrixLA(object):
         # TODO: return LookupArray?
         return self.der['Z']
 
-    def frequency_derivative_P(self):
-        return self.md['s']*self.der['Z'] + self.matrices['Z']
-
     def clear_cached(self):
         "Clear any cached data"
         if hasattr(self, "lu_factored"):
@@ -175,11 +172,6 @@ class EfieImpedanceMatrixLA(ImpedanceMatrixLA):
                 self.md['s']*self.der['L'] -
                 self.matrices['S']/self.md['s']**2 +
                 self.der['S']/self.md['s'])
-
-    def frequency_derivative_P(self):
-        return (2*self.md['s']*self.matrices['L'] +
-                self.md['s']**2*self.der['L'] +
-                self.der['S'])
 
 
 class CfieImpedanceMatrixLA(ImpedanceMatrixLA):
