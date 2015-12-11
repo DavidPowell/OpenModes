@@ -92,7 +92,7 @@ function openmodes_three_plot(three_container, json_geo, width, height, initial_
                 scene.add( arrowMeshes[i] );
                 
                 // find the maximum current value
-                currentMax = Math.max(currentMax, Math.sqrt(json_geo.current.real[i][0]*json_geo.current.real[i][0] + json_geo.current.real[i][1]*json_geo.current.real[i][1]));
+                currentMax = Math.max(currentMax, Math.sqrt(json_geo.current.real[i][0]*json_geo.current.real[i][0] + json_geo.current.imag[i][0]*json_geo.current.imag[i][0]));
             }
         }
         
