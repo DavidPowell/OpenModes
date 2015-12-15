@@ -147,33 +147,28 @@ class SinglePart(Part):
         yield self
 
 
-class CompositePart(Part):
-    """A composite part containing sub-parts which can be treated as a
-    whole
+class MultiPart(Part):
+    """A collection of several parts, which should generally be treated
+    separately
     """
-    def __init__(self, location=None):
-
-        Part.__init__(self, location)
-        self.initial_location = location
-        self.reset()
-        self.children = []
+    def __init__(self, location=None, children=None):
+        """Note that location is essentially meaningless in this case"""
+        super(MultiPart, self).__init__(location)
+        self.children = children or []
 
     @property
     def unique_id(self):
         """The unique_id of a composite part is just the concatenation of that
         of its child parts"""
-        tuple(part.unique_id for part in self.children)
+        return ("MultiPart",)+tuple(part.unique_id for part in self.children)
 
     def clear(self):
         "Clear all child parts from this part"
         self.children = []
 
     def add_part(self, part):
-        "Add a part to this part"
-        if part.parent_ref is not None:
-            raise ValueError("Part already has a different parent")
+        "Add a part to this part, but do not become its parent"
         self.children.append(part)
-        part.parent_ref = PicklableRef(self)
 
     def iter_single(self):
         """Iterates over all single parts which are within this part
@@ -235,3 +230,24 @@ class CompositePart(Part):
     def __contains__(self, key):
         """Check if the given part is stored within this tree of parts"""
         return self == key or any(key in part for part in self.children)
+
+
+class CompositePart(MultiPart):
+    """A composite part containing sub-parts which can be treated as a
+    whole. The sub-parts have this composite part as a parent.
+    """
+    def __init__(self, location=None):
+        super(CompositePart, self).__init__(location)
+
+    @property
+    def unique_id(self):
+        """The unique_id of a composite part is just the concatenation of that
+        of its child parts"""
+        return ("CompositePart",)+tuple(part.unique_id for part in self.children)
+
+    def add_part(self, part):
+        "Add a part to this part, and become its parent part"
+        if part.parent_ref is not None:
+            raise ValueError("Part already has a different parent")
+        self.children.append(part)
+        part.parent_ref = PicklableRef(self)

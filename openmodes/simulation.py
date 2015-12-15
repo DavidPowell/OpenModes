@@ -31,7 +31,7 @@ import numbers
 
 from openmodes.mesh import gmsh
 from openmodes.integration import DunavantRule
-from openmodes.parts import SinglePart, CompositePart
+from openmodes.parts import SinglePart, CompositePart, MultiPart
 from openmodes.basis import LoopStarBasis, BasisContainer
 from openmodes.operator import EfieOperator
 from openmodes.visualise import plot_mayavi, write_vtk, preprocess
@@ -271,10 +271,13 @@ class Simulation(Identified):
                                                              modes)
                     cache[part.unique_id] = res[part]
 
+            # Find the parent part it it already exists, otherwise create a
+            # MultiPart to hold the various parts
+            # TODO: Look harder to find an existing parent part
             if set(parts) == set(self.parts.children):
                 parent_part = self.parts
             else:
-                raise NotImplementedError
+                parent_part = MultiPart(children=parts)
         else:
             logging.info("Estimating poles of a single part")
             if previous_result is not None:
