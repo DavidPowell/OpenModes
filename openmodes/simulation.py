@@ -288,8 +288,7 @@ class Simulation(Identified):
             parent_part = parts
            
                                      
-        return Modes(parent_part, res, self.operator.unknowns, self.operator.sources,
-                     self.basis_container)
+        return Modes(parent_part, res, self.operator, self.basis_container)
 
     def refine_poles(self, estimates, rel_tol=1e-8, max_iter=40):
         """Refine the location of poles by iterative search
@@ -320,8 +319,7 @@ class Simulation(Identified):
                 refined[part] = self.operator.refine_poles(estimate, part, rel_tol, max_iter)
                 cache[part.unique_id] = refined[part]
 
-        return Modes(estimates.parent_part, refined, self.operator.unknowns,
-                     self.operator.sources, self.basis_container)
+        return Modes(estimates.parent_part, refined, self.operator, self.basis_container)
 
     def construct_models(self, mode_s, mode_j, part=None,
                          model_class=ScalarModelLeastSq):

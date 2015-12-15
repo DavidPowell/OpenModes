@@ -37,7 +37,7 @@ class Modes(object):
     """A class for holding a set of modes, enabling a matrix or vector to be
     easily projected onto them"""
 
-    def __init__(self, parent_part, modes_of_parts, unknowns, sources,
+    def __init__(self, parent_part, modes_of_parts, operator,
                  orig_container, macro_container=None):
         """
         parent_part: Part
@@ -58,8 +58,7 @@ class Modes(object):
             there is an existing container which should be re-used.
         """
         self.parent_part = parent_part
-        self.unknowns = unknowns
-        self.sources = sources
+        self.operator = operator
         self.orig_container = orig_container
         self.modes_of_parts = modes_of_parts
 
@@ -85,7 +84,7 @@ class Modes(object):
     def vr(self):
         "The right eigenvectors"
 
-        res = LookupArray((self.unknowns, (self.parent_part, self.orig_container),
+        res = LookupArray((self.operator.unknowns, (self.parent_part, self.orig_container),
                           ('modes',), (self.parent_part, self.macro_container)),
                          dtype=np.complex128)
         res[:] = 0.0
@@ -98,7 +97,7 @@ class Modes(object):
     def vl(self):
         "The left eigenvectors"
         res = LookupArray((('modes',), (self.parent_part, self.macro_container),
-                          self.sources, (self.parent_part, self.orig_container)),
+                          self.operator.sources, (self.parent_part, self.orig_container)),
                          dtype=np.complex128)
         res[:] = 0.0
 
@@ -113,7 +112,7 @@ class Modes(object):
         # TODO: implement for an intermediate level sub-part for which modes
         # were not calculated directly, only of its children.
         sub_modes = {part: self.modes_of_parts[part]}
-        return Modes(part, sub_modes, self.unknowns, self.sources,
+        return Modes(part, sub_modes, self.operator,
                      self.orig_container, self.macro_container)
 
     def select(self, criteria):
@@ -127,8 +126,7 @@ class Modes(object):
             new[part]['vr'] = original['vr'][:, criteria]
             new[part]['vl'] = original['vl'][criteria, :]
 
-        return Modes(self.parent_part, new, self.unknowns, self.sources,
-                     self.orig_container)
+        return Modes(self.parent_part, new, self.operator, self.orig_container)
 
     def add_conjugates(self):
         """Create a new set of modes including the conjugate poles, with the
@@ -154,8 +152,7 @@ class Modes(object):
                                          original['vl'][complex_poles, :],
                                          original['vl'][complex_poles, :].conj()))
 
-        return Modes(self.parent_part, new, self.unknowns, self.sources,
-                     self.orig_container)
+        return Modes(self.parent_part, new, self.operator, self.orig_container)
 
 
 def match_degenerate_modes(modes, threshold=1e-2):
