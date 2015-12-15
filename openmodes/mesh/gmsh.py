@@ -28,6 +28,7 @@ from __future__ import print_function
 
 import subprocess
 import os.path as osp
+import os
 import struct
 import numpy as np
 from collections import defaultdict
@@ -38,6 +39,11 @@ from openmodes.helpers import MeshError
 
 # the minimum version of gmsh required
 MIN_VERSION = (2, 8, 4)
+
+try:
+    gmsh_path = os.environ['GMSH_PATH']
+except KeyError:
+    gmsh_path = 'gmsh'
 
 
 def mesh_geometry(filename, dirname, mesh_tol=None, binary=True,
@@ -78,7 +84,7 @@ def mesh_geometry(filename, dirname, mesh_tol=None, binary=True,
     meshname = osp.join(dirname, osp.splitext(osp.basename(filename))[0]
                         + ".msh")
 
-    call_options = ['gmsh', filename, '-2', '-o', meshname,
+    call_options = [gmsh_path, filename, '-2', '-o', meshname,
                     '-string', 'Mesh.Algorithm=1;']
 
     # override geometric parameters on the command-line
@@ -309,7 +315,7 @@ def read_mesh(filename, returned_elements=("edges", "triangles")):
 
 def check_installed():
     "Check if a supported version of gmsh is installed"
-    call_options = ['gmsh', '--version']
+    call_options = [gmsh_path, '--version']
 
     try:
         proc = subprocess.Popen(call_options, stderr=subprocess.PIPE,
