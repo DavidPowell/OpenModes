@@ -23,7 +23,6 @@ quantities for both EFIE and MFIE may be calculated simultaneously"""
 import logging
 import numpy as np
 from openmodes.core import face_integrals_yla_oijala
-from openmodes.taylor_duffy import taylor_duffy, OPERATOR_EFIE, OPERATOR_MFIE
 from openmodes.basis import LinearTriangleBasis
 
 
@@ -179,12 +178,10 @@ def singular_impedance_rwg(basis, operator, tangential_form, num_terms,
     if operator == "EFIE" and tangential_form:
         singular_terms = MultiSparse([(np.float64, (num_terms,)),        # phi
                                       (np.float64, (num_terms, 3, 3))])  # A
-        which_operator = OPERATOR_EFIE
     elif operator == "EFIE":
         raise NotImplementedError
     elif operator == "MFIE":
         singular_terms = MultiSparse([(np.float64, (num_terms, 3, 3))])  # A
-        which_operator = OPERATOR_MFIE
     else:
         raise ValueError("Don't know how to handle singularities for operator "
                          "%s with tangential_form=%s" %
