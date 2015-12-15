@@ -321,36 +321,6 @@ class Simulation(Identified):
 
         return Modes(estimates.parent_part, refined, self.operator, self.basis_container)
 
-    def construct_models(self, mode_s, mode_j, part=None,
-                         model_class=ScalarModelLeastSq):
-        """Construct a scalar models from the modes of a part
-
-        Parameters
-        ----------
-        mode_s : ndarray
-            The mode frequency of the whole system
-        mode_j : list of ndarray
-            The currents for the modes of the whole system
-        part : Part, optional
-            The part for which to construct the model. If unspecified, a scalar
-            model will be created for the full system of all parts
-        model_class : class, optional
-            The class describing the type of model to construct
-
-        Returns
-        -------
-        scalar_models : list
-            The scalar models
-        """
-
-        part = part or self.parts
-
-        scalar_models = []
-
-        for s_n, j_n in zip(mode_s, mode_j.T):
-            scalar_models.append(model_class(part, s_n, j_n, self.operator))
-        return scalar_models
-
     def plot_3d(self, solution=None, part=None, output_format='webgl',
                 filename=None, compress_scalars=None,
                 compress_separately=False, **kwargs):
