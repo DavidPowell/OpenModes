@@ -35,8 +35,8 @@ except ImportError:
 else:
     numpy_installed = True
 
-if not numpy_installed or (parse_version(numpy.__version__) < parse_version('1.6.2')):
-    raise ValueError("Numpy 1.6.2 or greater required")
+if not numpy_installed or (parse_version(numpy.__version__) < parse_version('1.10.0')):
+    raise ValueError("Numpy 1.10.0 or greater required")
 
 from numpy.distutils.core import Extension, setup
 
