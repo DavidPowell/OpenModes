@@ -23,7 +23,6 @@ Routines for solving linear and nonlinear eigenvalue problems
 import scipy.linalg as la
 import numpy as np
 import logging
-from openmodes.integration import GaussLegendreRule
 from openmodes.array import loop_star_indices
 
 
@@ -58,11 +57,15 @@ def eig_linearised(Z, modes):
     L = Z.matrices['L']
     S = Z.matrices['S']
 
-    if True:
+    try:
         # Try to find the loop and star parts of the matrix (all relevant
         # matrices and vectors follow the same decomposition)
         loop, star = loop_star_indices(L)
+    except AttributeError:
+        loop = [[], []]
+        star = [slice(None), slice(None)]
 
+    if len(loop[0]) > 0 and len(loop[1]) > 0:
         L_conv = la.solve(L[loop[0], loop[1]],
                           L[loop[0], star[1]])
         L_red = (L[star[0], star[1]] -
