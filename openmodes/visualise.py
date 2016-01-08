@@ -208,12 +208,39 @@ def plot_mayavi(parts, scalar_function=None, vector_function=None,
         mlab.savefig(filename)
         mlab.options.offscreen = offscreen
 
+scalar_names = {'J': 'rho_e', 'M': 'rho_m'}
 
-def write_vtk(parts, scalar_function=None, vector_function=None,
-              vector_points=None, scalar_name="scalar", vector_name="vector",
-              filename=None, autoscale_vectors=False,
-              compress_separately=False):
-    """Write the mesh and solution data to a VTK file
+# Reduce precision for some types
+vtk_type_map = {np.int32: 'Int32', np.float32: 'Float32',
+                np.float64: 'Float32'}
+vtk_type_map = {np.dtype(key): val for key, val in vtk_type_map.items()}
+
+
+def vtk_da(doc, ar, name=None, type_name=None):
+    "Create a VTK DataArray in XML"
+
+    da = doc.createElementNS("VTK", "DataArray")
+
+    if len(ar.shape) > 1:
+        da.setAttribute("NumberOfComponents", str(np.product(ar.shape[1:])))
+
+    if type_name is None:
+        type_name = vtk_type_map[ar.dtype]
+    da.setAttribute("type", type_name)
+    da.setAttribute("format", "ascii")
+    
+    if name is not None:
+        da.setAttribute("Name", name)
+
+    text = doc.createTextNode(" ".join(str(x) for x in ar.flat))
+    da.appendChild(text)
+
+    return da
+
+
+def write_vtk(parts, filename, solution=None, basis_container=None):
+    """Write the mesh and solution data to a VTK file, by directly generating
+    the XML tree
 
     If the current vector is given, then currents and charges will be
     written to the VTK file. Otherwise only the mesh is written
@@ -221,68 +248,82 @@ def write_vtk(parts, scalar_function=None, vector_function=None,
     Parameters
     ----------
     filename : string
-        File to save to. If it has the extension `.vtk`, then the file will be
-        written in the simple legacy format. Otherwise the modern XML format
-        will be used, which should be correctly indicated by using the tile
-        extension `.vtp`.
-    parts : list
-        The list of all SingleParts
-    scalar_function : list, optional
-        The scalar function to plot for each part
-    vector_function : list, optional
-        The vector function to plot for each part
-    scalar_name : string, optional
-        The name of the scalar function
-    vector_name : string, optional
-        The name of the vector function
-    compress_scalar : float, optional
-        If specified, this compression factor will be applied to reduce the
-        dynamic range of the scalar data
-    autoscale_vectors : boolean, optional
-        Automatically scale the vectors so that the maximum value is 1.0
-    compress_separately : boolean, optional
-        Apply the compression and scaling separately to each part, which will
-        hide the differences between parts
-
-    Requires that tvtk is installed
+        The modern XML PolyData format will be used, which should be correctly
+        indicated by using the file extension `.vtp`.
+    part : Part
+        The parent part
+    solution: LookupArray, optional
+        The solution to plot over the surface
+    basis_container: BasisContainer, optional
+        The basis container, required if a solution is given
     """
 
-    try:
-        from tvtk.api import tvtk, write_data
-    except ImportError:
-        raise ImportError("Please ensure that tvtk is correctly installed")
+    import xml.dom.minidom
+    import sys
 
-    meshes = [part.mesh for part in parts]
-    nodes = [part.nodes for part in parts]
-    mesh = combine_mesh(meshes, nodes)
+    doc = xml.dom.minidom.Document()
+    root = doc.createElementNS("VTK", "VTKFile")
 
-    polygons = mesh.polygons.tolist()
-    struct = tvtk.PolyData(points=mesh.nodes, polys=polygons)
+    root.setAttribute("type", "PolyData")
+    root.setAttribute("version", "0.1")
 
-    if scalar_function is not None:
-        scalar_function = np.hstack(scalar_function)
+    if sys.byteorder == 'little':
+        root.setAttribute("byte_order", "LittleEndian")
+    else:
+        root.setAttribute("byte_order", "BigEndian")
 
-        scalar_real = tvtk.FloatArray(name=scalar_name+"_real")
-        scalar_real.from_array(scalar_function.real)
-        struct.cell_data.add_array(scalar_real)
+    doc.appendChild(root)
 
-        scalar_imag = tvtk.FloatArray(name=scalar_name+"_imag")
-        scalar_imag.from_array(scalar_function.imag)
-        struct.cell_data.add_array(scalar_imag)
+    polydata = doc.createElementNS("VTK", "PolyData")
+    root.appendChild(polydata)
 
-    if vector_function is not None:
-        if autoscale_vectors and compress_separately:
-            vector_function = [v/np.average(np.abs(v)) for v in vector_function]
-        vector_function = np.vstack(vector_function)
-        if autoscale_vectors and not compress_separately:
-            vector_function = vector_function/np.average(np.abs(vector_function))
+    for part in parts.iter_single():
+        mesh = part.mesh
 
-        vector_real = tvtk.FloatArray(name=vector_name+"_real")
-        vector_real.from_array(vector_function.real)
-        struct.cell_data.add_array(vector_real)
+        piece = doc.createElementNS("VTK", "Piece")
+        piece.setAttribute("NumberOfPoints", str(len(part.nodes)))
+        piece.setAttribute("NumberOfPolys", str(len(mesh.polygons)))
+        polydata.appendChild(piece)
 
-        vector_imag = tvtk.FloatArray(name=vector_name+"_imag")
-        vector_imag.from_array(vector_function.imag)
-        struct.cell_data.add_array(vector_imag)
+        # Add the points
+        points = doc.createElementNS("VTK", "Points")
+        piece.appendChild(points)
 
-    write_data(struct, filename)
+        # DataArray containing point coordinates
+        points.appendChild(vtk_da(doc, part.nodes))
+
+        # Now define the polygons
+        polys = doc.createElementNS("VTK", "Polys")
+        piece.appendChild(polys)
+        polys.appendChild(vtk_da(doc, mesh.polygons.flatten(), "connectivity"))
+        polys.appendChild(vtk_da(doc, np.cumsum([len(y) for y in mesh.polygons]), "offsets"))
+
+        if solution is None:
+            continue
+
+        # The current and charge distributions, are currently defined at a
+        # single point per cell, hence they are CellData
+        basis = basis_container[part]
+
+        celldata = doc.createElementNS("VTK", "CellData")
+        # Iterate over multiple quantities (e.g. electric and magnetic current)
+        for sol in solution.lookup[0]:
+            # Get the current at the centre of the triangle, and its divergence
+            centre, current, charge = basis.interpolate_function(solution[sol, part],
+                                                                 return_scalar=True,
+                                                                 nodes=part.nodes)
+            try:
+                scalar_name = scalar_names[sol]
+            except KeyError:
+                scalar_name = "scalar_"+sol
+
+            # The real and imaginary parts of the charge and current
+            celldata.appendChild(vtk_da(doc, charge.real, scalar_name+"_real"))
+            celldata.appendChild(vtk_da(doc, charge.imag, scalar_name+"_imag"))
+            celldata.appendChild(vtk_da(doc, current.real, sol+"_real"))
+            celldata.appendChild(vtk_da(doc, current.imag, sol+"_imag"))
+
+        piece.appendChild(celldata)
+
+    with open(filename, "w") as outfile:
+        doc.writexml(outfile, newl='\n', addindent='  ')

@@ -376,7 +376,16 @@ class Simulation(Identified):
             between parts.
         """
 
-        part = part or self.parts
+        if part is None:
+            if solution is None:
+                part or self.parts
+            else:
+                # Use the parent part of the provided solution
+                part = solution.lookup[1][2]
+
+        if output_format == 'vtk':
+            write_vtk(part, filename, solution, self.basis_container)
+            return
 
         if solution is None:
             # don't plot a solution, just plot a part
@@ -391,12 +400,6 @@ class Simulation(Identified):
         if output_format == 'mayavi':
             plot_mayavi(parts_list, charges, currents, vector_points=centres,
                         compress_scalars=compress_scalars, filename=filename)
-
-        elif output_format == 'vtk':
-            write_vtk(parts_list, charges, currents, filename=filename,
-                      autoscale_vectors=True,
-                      compress_separately=compress_separately,
-                      scalar_name="charge", vector_name="current")
 
         elif output_format == 'webgl':
             from openmodes.ipython import plot_3d
