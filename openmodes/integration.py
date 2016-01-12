@@ -92,6 +92,10 @@ class GaussLegendreRule(Identified):
     def __len__(self):
         return len(self.x)
 
+    def __repr__(self):
+        return "%s.%s(%d)" % (type(self).__module__, type(self).__name__,
+                              self.order)
+
     def __iter__(self):
         "Iterate over all integration points and weights"
         for x, w in zip(self.x, self.weights):
@@ -185,7 +189,7 @@ def sphere_fibonacci(num_points, cartesian=False):
 
 class Contour(object):
     """A contour for line integration in the complex plane"""
-    
+
     def points_inside(self, points):
         "Check each point to see whether it lies within the contour"
         vertices = np.array([x for x, w in self])
@@ -197,24 +201,25 @@ class Contour(object):
 
         return inside
 
+
 class RectangularContour(Contour):
     """A rectangular contour in the complex frequency plane"""
     def __init__(self, s_min, s_max, integration_rule=GaussLegendreRule(20)):
-        """        
+        """
         Parameters
         ----------
         s_min, s_max: complex
-            The corners of the rectangule
+            The corners of the rectangle
         """
         min_real, max_real = sorted((s_min.real, s_max.real))
         min_imag, max_imag = sorted((s_min.imag, s_max.imag))
-    
+
         self.integration_rule = integration_rule
         self.coordinates = (min_real+1j*min_imag, max_real+1j*min_imag,
                             max_real+1j*max_imag, min_real+1j*max_imag)
 
     def __iter__(self):
-        """    
+        """
         Returns
         -------
         gen: generator
@@ -225,7 +230,7 @@ class RectangularContour(Contour):
         for line_count in range(4):
             s_start = self.coordinates[line_count]
             s_end = self.coordinates[(line_count+1) % 4]
-    
+
             ds = s_end-s_start
             for x, w in self.integration_rule:
                 s = s_start + ds*x
@@ -235,13 +240,14 @@ class RectangularContour(Contour):
 class EllipticalContour(Contour):
     """A quarter ellipse contour in the complex frequency plane"""
     def __init__(self, radius_real, radius_imag, offset_real, offset_imag,
-                     integration_rule=GaussLegendreRule(20)):
+                 integration_rule=GaussLegendreRule(20)):
         """
         Parameters
         ----------
         radius_real, radius_imag: real
-            The radii of the real and imaginary parts. The signs of these determine
-            which quadrant of the complex plane the quarter ellipse will be in
+            The radii of the real and imaginary parts. The signs of these
+            determine which quadrant of the complex plane the quarter ellipse
+            will be in
         offset_real, offset_imag: real
             The offsets of the straight line parts from the real and imaginary
             axes. Must be smaller in magnitude than the corresponding radii.
@@ -252,7 +258,7 @@ class EllipticalContour(Contour):
         self.offset_imag = offset_imag
         self.offset_real = offset_real
         self.integration_rule = integration_rule
-    
+
     def __iter__(self):
         """
         Returns
@@ -265,14 +271,14 @@ class EllipticalContour(Contour):
         radius_imag = self.radius_imag
         offset_imag = self.offset_imag
         offset_real = self.offset_real
-    
+
         # correct for the direction of rotation changing
         sign = -np.sign(radius_real/radius_imag)
-    
+
         # the points of maximum real and imag (different from radius due to offsets)
         max_real = radius_real*np.sqrt(1.0 - (offset_imag/radius_imag)**2)
         max_imag = radius_imag*np.sqrt(1.0 - (offset_real/radius_real)**2)
-    
+
         # the line parallel to the real axis
         s_start = max_real+1j*offset_imag
         s_end = offset_real+1j*offset_imag
@@ -280,7 +286,7 @@ class EllipticalContour(Contour):
         for x, w in self.integration_rule:
             s = s_start + ds*x
             yield(s, w*ds*sign)
-    
+
         # the line parallel to the imaginary axis
         s_start = offset_real+1j*offset_imag
         s_end = offset_real+1j*max_imag
@@ -288,16 +294,14 @@ class EllipticalContour(Contour):
         for x, w in self.integration_rule:
             s = s_start + ds*x
             yield(s, w*ds*sign)
-    
-        t_start = np.arcsin(offset_real/radius_real)   
+
+        t_start = np.arcsin(offset_real/radius_real)
         t_end = np.arccos(offset_imag/radius_imag)
-        
+
         dt = t_end-t_start
-    
+
         for x, w in self.integration_rule:
             t = t_start + dt*x
             s = radius_real*np.sin(t) + 1j*radius_imag*np.cos(t)
             ds_dt = radius_real*np.cos(t) - 1j*radius_imag*np.sin(t)
             yield(s, w*ds_dt*dt*sign)
-    
-            
