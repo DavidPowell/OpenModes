@@ -211,8 +211,8 @@ def plot_mayavi(parts, scalar_function=None, vector_function=None,
 scalar_names = {'J': 'rho_e', 'M': 'rho_m'}
 
 # Reduce precision for some types
-vtk_type_map = {np.int32: 'Int32', np.float32: 'Float32',
-                np.float64: 'Float32'}
+vtk_type_map = {np.int32: 'Int32', np.int64: 'Int32',
+                np.float32: 'Float32', np.float64: 'Float32'}
 vtk_type_map = {np.dtype(key): val for key, val in vtk_type_map.items()}
 
 

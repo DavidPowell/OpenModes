@@ -359,7 +359,9 @@ class Simulation(Identified):
         ----------
         solution : array, optional
             The solution to plot, typically a vector of current. If not
-            specified, then only the geometry will be plotted
+            specified, then only the geometry will be plotted. Note that for
+            all output formats except VTK, the particular current component
+            ("J" or "M") must be explicitly selected
         part : Part, optional
             If specified, then only a particular part will be plotted
         output_format : string, optional
@@ -381,7 +383,10 @@ class Simulation(Identified):
                 part or self.parts
             else:
                 # Use the parent part of the provided solution
-                part = solution.lookup[1][2]
+                try:
+                    part = solution.lookup[1][2]
+                except IndexError:
+                    part = solution.lookup[0][2]
 
         if output_format == 'vtk':
             write_vtk(part, filename, solution, self.basis_container)
