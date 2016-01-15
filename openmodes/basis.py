@@ -530,7 +530,8 @@ class LoopStarBasis(LinearTriangleBasis):
                 needed_nodes = node_sets[loop_number]
                 loop_triangles = OrderedSet()
                 for node_number in needed_nodes:
-                    loop_triangles.update(triangles_sharing_nodes[node_number])
+                    for t in triangles_sharing_nodes[node_number]:
+                        loop_triangles.add(t)
 
                 this_loop = construct_loop(list(loop_triangles), mesh.polygons)
                 loop_tri_p.append(this_loop[0])
