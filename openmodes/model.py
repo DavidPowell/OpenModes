@@ -45,10 +45,10 @@ class ModelMutualWeight(object):
 
     def impedance_mutual(self, s, part_o, part_s):
         "Impedance between two parts, by weighting matrix"
-        vl = self.modes.vl[:, :, :, part_o]
-        vr = self.modes.vr[:, part_s, :, :]
+        vl = self.modes.vl[:, part_o, :, part_o]
+        vr = self.modes.vr[:, part_s, :, part_s]
         Z = self.modes.operator.impedance(s, part_o, part_s)
-        return Z.weight(vr, vl).val()
+        return Z.weight(vr, vl).val().simple_view()
 
     def impedance(self, s):
         """Impedance matrix
