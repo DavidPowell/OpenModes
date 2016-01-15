@@ -13,6 +13,7 @@ import os
 import os.path as osp
 import dill as pickle
 import tempfile
+import numpy as np
 
 
 def test_pickling_references():
@@ -72,5 +73,34 @@ def test_pickling_references():
     print("loaded parent references", loaded_parents_dict)
     os.remove(file_name)
 
+
+def test_empty_array():
+    "Confirm that an empty array has the expected dimensions and lookup"
+    sim = openmodes.Simulation()
+    name = "SRR"
+    mesh_tol = 1e-3
+
+    sim = openmodes.Simulation(name=name)
+    mesh = sim.load_mesh(osp.join(openmodes.geometry_dir, name+'.geo'),
+                         mesh_tol=mesh_tol)
+    part1 = sim.place_part(mesh)
+    part2 = sim.place_part(mesh, location=[0, 0, 5e-3])
+
+    vec = sim.empty_array()
+
+    s = 2j*np.pi*1e9
+    Z = sim.impedance(s)
+    pw = PlaneWaveSource([0, 1, 0], [0, 0, 1])
+    V = sim.source_vector(pw, 0)
+    I = Z.solve(V)
+
+    assert(vec.shape == I.shape)
+    assert(vec.lookup == I.lookup)
+
+    vec2 = sim.empty_array(part2)
+    assert(vec2.shape == I[:, part2].shape)
+    assert(vec2.lookup == I[:, part2].lookup)
+
 if __name__ == "__main__":
     test_pickling_references()
+    test_empty_array()

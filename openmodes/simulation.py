@@ -41,6 +41,7 @@ from openmodes.material import FreeSpace, PecMaterial
 from openmodes.modes import Modes
 from openmodes.multipole import spherical_multipoles
 from openmodes.constants import c
+from openmodes.array import LookupArray
 
 
 class Simulation(Identified):
@@ -319,6 +320,24 @@ class Simulation(Identified):
                 cache[part.unique_id] = refined[part]
 
         return Modes(estimates.parent_part, refined, self.operator, self.basis_container)
+
+    def empty_array(self, part=None, extra_dims=()):
+        """
+        Create an empty array of the appropriate size to contain solutions for
+        all of the parts, or a single part and its sub-parts
+
+        Parameters
+        ----------
+        part : Part, optional
+            The part for which to create the vector. If not specified, all
+            parts in the full simulation
+        extra_dims : tuple, optional
+            This can give the sizes of additional dimensions
+        """
+
+        part = part or self.parts
+
+        return LookupArray((self.operator.unknowns, (part, self.basis_container))+extra_dims, dtype=np.complex128)
 
     def plot_3d(self, solution=None, part=None, output_format='webgl',
                 filename=None, compress_scalars=None,
