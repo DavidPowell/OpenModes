@@ -129,12 +129,16 @@ def plot_3d(parts_list, charges, currents, centres, width=700, height=500,
     if currents is not None:
         currents = np.vstack(currents)
         lengths_real = np.sqrt(np.sum(currents.real**2, axis=1))
-        lengths_imag = np.sqrt(np.sum(currents.imag**2, axis=1))
         currents.real /= lengths_real[:, None]
-        currents.imag /= lengths_imag[:, None]
-
         current_real = np.hstack((lengths_real[:, None], currents.real)).tolist()
-        current_imag = np.hstack((lengths_imag[:, None], currents.imag)).tolist()
+        
+        if np.any(np.iscomplex(currents)):
+            lengths_imag = np.sqrt(np.sum(currents.imag**2, axis=1))
+            currents.imag /= lengths_imag[:, None]
+            current_imag = np.hstack((lengths_imag[:, None], currents.imag)).tolist()
+        else:
+            current_imag = np.zeros((currents.shape[0], 4)).tolist()
+
         geometry_tree['current'] = {'real': current_real, 'imag': current_imag}
         geometry_tree['centres'] = (np.vstack(centres)*mesh_scale).tolist()
 
