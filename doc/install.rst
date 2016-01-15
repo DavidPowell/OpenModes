@@ -14,7 +14,7 @@ Quick Install Instructions
    You can install Anaconda without administrator access, and
    it is available for Windows, Linux and Mac OSX.
    
-   Python 3.5 is recommended, and Python 2.7 will continue to be supported.
+   *Python 3.5 is recommended*, and Python 2.7 will continue to be supported.
    Python versions 3.3 and 3.4 should work, but these python versions do not
    have pre-compiled windows binaries.
 
@@ -57,27 +57,29 @@ The following software packages are the absolute minimum to run OpenModes:
 - scipy
 - `gmsh`_ (2.8.4 or later)
 - matplotlib (or some other package to plot the results)
+- jinja2 (for 3D plots in the notebook)
+- six (used to write code suited to both python 2/3)
 
 Strongly recommended packages
 
-- IPython (the notebook is used by many of the examples, and it allows inline 3D plots)
-- jinja2 (for 3D plots in the notebook)
-- `Mayavi`_ (to export 3D plots to vtk file format, or to directly view the results)
-- ViSit or `ParaView`_ (3D plotting software to view vtk files)
+- Jupyter notebook (formerly IPython) is used for the examples, and it allows inline 3D plots
+- dill (an alternative to pickle, required for saving many of the objects used by OpenModes)
 
 Other packages which may be useful
 
 - spyder (a GUI for editing python)
+- `Mayavi`_ (Python 2 only, can produce 3D plots in a GUI window)
+- ViSit or `ParaView`_ (3D plotting software to view vtk files)
 
 OpenModes contains some core routines which are optimised using fortran.
 Therefore, on platforms where a binary package of OpenModes is not provided,
 a fortran compiler is required.
 
 For windows users, there are several choices of scientific python distribution
-which may be suitable
+which allow easy installation of most of the required packages
 
+- `Anaconda`_ (recommended)
 - WinPython
-- `Anaconda`_
 - Enthought Python Distribution
 - Enthought Canopy
 
@@ -107,7 +109,7 @@ If you don't have root access to your Linux machine, then use the command
 Alternatively, the `Anaconda`_ distribution can be used just as under Windows
 
 Note that due to a bug in numpy, compilation may fail under Python 3.x. This is fixed
-in numpy's master repository, but your Linux distribution probably has an older release of numpy.
+in numpy 1.10.0, but your Linux distribution may have an older release of numpy.
 The fix is relatively simple to apply to your own local copy of numpy, see the 
 `github pull request <https://github.com/numpy/numpy/pull/5638>`_.
 
@@ -156,7 +158,6 @@ Building the Documentation
 
 In order to build the documentation, the following packages are required
 
-- numpydoc
 - Sphinx
 - pandoc
 
