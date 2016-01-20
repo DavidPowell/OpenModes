@@ -116,7 +116,15 @@ class Modes(object):
                      self.orig_container, self.macro_container)
 
     def select(self, criteria):
-        """Select a sub-set of modes based on the given criteria"""
+        """Select a sub-set of modes based on the given criteria
+
+        Parameters
+        ----------
+        criteria: list, bool, slice etc.
+            Typically this will be a list of desired mode numbers
+            It could also be any other value which can be used to index one
+            dimension of a numpy array.
+        """
 
         # for now, criteria is just a list of mode numbers
         new = {}
