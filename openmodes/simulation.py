@@ -369,7 +369,7 @@ class Simulation(Identified):
 
         if part is None:
             if solution is None:
-                part or self.parts
+                part = part or self.parts
             else:
                 # Use the parent part of the provided solution
                 try:
