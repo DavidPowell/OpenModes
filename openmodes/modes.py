@@ -120,19 +120,24 @@ class Modes(object):
 
         Parameters
         ----------
-        criteria: list, bool, slice etc.
+        criteria: list, of dict(Part, list)
             Typically this will be a list of desired mode numbers
-            It could also be any other value which can be used to index one
-            dimension of a numpy array.
+            If there are multiple parts, then this can instead be a dictionary
+            with different criteria per Part.
         """
 
         # for now, criteria is just a list of mode numbers
         new = {}
         for part, original in self.modes_of_parts.items():
+            try:
+                part_criteria = criteria[part]
+            except KeyError:
+                part_criteria = criteria
+
             new[part] = {}
-            new[part]['s'] = original['s'][criteria]
-            new[part]['vr'] = original['vr'][:, criteria]
-            new[part]['vl'] = original['vl'][criteria, :]
+            new[part]['s'] = original['s'][part_criteria]
+            new[part]['vr'] = original['vr'][:, part_criteria]
+            new[part]['vl'] = original['vl'][part_criteria, :]
 
         return Modes(self.parent_part, new, self.operator, self.orig_container)
 
