@@ -176,7 +176,7 @@ def equivalence(relations):
         classes_reverse[item_class].add(item)
 
     # the class names are arbitrary, so just return the list of sets
-    return classes_reverse.values()
+    return list(classes_reverse.values())
 
 
 def wrap_if_constant(func):
