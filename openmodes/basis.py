@@ -517,16 +517,22 @@ class LoopStarBasis(LinearTriangleBasis):
                 loop_node_p.append(this_loop[2])
                 loop_node_m.append(this_loop[3])
 
+        node_sets = equivalence(unshared_edges)
+        boundaries = len(node_sets)
+        euler = len(mesh.nodes) - len(edges) + len(mesh.polygons)
+        genus = 1 - 0.5*(boundaries+euler)
+        logging.info("Mesh has {} Boundaries, {} Euler number, {} Genus"
+                     .format(boundaries, euler, genus))
         if num_loops > len(inner_nodes):
             # The structure has internal holes, so additional loops are needed
-            node_sets = equivalence(unshared_edges)
+            needed_loops = num_loops-len(inner_nodes)
 
-            if len(node_sets) < num_loops-len(inner_nodes):
+            if boundaries < needed_loops:
                 raise MeshError("Unable to find a full set of loops")
 
             # For each additional loop needed, find the set of triangles which
             # loop around one of the edges
-            for loop_number in range(num_loops-len(inner_nodes)):
+            for loop_number in range(needed_loops):
                 needed_nodes = node_sets[loop_number]
                 loop_triangles = OrderedSet()
                 for node_number in needed_nodes:
