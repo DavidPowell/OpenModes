@@ -236,6 +236,9 @@ class RectangularContour(Contour):
                 s = s_start + ds*x
                 yield(s, w*ds)
 
+    def __len__(self):
+        return 4*len(self.integration_rule)
+
 
 class ExternalModeContour(Contour):
     """A modified rectangular contour which finds external modes of objects,
@@ -303,7 +306,6 @@ class ExternalModeContour(Contour):
         # the circular arc avoiding the origin
         t_start = np.pi*0.5+self.avoid_angle
         t_end = self.avoid_angle
-
         dt = t_end-t_start
 
         for x, w in self.integration_rule:
@@ -311,6 +313,9 @@ class ExternalModeContour(Contour):
             s = self.avoid_origin*(-np.sin(t) + 1j*np.cos(t))
             ds_dt = self.avoid_origin*(-np.cos(t) - 1j*np.sin(t))
             yield(s, w*ds_dt*dt)
+
+    def __len__(self):
+        return 5*len(self.integration_rule)
 
 
 class EllipticalContour(Contour):
@@ -371,9 +376,9 @@ class EllipticalContour(Contour):
             s = s_start + ds*x
             yield(s, w*ds*sign)
 
+        # the elliptical segment
         t_start = np.arcsin(offset_real/radius_real)
         t_end = np.arccos(offset_imag/radius_imag)
-
         dt = t_end-t_start
 
         for x, w in self.integration_rule:
@@ -381,3 +386,6 @@ class EllipticalContour(Contour):
             s = radius_real*np.sin(t) + 1j*radius_imag*np.cos(t)
             ds_dt = radius_real*np.cos(t) - 1j*radius_imag*np.sin(t)
             yield(s, w*ds_dt*dt*sign)
+
+    def __len__(self):
+        return 3*len(self.integration_rule)
