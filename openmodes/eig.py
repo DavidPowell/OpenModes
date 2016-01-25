@@ -92,7 +92,8 @@ def eig_linearised(Z, modes):
     return w_freq[which_modes], vr[:, which_modes]
 
 
-def poles_cauchy(Z_func, contour, svd_threshold=1e-10, previous_result=None):
+def poles_cauchy(Z_func, contour, svd_threshold=1e-10, previous_result=None,
+                 iter_wrap=lambda x: x):
     """Estimate location and residue of the poles of a matrix function by
     Cauchy integration. Uses a technique described in:
 
@@ -132,7 +133,7 @@ def poles_cauchy(Z_func, contour, svd_threshold=1e-10, previous_result=None):
         logging.info("Performing full cauchy integration")
 
         # integrate over the entire contour
-        for s, w in contour:
+        for s, w in iter_wrap(contour):
             Z_inv = la.inv(Z_func(s)[:], overwrite_a=True)*w
             # This trick avoids having to know the size of C1 and C2 in
             # advance

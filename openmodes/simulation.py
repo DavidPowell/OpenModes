@@ -263,6 +263,8 @@ class Simulation(Identified):
         if isinstance(modes, numbers.Integral):
             modes = np.arange(modes)
 
+        iter_wrap = self.__iter_wrap("Contour Integration")
+
         if isinstance(parts, collections.Iterable):
             logging.info("Estimating poles of multiple parts")
             # a list of parts was given
@@ -283,7 +285,8 @@ class Simulation(Identified):
                                                              threshold,
                                                              previous,
                                                              cauchy_integral,
-                                                             modes)
+                                                             modes,
+                                                             iter_wrap=iter_wrap)
                     cache[part.unique_id] = res[part]
 
             # Find the parent part it it already exists, otherwise create a
@@ -299,7 +302,8 @@ class Simulation(Identified):
                 previous_result = previous_result.modes_of_parts[parts]
             res = {parts: self.operator.estimate_poles(contour, parts,
                                                 threshold, previous_result,
-                                                cauchy_integral, modes)}
+                                                cauchy_integral, modes,
+                                                iter_wrap=iter_wrap)}
             parent_part = parts
            
                                      
@@ -547,3 +551,11 @@ class Simulation(Identified):
             a_m += n_m
 
         return a_e, a_m
+
+    def __iter_wrap(self, description):
+        "Generate a wrapper iterator if using the notebook"
+        if self.notebook:
+            from .ipython import progress_iterator
+            return lambda x: progress_iterator(x, description=description)
+        else:
+            return lambda x: x
