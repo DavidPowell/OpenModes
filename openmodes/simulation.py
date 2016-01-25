@@ -169,11 +169,17 @@ class Simulation(Identified):
             frequency sweep.
         """
 
-        num_freqs = len(freqs)
-        for freq_count, freq in enumerate(freqs):
-            if freq_count % log_skip == 0 and freq_count != 0:
-                logging.info(log_label+" %d/%d" % (freq_count, num_freqs))
-            yield freq_count, 2j*np.pi*freq
+        if self.notebook:
+            from .ipython import progress_iterator
+            it = progress_iterator(freqs, description="Frequency Sweep")
+            for freq_count, freq in enumerate(it):
+                yield freq_count, 2j*np.pi*freq
+        else:
+            num_freqs = len(freqs)
+            for freq_count, freq in enumerate(freqs):
+                if freq_count % log_skip == 0 and freq_count != 0:
+                    logging.info(log_label+" %d/%d" % (freq_count, num_freqs))
+                yield freq_count, 2j*np.pi*freq
 
     def impedance(self, s, parent=None):
         """Evaluate the self and mutual impedances of all parts in the
