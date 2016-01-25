@@ -25,6 +25,7 @@ import numpy as np
 import uuid
 import json
 import matplotlib
+import logging
 
 from openmodes.mesh import combine_mesh
 from openmodes import template_env
@@ -42,7 +43,6 @@ def init_3d():
     library_javascript = StringIO()
 
     library_javascript.write("""
-    <p>Loading javascript for 3D plot in browser</p>
     <script type="text/javascript">
     /* Beginning of javascript injected by OpenModes */
     var openmodes_javascript_injected = true;
@@ -65,6 +65,7 @@ def init_3d():
                 "/* End of javascript injected by OpenModes */\n</script>\n")
 
     display(HTML(library_javascript.getvalue()))
+    logging.info("Javascript injected for 3D interactive WebGL plots")
 
 
 def plot_3d(parts_list, charges, currents, centres, width=700, height=500,

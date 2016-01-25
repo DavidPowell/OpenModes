@@ -55,7 +55,8 @@ class Simulation(Identified):
                  operator_class=EfieOperator,
                  name=None,
                  basis_args=dict(),
-                 background_material=FreeSpace):
+                 background_material=FreeSpace,
+                 notebook=False):
         """
         Parameters
         ----------
@@ -74,6 +75,9 @@ class Simulation(Identified):
             The material containing all simulation objects. Please note that
             background materials other than free space have not been fully
             tested yet, so YMMV.
+        notebook: boolean, optional
+            If True, then produce nicer output, which requires that the
+            simulation is running within the Jupyter (IPython) notebook
         """
 
         super(Simulation, self).__init__()
@@ -91,6 +95,11 @@ class Simulation(Identified):
         self.operator = operator_class(integration_rule=integration_rule,
                                        basis_container=self.basis_container,
                                        background_material=background_material)
+
+        self.notebook = notebook
+        if notebook:
+            from openmodes.ipython import init_3d
+            init_3d()
 
         logging.info('Creating simulation %s\nQuadrature order %d\n'
                      'Basis function class %s'
