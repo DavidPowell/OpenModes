@@ -237,6 +237,82 @@ class RectangularContour(Contour):
                 yield(s, w*ds)
 
 
+class ExternalModeContour(Contour):
+    """A modified rectangular contour which finds external modes of objects,
+    including on the negative real axis, but avoids internal modes on the
+    imaginary axis, and takes a detour about the origin"""
+    def __init__(self, corner, integration_rule=GaussLegendreRule(20),
+                 overlap_axes=None, avoid_origin=None):
+        """
+        Parameters
+        ----------
+        corner: complex
+            The furthest corner of the complex plane. Must have positive
+            imaginary and negative real parts
+        overlap_axes: real, optional
+            The amount by which to overlap the real axis, and to avoid the
+            imaginary axis
+        avoid_origin: real, optional
+            The radius by which to skirt around the origin
+        """
+        if corner.real >= 0.0 or corner.imag <= 0.0:
+            raise ValueError("Corner frequency must have negative real "
+                             "and positive imaginary parts")
+
+        corner_dimension = max(abs(corner.real), abs(corner.imag))
+
+        if overlap_axes is None:
+            overlap_axes = 1e-2*corner_dimension
+
+        if avoid_origin is None:
+            avoid_origin = 3e-2*corner_dimension
+
+        if avoid_origin < overlap_axes or overlap_axes < 0:
+            raise ValueError("Invalid contour shape")
+
+        cos_avoid = np.sqrt(avoid_origin**2-overlap_axes**2)
+
+        self.integration_rule = integration_rule
+        self.coordinates = (-overlap_axes+1j*cos_avoid,
+                            -overlap_axes+1j*corner.imag,
+                            corner,
+                            corner.real-1j*overlap_axes,
+                            -cos_avoid-1j*overlap_axes
+                            )
+        self.avoid_angle = np.arcsin(overlap_axes/avoid_origin)
+        self.avoid_origin = avoid_origin
+
+    def __iter__(self):
+        """
+        Returns
+        -------
+        gen: generator
+            A generator which yields (s, w), where s is the complex frequency
+            and w is the integration weight
+        """
+        # integrate over all 4 straight lines
+        for line_count in range(4):
+            s_start = self.coordinates[line_count]
+            s_end = self.coordinates[line_count+1]
+
+            ds = s_end-s_start
+            for x, w in self.integration_rule:
+                s = s_start + ds*x
+                yield(s, w*ds)
+
+        # the circular arc avoiding the origin
+        t_start = np.pi*0.5+self.avoid_angle
+        t_end = self.avoid_angle
+
+        dt = t_end-t_start
+
+        for x, w in self.integration_rule:
+            t = t_start + dt*x
+            s = self.avoid_origin*(-np.sin(t) + 1j*np.cos(t))
+            ds_dt = self.avoid_origin*(-np.cos(t) - 1j*np.sin(t))
+            yield(s, w*ds_dt*dt)
+
+
 class EllipticalContour(Contour):
     """A quarter ellipse contour in the complex frequency plane"""
     def __init__(self, radius_real, radius_imag, offset_real, offset_imag,
