@@ -325,6 +325,7 @@ class Simulation(Identified):
             given by the parts
         """
 
+        iter_wrap = self.__iter_wrap("Refining modes")
         # Multiple parts have been estimated
         refined = {}
         cache = {}
@@ -335,7 +336,7 @@ class Simulation(Identified):
                 refined[part] = cache[part.unique_id]
             else:
                 # Otherwise call self recursively
-                refined[part] = self.operator.refine_poles(estimate, part, rel_tol, max_iter)
+                refined[part] = self.operator.refine_poles(estimate, part, rel_tol, max_iter, iter_wrap)
                 cache[part.unique_id] = refined[part]
 
         return Modes(estimates.parent_part, refined, self.operator, self.basis_container)

@@ -102,7 +102,8 @@ class Operator(object):
 
         return result
 
-    def refine_poles(self, estimates, part, rel_tol, max_iter):
+    def refine_poles(self, estimates, part, rel_tol, max_iter,
+                     iter_wrap = lambda x: x):
         """Find the poles of the operator applied to a specified part
 
         Parameters
@@ -153,7 +154,7 @@ class Operator(object):
 
         # Note that mode refers to the position in the array modes, which
         # at this point need not correspond to the original mode numbering
-        for mode in range(num_modes):
+        for mode in iter_wrap(range(num_modes)):
             logging.info("Searching for mode %d"%mode)
             try:
                 res = eig_newton(Z_func, estimates['s'][mode],
