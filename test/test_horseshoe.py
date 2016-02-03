@@ -56,18 +56,19 @@ def test_horseshoe_modes(plot=False, skip_asserts=False,
 
     s_start = 2j*np.pi*10e9
 
-    modes = sim.estimate_poles(s_start, modes=3, cauchy_integral=False)
+    estimates = sim.estimate_poles(s_start, modes=3, cauchy_integral=False)
+    modes = sim.refine_poles(estimates)
     mode_s = modes.s
     mode_j = modes.vr
     print("Singularities found at", mode_s)
 
     if write_reference:
         write_1d_complex(osp.join(reference_dir, 'eigenvector_0.txt'),
-                         mode_j["J", :, 0])
+                         mode_j["J", :, 'modes', 0])
         write_1d_complex(osp.join(reference_dir, 'eigenvector_1.txt'),
-                         mode_j["J", :, 1])
+                         mode_j["J", :, 'modes', 1])
         write_1d_complex(osp.join(reference_dir, 'eigenvector_2.txt'),
-                         mode_j["J", :, 2])
+                         mode_j["J", :, 'modes', 2])
 
     j_0_ref = read_1d_complex(osp.join(reference_dir, 'eigenvector_0.txt'))
     j_1_ref = read_1d_complex(osp.join(reference_dir, 'eigenvector_1.txt'))
