@@ -40,12 +40,7 @@ src/*.html
 *.vtk
 *.session
 *.session.gui
-doc/examples/
-test/output/
 src/*module.c
 src/*f2pywrappers*
 junk/
-examples/output/
 RELEASE-VERSION
-doc/modules.txt
-doc/openmodes*.txt
