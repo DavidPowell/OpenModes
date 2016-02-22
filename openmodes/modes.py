@@ -131,7 +131,7 @@ class Modes(object):
         for part, original in self.modes_of_parts.items():
             try:
                 part_criteria = criteria[part]
-            except KeyError:
+            except:
                 part_criteria = criteria
 
             new[part] = {}

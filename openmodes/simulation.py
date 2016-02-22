@@ -172,8 +172,10 @@ class Simulation(Identified):
         if self.notebook:
             from .ipython import progress_iterator
             it = progress_iterator(freqs, description="Frequency Sweep")
+            logging.info(log_label+" started")
             for freq_count, freq in enumerate(it):
                 yield freq_count, 2j*np.pi*freq
+            logging.info(log_label+" finished")
         else:
             num_freqs = len(freqs)
             for freq_count, freq in enumerate(freqs):
