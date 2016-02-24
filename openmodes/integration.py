@@ -215,9 +215,12 @@ class CircularContour(Contour):
         self.integration_rule = integration_rule
 
     def __iter__(self):
-        ds = 2*np.pi*self.radius
+        d_theta = 2*np.pi
         for x, w in self.integration_rule:
-            yield(np.exp(2j*np.pi*x)*self.radius+self.centre, w*ds)
+            theta = 2*np.pi*x
+            s = np.exp(1j*theta)*self.radius+self.centre
+            ds_dtheta = 1j*np.exp(1j*theta)*self.radius
+            yield(s, w*ds_dtheta*d_theta)
 
     def __len__(self):
         return len(self.integration_rule)
