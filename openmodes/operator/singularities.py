@@ -209,7 +209,7 @@ def singular_impedance_rwg(basis, operator, tangential_form, num_terms,
                 # normals are not supplied for EFIE
                 normal = None
             # at least one node is shared
-            res = face_integrals_yla_oijala(nodes[polygons[q]], rule.xi_eta, rule.weights,
+            res = face_integrals_yla_oijala(nodes[polygons[q]], rule.points, rule.weights,
                                           nodes[polygons[p]], normal_o=normal)
             if operator == "MFIE":
                 if tangential_form:

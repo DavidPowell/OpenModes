@@ -184,7 +184,7 @@ class LinearTriangleBasis(AbstractBasis):
                        self.mesh.nodes.dtype)
 
         for tri_count, node_nums in enumerate(self.mesh.polygons):
-            for point_count, (xi, eta) in enumerate(integration_rule.xi_eta):
+            for point_count, (xi, eta) in enumerate(integration_rule.points):
                 zeta = 1.0 - eta - xi
 
                 r[tri_count, point_count] = (xi*nodes[node_nums[0]] +

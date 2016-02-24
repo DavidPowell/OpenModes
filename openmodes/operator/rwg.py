@@ -55,7 +55,7 @@ def impedance_curl_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
         num_faces_s = num_faces_o
         res = z_mfie_faces_self(nodes_o, basis_o.mesh.polygons,
                                 basis_o.mesh.polygon_areas, gamma_0,
-                                integration_rule.xi_eta,
+                                integration_rule.points,
                                 integration_rule.weights, normals,
                                 tangential_form, *singular_terms)
 
@@ -67,7 +67,7 @@ def impedance_curl_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
 
         res = z_mfie_faces_mutual(nodes_o, basis_o.mesh.polygons,
                                   nodes_s, basis_s.mesh.polygons,
-                                  gamma_0, integration_rule.xi_eta,
+                                  gamma_0, integration_rule.points,
                                   integration_rule.weights, normals,
                                   tangential_form)
 
@@ -119,7 +119,7 @@ def impedance_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
 
         num_faces_s = num_faces_o
         res = z_efie_faces_self(nodes_o, basis_o.mesh.polygons, gamma_0,
-                                integration_rule.xi_eta,
+                                integration_rule.points,
                                 integration_rule.weights, *singular_terms)
 
         transform_L_s = transform_L_o
@@ -132,7 +132,7 @@ def impedance_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
 
         res = z_efie_faces_mutual(nodes_o, basis_o.mesh.polygons, nodes_s,
                                   basis_s.mesh.polygons, gamma_0,
-                                  integration_rule.xi_eta,
+                                  integration_rule.points,
                                   integration_rule.weights)
 
         transform_L_s, transform_S_s = basis_s.transformation_matrices

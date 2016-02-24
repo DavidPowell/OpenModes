@@ -29,7 +29,21 @@ from openmodes.helpers import Identified
 from openmodes.external.point_in_polygon import wn_PnPoly
 
 
-class DunavantRule(Identified):
+class IntegrationRule(Identified):
+    def __len__(self):
+        return len(self.points)
+
+    def __repr__(self):
+        return "%s.%s(%d)" % (type(self).__module__, type(self).__name__,
+                              self.order)
+
+    def __iter__(self):
+        "Iterate over all integration points and weights"
+        for point, w in zip(self.points, self.weights):
+            yield point, w
+
+
+class DunavantRule(IntegrationRule):
     """The symmetric quadrature rule over a triangle as given in
     D. A. Dunavant, Int. J. Numer. Methods Eng. 21, 1129 (1985).
 
@@ -52,31 +66,18 @@ class DunavantRule(Identified):
         from openmodes import dunavant
 
         self.order = order
-        self.num_points = dunavant.dunavant_order_num(order)
-        xi_eta, weights = dunavant.dunavant_rule(order, self.num_points)
+        num_points = dunavant.dunavant_order_num(order)
+        xi_eta, weights = dunavant.dunavant_rule(order, num_points)
 
-        self.xi_eta = np.asfortranarray(xi_eta.T)
+        self.points = np.asfortranarray(xi_eta.T)
         # scale the weights to 0.5
         self.weights = np.asfortranarray((weights*0.5/sum(weights)).T)
-
-    def __len__(self):
-        return self.num_points
-
-    def __repr__(self):
-        return "%s.%s(%d)" % (type(self).__module__, type(self).__name__,
-                              self.order)
-
-    def __iter__(self):
-        "Iterate over all integration points and weights"
-        for xi_eta, w in zip(self.xi_eta, self.weights):
-            yield xi_eta, w
-
 
 # This makes a useful default e.g. for interpolation
 triangle_centres = DunavantRule(1)
 
 
-class GaussLegendreRule(Identified):
+class GaussLegendreRule(IntegrationRule):
     """1D Gauss Legendre Quadrature Rule
 
     Defined over the range (0, 1)
@@ -87,19 +88,23 @@ class GaussLegendreRule(Identified):
         a = scipy.special.sh_legendre(order).weights
 
         self.weights = a[:, 1].real
-        self.x = a[:, 0].real
+        self.points = a[:, 0].real
 
-    def __len__(self):
-        return len(self.x)
 
-    def __repr__(self):
-        return "%s.%s(%d)" % (type(self).__module__, type(self).__name__,
-                              self.order)
+class TrapezoidalRule(IntegrationRule):
+    """1D Trapezoidal rule with evenly spaced points
 
-    def __iter__(self):
-        "Iterate over all integration points and weights"
-        for x, w in zip(self.x, self.weights):
-            yield x, w
+    Defined over the range (0, 1)
+
+    Includes the end-points
+    """
+    def __init__(self, order):
+        super(TrapezoidalRule, self).__init__()
+
+        self.points = np.linspace(0.0, 1.0, order+1)
+        self.weights = np.ones(order+1)
+        self.weights[0] *= 0.5
+        self.weights[-1] *= 0.5
 
 
 def cartesian_to_barycentric(r, nodes):
@@ -200,6 +205,22 @@ class Contour(object):
             inside[point_num] = wn_PnPoly((point.real, point.imag), vertices)
 
         return inside
+
+
+class CircularContour(Contour):
+    """A circular contour in the complex frequency plane"""
+    def __init__(self, centre, radius, integration_rule=TrapezoidalRule(20)):
+        self.centre = centre
+        self.radius = radius
+        self.integration_rule = integration_rule
+
+    def __iter__(self):
+        ds = 2*np.pi*self.radius
+        for x, w in self.integration_rule:
+            yield(np.exp(2j*np.pi*x)*self.radius+self.centre, w*ds)
+
+    def __len__(self):
+        return len(self.integration_rule)
 
 
 class RectangularContour(Contour):
