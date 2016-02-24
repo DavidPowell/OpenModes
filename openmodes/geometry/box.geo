@@ -1,4 +1,4 @@
-// a box without sharp edges
+// a box with sharp edges
 
 // geometric parameters specifiable from the command line
 If (!Exists(len_x))
