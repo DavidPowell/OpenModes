@@ -1,6 +1,22 @@
 What's new in OpenModes
 =======================
 
+**Release 1.0.0**
+
+March 2016
+
+- Dielectric objects can now be handled via a surface equivalent problem
+- New, more robust method for finding complex poles
+- New classes to conveniently represent modes and use them for modelling
+- Improved Python 3 support (Python 3.5 now recommended)
+- Improvements to 3D plotting
+- Working code for spherical multipole decomposition
+- Impedance matrix objects are greatly simplified
+- New pre-made geometries are included
+
+Note that code for old versions of OpenModes will need to be modified to work
+with the new version. All examples have been updated.
+
 **Release 0.0.5**
 
 March 2015
