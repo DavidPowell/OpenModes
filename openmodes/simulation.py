@@ -538,10 +538,10 @@ class Simulation(Identified):
         for part in parent_part.iter_single():
             basis = self.basis_container[part]
 
-            points, current_J = basis.interpolate_function(solution["J"].simple_view(),
+            points, current_J = basis.interpolate_function(solution["J", part].simple_view(),
                                                            int_weight=True, integration_rule=self.integration_rule)
             try:
-                points, current_M = basis.interpolate_function(solution["M"].simple_view(),
+                points, current_M = basis.interpolate_function(solution["M", part].simple_view(),
                                                                int_weight=True, integration_rule=self.integration_rule)
             except KeyError:
                 current_M = np.zeros_like(current_J)
