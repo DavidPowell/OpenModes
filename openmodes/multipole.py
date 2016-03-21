@@ -108,15 +108,18 @@ def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0):
         phi_hat = np.array((-sp, cp, 0))
 
         kr = k*r
-        jl, djl = scipy.special.sph_jn(max_l, kr)
+        jl, djl = scipy.special.sph_jn(max_l+1, kr)
         # reshape to be size (num_l x 1)
         jl = jl[:, None]
         djl = djl[:, None]
 
         # Riccati Bessel function plus its second derivative
-        ric_plus_second = l*(l+1)*jl/kr
+        ll = l[1:]
+        ric_plus_second = np.zeros((max_l+1, 1), np.complex128)
+        ric_plus_second[1:] = ll*(ll+1)/(2*ll+1)*(jl[:-2]+jl[2:])
         # First derivative, divided by kr
-        ric_der = (jl/kr + djl)
+        ric_der = np.zeros((max_l+1, 1), np.complex128)
+        ric_der[1:] = ((ll+1)*jl[:-2]-ll*jl[2:])/(2*ll+1)
 
         # associated Legendre function and its derivative
         P_lm, dP_lm = scipy.special.lpmn(max_l, max_l, ct)
@@ -148,8 +151,8 @@ def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0):
         M_phi = np.dot(phi_hat, M)
 
         a_e += exp_imp*(ric_plus_second*P_lm*J_r + ric_der*(tau_lm*J_theta - 1j*pi_lm*J_phi))
-        a_e += exp_imp*jl*(1j*pi_lm*M_theta + tau_lm*M_phi)
-        a_m += exp_imp*jl*(1j*pi_lm*J_theta + tau_lm*J_phi)
+        a_e += exp_imp*jl[:-1]*(1j*pi_lm*M_theta + tau_lm*M_phi)
+        a_m += exp_imp*jl[:-1]*(1j*pi_lm*J_theta + tau_lm*J_phi)
         a_m += exp_imp*(ric_plus_second*P_lm*M_r + ric_der*(tau_lm*M_theta - 1j*pi_lm*M_phi))
 
     # Ignore divide by zero and resulting NaN, which will occur for invalid
