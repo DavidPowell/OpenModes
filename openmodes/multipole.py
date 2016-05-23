@@ -22,27 +22,7 @@ import numpy as np
 import scipy.special
 from scipy.special import factorial
 
-from openmodes.constants import c, eta_0
-
-def currents_sphere(m_max, n_max, eo, points):
-    """
-    Modal currents on a sphere    
-    
-    Parameters
-    ----------
-    m : integer
-    n : integer
-    eo : integer
-        0 for even, 1 for odd
-
-    Formulas from Tai, p 200"""
-
-    cos_theta = np.cos(theta)
-
-    scipy.special.lpmn(m_max, n_max, cos_theta)
-    
-    if not eo:
-        -m/np.sin(theta)
+from openmodes.constants import eta_0
 
 
 def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0):
