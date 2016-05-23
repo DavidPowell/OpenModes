@@ -164,7 +164,7 @@ class Operator(object):
                                  func_gives_der=self.frequency_derivatives,
                                  y_0=estimates['vl'][mode, :])
             except (ConvergenceError, ValueError):
-                logging.info("Convergence failed, mode discarded")
+                logging.warn("Mode {} convergence failed, mode discarded".format(mode))
                 continue
 
             logging.info("Converged after %d iterations\n"

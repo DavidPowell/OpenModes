@@ -277,6 +277,7 @@ class Simulation(Identified):
                     # If an identical part's modes have already been calculated
                     # then reuse them
                     res[part] = cache[part.unique_id]
+                    logging.info("Retrieving part from cache")
                 else:
                     if previous_result is None:
                         previous = None
