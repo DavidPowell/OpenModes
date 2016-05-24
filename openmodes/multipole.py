@@ -145,6 +145,70 @@ def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0):
     return a_e, a_m
 
 
+def far_fields(a_e, a_m, theta, phi):
+    """Calculate far fields from the multipole decomposition
+
+    Excludes the r dependent terms
+
+    From Jackson sections 3.5, 9.6, 9.9
+
+    Parameters
+    ----------
+    a_e, a_m: ndarray(max_l, 2*max_l+1)
+        The multipole coefficients
+    theta, phi: scalar
+        polar angles of observation
+
+    Returns
+    -------
+    E, H: ndarray(3)
+        The electric and magnetic fields at the observation angle
+    """
+
+    # TODO: Allow theta and phi to be arrays
+    # TODO: Store X_lm to enable reuse at multiple frequencies
+    # TODO: Reuse calculated P_lm from spherical_multipoles
+
+    num_l = a_e.shape[0]
+    max_l = num_l - 1
+
+    st = np.sin(theta)
+    ct = np.cos(theta)
+    sp = np.sin(phi)
+    cp = np.cos(phi)
+    r_hat = np.stack((st*cp, st*sp, ct), axis=-1)
+
+    l = np.arange(num_l)[:, None]
+    m_pos = np.arange(num_l)[None, :]
+    m = np.hstack((m_pos, np.arange(-max_l, 0)[None, :]))
+
+    # associated Legendre function and its derivative
+    P_lm, dP_lm = scipy.special.lpmn(max_l, max_l, ct)
+    P_lm = P_lm.T
+
+    Y_lm_pos = np.sqrt((2*l+1)/(4*np.pi)*factorial(l-m_pos)/factorial(l+m_pos))*P_lm*np.exp(1j*m_pos*phi)
+    Y_lm_neg = (-1)**m_pos*Y_lm_pos.conj()
+    Y_lm = np.hstack((Y_lm_pos,  Y_lm_neg[:, :0:-1]))
+
+    # Angular momentum operator L acting on Y_lm
+    # Note that for m=l and m=-l, roll operator gives a spurious result, but
+    # this is cancelled by (m-l) and (m+l) terms respectively.
+    # As the calculations include invalid combinations of l and m,
+    # warnings should be suppressed for these calculations.
+    with np.errstate(invalid='ignore'):
+        Y_lm_p = np.sqrt((l-m)*(l+m+1))*np.roll(Y_lm, -1, axis=1)
+        Y_lm_m = np.sqrt((l+m)*(l-m+1))*np.roll(Y_lm, 1, axis=1)
+        X = np.stack((0.5*(Y_lm_p+Y_lm_m), -0.5j*(Y_lm_p-Y_lm_m), m*Y_lm),
+                     axis=-1) / np.sqrt(l*(l+1))[:, :, None]
+
+    H = np.zeros(3, np.complex128)
+    for l in range(1, max_l+1):
+        for m in range(-l, l+1):
+            H += (1j)**(l+1)*(a_e[l, m]*X[l, m] + a_m[l, m]*np.cross(r_hat, X[l, m]))
+    E = eta_0*np.cross(H, r_hat)
+    return E, H
+
+
 def cartesian_multipoles(points, charge, current, s, electric_order=1,
                          magnetic_order=1):
     """Calculate the electric and magnetic multipole moments up to the
