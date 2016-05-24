@@ -25,6 +25,56 @@ from scipy.special import factorial
 from openmodes.constants import eta_0
 
 
+def multipole_fixed(max_l, points, l, m, m_pos):
+    """Calculate all frequency-independent quantities for the multipole decomposition.
+
+    These depend only on the coordinates of the points, and need only be
+    calculated once for each object and reused at multiple frequencies"""
+
+    r = np.sqrt(np.sum(points**2, axis=1))
+    theta = np.arccos(points[:, 2]/r)
+    phi = np.arctan2(points[:, 1], points[:, 0])
+
+    st = np.sin(theta)
+    ct = np.cos(theta)
+    sp = np.sin(phi)
+    cp = np.cos(phi)
+
+    # calculate the unit vectors on the sphere
+    r_hat = points/r[:, None]
+    theta_hat = np.stack((ct*cp, ct*sp, -st), axis=-1)
+    phi_hat = np.stack((-sp, cp, np.zeros_like(sp)), axis=-1)
+
+    exp_imp = np.exp(-1j*m[None, :, :]*phi[:, None, None])
+
+    P_lm = np.zeros((len(ct), len(l), m.shape[1]))
+    dP_lm = np.zeros_like(P_lm)
+
+    for point_count, ct_n in enumerate(ct):
+
+        # associated Legendre function and its derivative
+        P_lmp, dP_lmp = scipy.special.lpmn(max_l, max_l, ct_n)
+        P_lmp = P_lmp.T
+        dP_lmp = dP_lmp.T
+
+        # Calculate negative values of m from positive
+        P_lmn, dP_lmn = scipy.special.lpmn(-max_l, max_l, ct_n)
+        P_neg = (-1)**m_pos*factorial(l-m_pos)/factorial(l+m_pos)
+        P_lmn = P_neg*P_lmp
+        dP_lmn = P_neg*dP_lmp
+
+        # combine positive and negative P_lmn
+        P_lm[point_count] = np.hstack((P_lmp,  P_lmn[:, :0:-1]))
+        dP_lm[point_count] = np.hstack((dP_lmp, dP_lmn[:, :0:-1]))
+
+    # theta derivative of P_lm(cos\theta)
+    tau_lm = -st[:, None, None]*dP_lm
+    pi_lm = P_lm*m/st[:, None, None]
+
+    return (r, theta, phi, r_hat, theta_hat, phi_hat, P_lm, exp_imp,
+            tau_lm, pi_lm)
+
+
 def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0):
     """Calculate the multipole coefficients in a spherical basis
 
@@ -69,25 +119,14 @@ def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0):
     m_pos = np.arange(num_l)[None, :]
     m = np.hstack((m_pos, np.arange(-max_l, 0)[None, :]))
 
-    for J, M, point in zip(current, current_M, points):
+    (r, theta, phi, r_hat, theta_hat, phi_hat, P_lm, exp_imp, tau_lm,
+     pi_lm) = multipole_fixed(max_l, points, l, m, m_pos)
 
-        # Convert cartesian to (r, theta, phi) spherical coordinates
-        # Convention as per Jackson, Figure 3.1
-        r = np.sqrt(np.sum(point**2))
-        theta = np.arccos(point[2]/r)
-        phi = np.arctan2(point[1], point[0])
+    ric_plus_second = np.zeros((max_l+1, 1), np.complex128)
+    ric_der = np.zeros((max_l+1, 1), np.complex128)
 
-        # calculate the unit vectors on the sphere
-        st = np.sin(theta)
-        ct = np.cos(theta)
-        sp = np.sin(phi)
-        cp = np.cos(phi)
-
-        r_hat = point/r
-        theta_hat = np.array((ct*cp, ct*sp, -st))
-        phi_hat = np.array((-sp, cp, 0))
-
-        kr = k*r
+    for n, (J, M) in enumerate(zip(current, current_M)):
+        kr = k*r[n]
         jl, djl = scipy.special.sph_jn(max_l+1, kr)
         # reshape to be size (num_l x 1)
         jl = jl[:, None]
@@ -95,50 +134,27 @@ def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0):
 
         # Riccati Bessel function plus its second derivative
         ll = l[1:]
-        ric_plus_second = np.zeros((max_l+1, 1), np.complex128)
         ric_plus_second[1:] = ll*(ll+1)/(2*ll+1)*(jl[:-2]+jl[2:])
         # First derivative, divided by kr
-        ric_der = np.zeros((max_l+1, 1), np.complex128)
         ric_der[1:] = ((ll+1)*jl[:-2]-ll*jl[2:])/(2*ll+1)
 
-        # associated Legendre function and its derivative
-        P_lm, dP_lm = scipy.special.lpmn(max_l, max_l, ct)
-        P_lm = P_lm.T
-        dP_lm = dP_lm.T
-
-        # Calculate negative values of m from positive
-        P_lmn, dP_lmn = scipy.special.lpmn(-max_l, max_l, ct)
-        P_neg = (-1)**m_pos*factorial(l-m_pos)/factorial(l+m_pos)
-        P_lmn = P_neg*P_lm
-        dP_lmn = P_neg*dP_lm
-
-        # combine positive and negative P_lmn
-        P_lm = np.hstack((P_lm,  P_lmn[:, :0:-1]))
-        dP_lm = np.hstack((dP_lm, dP_lmn[:, :0:-1]))
-
-        # theta derivative of P_lm(cos\theta)
-        tau_lm = -st*dP_lm
-        pi_lm = P_lm*m/st
-
-        exp_imp = np.exp(-1j*m*phi)
-
         # components of current
-        J_r = np.dot(r_hat, J)
-        J_theta = np.dot(theta_hat, J)
-        J_phi = np.dot(phi_hat, J)
-        M_r = np.dot(r_hat, M)
-        M_theta = np.dot(theta_hat, M)
-        M_phi = np.dot(phi_hat, M)
+        J_r = np.dot(r_hat[n], J)
+        J_theta = np.dot(theta_hat[n], J)
+        J_phi = np.dot(phi_hat[n], J)
+        M_r = np.dot(r_hat[n], M)
+        M_theta = np.dot(theta_hat[n], M)
+        M_phi = np.dot(phi_hat[n], M)
 
-        a_e += exp_imp*(ric_plus_second*P_lm*J_r + ric_der*(tau_lm*J_theta - 1j*pi_lm*J_phi))
-        a_e += exp_imp*jl[:-1]*(1j*pi_lm*M_theta + tau_lm*M_phi)
-        a_m += exp_imp*jl[:-1]*(1j*pi_lm*J_theta + tau_lm*J_phi)
-        a_m += exp_imp*(ric_plus_second*P_lm*M_r + ric_der*(tau_lm*M_theta - 1j*pi_lm*M_phi))
+        a_e += exp_imp[n]*(ric_plus_second*P_lm[n]*J_r + ric_der*(tau_lm[n]*J_theta - 1j*pi_lm[n]*J_phi))
+        a_e += exp_imp[n]*jl[:-1]*(1j*pi_lm[n]*M_theta + tau_lm[n]*M_phi)
+        a_m += exp_imp[n]*jl[:-1]*(1j*pi_lm[n]*J_theta + tau_lm[n]*J_phi)
+        a_m += exp_imp[n]*(ric_plus_second*P_lm[n]*M_r + ric_der*(tau_lm[n]*M_theta - 1j*pi_lm[n]*M_phi))
 
     # Ignore divide by zero and resulting NaN, which will occur for invalid
     # combinations of l, m
     with np.errstate(invalid='ignore', divide='ignore'):
-        common_factor = np.sqrt(eta)*k**2/(2*np.pi)*np.sqrt(factorial(l-m)/factorial(l+m))/np.sqrt(l*(l+1))        
+        common_factor = np.sqrt(eta)*k**2/(2*np.pi)*np.sqrt(factorial(l-m)/factorial(l+m))/np.sqrt(l*(l+1))
         a_e *= (-1j)**(l-1)*common_factor
         a_m *= (-1j)**(l+1)*common_factor
 
