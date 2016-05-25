@@ -39,7 +39,7 @@ from openmodes.mesh import TriangularSurfaceMesh
 from openmodes.helpers import Identified
 from openmodes.material import FreeSpace, PecMaterial
 from openmodes.modes import Modes
-from openmodes.multipole import spherical_multipoles
+from openmodes.multipole import spherical_multipoles, multipole_fixed
 from openmodes.constants import c
 from openmodes.array import LookupArray
 
@@ -96,6 +96,7 @@ class Simulation(Identified):
                                        basis_container=self.basis_container,
                                        background_material=background_material)
 
+        self.multipole_cache = {}
         self.notebook = notebook
         if notebook:
             from openmodes.ipython import init_3d
@@ -550,7 +551,18 @@ class Simulation(Identified):
             if origin is not None:
                 points -= origin
 
-            n_e, n_m = spherical_multipoles(order, k, points, current_J, 1j*current_M)
+            cache_key = (part.position_hash, order)
+            try:
+                fixed_terms = self.multipole_cache[cache_key]
+                logging.info("Retrived multipole terms from cache")
+            except KeyError:
+                fixed_terms = multipole_fixed(order, points)
+                self.multipole_cache[cache_key] = fixed_terms
+
+            n_e, n_m = spherical_multipoles(order, k, points, current_J,
+                                            1j*current_M,
+                                            self.background_material.eta(s),
+                                            fixed_terms)
             a_e += n_e
             a_m += n_m
 

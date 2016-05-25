@@ -25,11 +25,17 @@ from scipy.special import factorial
 from openmodes.constants import eta_0
 
 
-def multipole_fixed(max_l, points, l, m, m_pos):
-    """Calculate all frequency-independent quantities for the multipole decomposition.
+def multipole_fixed(max_l, points):
+    """Calculate all frequency-independent quantities for the multipole
+    decomposition.
 
     These depend only on the coordinates of the points, and need only be
     calculated once for each object and reused at multiple frequencies"""
+
+    num_l = max_l + 1
+    l = np.arange(num_l)[:, None]
+    m_pos = np.arange(num_l)[None, :]
+    m = np.hstack((m_pos, np.arange(-max_l, 0)[None, :]))
 
     r = np.sqrt(np.sum(points**2, axis=1))
     theta = np.arccos(points[:, 2]/r)
@@ -75,7 +81,8 @@ def multipole_fixed(max_l, points, l, m, m_pos):
             tau_lm, pi_lm)
 
 
-def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0):
+def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0,
+                         fixed_terms=None):
     """Calculate the multipole coefficients in a spherical basis
 
     Using the formulas from:
@@ -119,8 +126,13 @@ def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0):
     m_pos = np.arange(num_l)[None, :]
     m = np.hstack((m_pos, np.arange(-max_l, 0)[None, :]))
 
-    (r, theta, phi, r_hat, theta_hat, phi_hat, P_lm, exp_imp, tau_lm,
-     pi_lm) = multipole_fixed(max_l, points, l, m, m_pos)
+    # Use precalculated fixed terms if provided
+    try:
+        (r, theta, phi, r_hat, theta_hat, phi_hat, P_lm, exp_imp, tau_lm,
+         pi_lm) = fixed_terms
+    except:
+        (r, theta, phi, r_hat, theta_hat, phi_hat, P_lm, exp_imp, tau_lm,
+         pi_lm) = multipole_fixed(max_l, points)
 
     ric_plus_second = np.zeros((max_l+1, 1), np.complex128)
     ric_der = np.zeros((max_l+1, 1), np.complex128)
