@@ -19,6 +19,7 @@
 
 from openmodes.helpers import Identified, PicklableRef
 import numpy as np
+import uuid
 
 from openmodes.material import PecMaterial
 
@@ -37,11 +38,17 @@ class Part(Identified):
 
     def reset(self):
         """Reset this part to the default values of the original `Mesh`
-        from which this `Part` was created
+        from which this `Part` was created, and move it to its initial
+        location (the origin if not specified).
         """
         self.transformation_matrix[:] = np.eye(4)
         if self.initial_location is not None:
             self.translate(self.initial_location)
+        self._position_updated()
+
+    def _position_updated(self):
+        "Called when position is updated"
+        pass
 
     @property
     def complete_transformation(self):
@@ -63,6 +70,7 @@ class Part(Identified):
 
         self.transformation_matrix[:] = translation.dot(
                                                     self.transformation_matrix)
+        self._position_updated()
 
     def rotate(self, axis, angle):
         """
@@ -99,6 +107,7 @@ class Part(Identified):
                            [0, 0, 0, 1.0]])
 
         self.transformation_matrix[:] = matrix.dot(self.transformation_matrix)
+        self._position_updated()
 
 
 class SinglePart(Part):
@@ -110,9 +119,6 @@ class SinglePart(Part):
         Part.__init__(self, location)
         self.mesh = mesh
         self.material = material
-
-        self.initial_location = location
-        self.reset()
 
         # A SinglePart is uniquely identified by its mesh and material. i.e.
         # all parts with the same unique_id would have the same modes etc. This
@@ -145,6 +151,14 @@ class SinglePart(Part):
         if self not in lowest:
             raise ValueError("Reached unexpected part")
         yield self
+
+    def _position_updated(self):
+        """Called when position or orientation is updated
+
+        Each time this part's position is updated, a new unique random "hash"
+        value is generated in `position_hash`. This enables quick testing for
+        the same part in the same position and orientation, for caching."""
+        self.position_hash = uuid.uuid4().bytes
 
 
 class MultiPart(Part):
