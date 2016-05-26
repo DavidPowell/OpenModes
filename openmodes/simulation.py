@@ -554,7 +554,6 @@ class Simulation(Identified):
             cache_key = (part.position_hash, order)
             try:
                 fixed_terms = self.multipole_cache[cache_key]
-                logging.info("Retrived multipole terms from cache")
             except KeyError:
                 fixed_terms = multipole_fixed(order, points)
                 self.multipole_cache[cache_key] = fixed_terms
