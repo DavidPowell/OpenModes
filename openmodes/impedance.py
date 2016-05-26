@@ -42,14 +42,17 @@ class ImpedanceMatrixLA(object):
         self.sources = sources
         self.unknowns = unknowns
 
-        if matrices is None:
-            # create the empty matrices
-            self.matrices = {name: LookupArray(((part_o, basis_container),
-                                                (part_s, basis_container)),
-                                               dtype=np.complex128)
-                             for name in self.matrix_names}
-        else:
-            self.matrices = matrices
+        # Note that the internal LookupArray format is different from the
+        # final format as it excludes the quantity lookup.
+        self.matrices = {name: LookupArray(((part_o, basis_container),
+                                            (part_s, basis_container)),
+                                           dtype=np.complex128)
+                         for name in self.matrix_names}
+
+        if matrices is not None:
+            # fill out any matrices which are supplied
+            for name, mat in matrices.items():
+                self.matrices[name][:] = mat
 
         # create the frequency derivatives of the matrices
         if derivatives is None:
@@ -172,6 +175,14 @@ class EfieImpedanceMatrixLA(ImpedanceMatrixLA):
                 self.md['s']*self.der['L'] -
                 self.matrices['S']/self.md['s']**2 +
                 self.der['S']/self.md['s'])
+
+    def weight(self, vr, vl):
+        "Weight the impedance matrix by right and left vectors"
+        new_matrices = {name: np.dot(vl.simple_view(), np.dot(mat, vr.simple_view()))
+                        for name, mat in self.matrices.items()}
+        macro_container = vr.lookup[3][1]
+        return self.__class__(self.part_o, self.part_s, macro_container,
+                              ('modes',), ('modes',), self.md, new_matrices, self.der)
 
 
 class CfieImpedanceMatrixLA(ImpedanceMatrixLA):
