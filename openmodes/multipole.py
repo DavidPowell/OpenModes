@@ -115,12 +115,7 @@ def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0,
 
     num_l = max_l + 1
     num_m = 2*max_l + 1
-
-    # indices l, m.
-    # Note that for m, negative indices are used for negative m,
-    # and values with |m| > l should be ignored
-    a_e = np.zeros((num_l, num_m), np.complex128)
-    a_m = np.zeros((num_l, num_m), np.complex128)
+    num_points = len(points)
 
     l = np.arange(num_l)[:, None]
     m_pos = np.arange(num_l)[None, :]
@@ -134,34 +129,41 @@ def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0,
         (r, theta, phi, r_hat, theta_hat, phi_hat, P_lm, exp_imp, tau_lm,
          pi_lm) = multipole_fixed(max_l, points)
 
-    ric_plus_second = np.zeros((max_l+1, 1), np.complex128)
-    ric_der = np.zeros((max_l+1, 1), np.complex128)
+    jl = np.empty((num_points, num_l+1, 1))
+    djl = np.empty_like(jl)
 
-    for n, (J, M) in enumerate(zip(current, current_M)):
-        kr = k*r[n]
-        jl, djl = scipy.special.sph_jn(max_l+1, kr)
-        # reshape to be size (num_l x 1)
-        jl = jl[:, None]
-        djl = djl[:, None]
+    # spherical Bessel functions must be calculated per point
+    for n in range(num_points):
+        jl_n, djl_n = scipy.special.sph_jn(max_l+1, k*r[n])
+        jl[n] = jl_n[:, None]
+        djl[n] = djl_n[:, None]
 
-        # Riccati Bessel function plus its second derivative
-        ll = l[1:]
-        ric_plus_second[1:] = ll*(ll+1)/(2*ll+1)*(jl[:-2]+jl[2:])
-        # First derivative, divided by kr
-        ric_der[1:] = ((ll+1)*jl[:-2]-ll*jl[2:])/(2*ll+1)
+    ll = l[None, 1:]
+    # Riccati Bessel function plus its second derivative
+    ric_plus_second = np.zeros((num_points, num_l, 1))
+    ric_plus_second[:, 1:] = ll*(ll+1)/(2*ll+1)*(jl[:, :-2]+jl[:, 2:])
 
-        # components of current
-        J_r = np.dot(r_hat[n], J)
-        J_theta = np.dot(theta_hat[n], J)
-        J_phi = np.dot(phi_hat[n], J)
-        M_r = np.dot(r_hat[n], M)
-        M_theta = np.dot(theta_hat[n], M)
-        M_phi = np.dot(phi_hat[n], M)
+    # First derivative, divided by kr
+    ric_der = np.zeros_like(ric_plus_second)
+    ric_der[:, 1:] = ((ll+1)*jl[:, :-2]-ll*jl[:, 2:])/(2*ll+1)
 
-        a_e += exp_imp[n]*(ric_plus_second*P_lm[n]*J_r + ric_der*(tau_lm[n]*J_theta - 1j*pi_lm[n]*J_phi))
-        a_e += exp_imp[n]*jl[:-1]*(1j*pi_lm[n]*M_theta + tau_lm[n]*M_phi)
-        a_m += exp_imp[n]*jl[:-1]*(1j*pi_lm[n]*J_theta + tau_lm[n]*J_phi)
-        a_m += exp_imp[n]*(ric_plus_second*P_lm[n]*M_r + ric_der*(tau_lm[n]*M_theta - 1j*pi_lm[n]*M_phi))
+    # components of current
+    J_r = np.sum(r_hat*current, axis=1)[:, None, None]
+    J_theta = np.sum(theta_hat*current, axis=1)[:, None, None]
+    J_phi = np.sum(phi_hat*current, axis=1)[:, None, None]
+    M_r = np.sum(r_hat*current_M, axis=1)[:, None, None]
+    M_theta = np.sum(theta_hat*current_M, axis=1)[:, None, None]
+    M_phi = np.sum(phi_hat*current_M, axis=1)[:, None, None]
+
+    # indices l, m.
+    # Note that for m, negative indices are used for negative m,
+    # and values with |m| > l should be ignored
+    a_e = np.sum(exp_imp*(ric_plus_second*P_lm*J_r +
+                 ric_der*(tau_lm*J_theta - 1j*pi_lm*J_phi) +
+                 jl[:, :-1]*(1j*pi_lm*M_theta + tau_lm*M_phi)), axis=0)
+    a_m = np.sum(exp_imp*(jl[:, :-1]*(1j*pi_lm*J_theta + tau_lm*J_phi) +
+                 ric_plus_second*P_lm*M_r +
+                 ric_der*(tau_lm*M_theta - 1j*pi_lm*M_phi)), axis=0)
 
     # Ignore divide by zero and resulting NaN, which will occur for invalid
     # combinations of l, m
