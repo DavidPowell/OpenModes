@@ -108,7 +108,7 @@ def run_test(func, tests_filename):
     with open(osp.join(test_dir, results['name'])+".pickle", "rb") as infile:
         reference = pickle.load(infile)
 
-    assert(reference.keys() == results['results'].keys())
+    assert(set(reference.keys()) == set(results['results'].keys()))
     for name, val in results['results'].items():
         try:
             rtol = results['rtol'][name]
