@@ -1,7 +1,7 @@
 Examples
 ========
 
-There are several example files which can be opened using the `IPython notebook <http://ipython.org/notebook.html>`_,
+There are several example files which can be opened using the `Jupyter (IPython) notebook <http://jupyter.org>`_,
 an interactive web-based frontend to python which you will have installed if you
 followed the :doc:`Installation Instructions <install>`.
 
@@ -9,7 +9,7 @@ Web Preview
 -----------
 
 You can view *non-interactive* output without installing anything
-`here <http://nbviewer.ipython.org/github/DavidPowell/openmodes-examples/tree/master/Index.ipynb>`_.
+`here <http://nbviewer.jupyter.org/github/DavidPowell/openmodes-examples/tree/master/Index.ipynb>`_.
 
 Running Examples
 ----------------
