@@ -1,6 +1,15 @@
 What's new in OpenModes
 =======================
 
+**Release 1.1.0**
+
+May 2016
+
+- Modelling mutual interaction is re-implemented
+- Experimental support for far-field scattering from multipole coefficients
+- Improved performance of multipole decomposition
+- Additional geometries added
+
 **Release 1.0.0**
 
 March 2016
