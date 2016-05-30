@@ -50,7 +50,14 @@ class ModelMutualWeight(object):
         "Impedance between two parts, by weighting matrix"
         vl = self.modes.vl[:, part_o, :, part_o]
         vr = self.modes.vr[:, part_s, :, part_s]
-        Z_full[part_o, part_s] = self.modes.operator.impedance(s, part_o, part_s).weight(vr, vl)
+        z_weighted = self.modes.operator.impedance(s, part_o, part_s).weight(vr, vl)
+
+        # If the model has the same impedance class as the full matrix,
+        # then store all sub-matrices. Otherwise just get the combined value.
+        try:
+            Z_full[part_o, part_s] = z_weighted
+        except KeyError:
+            Z_full.matrices['Z'][part_o, part_s] = z_weighted.val().simple_view()
 
     def impedance(self, s):
         """Impedance matrix
