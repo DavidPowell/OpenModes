@@ -114,7 +114,7 @@ class LinearTriangleBasis(AbstractBasis):
 
         vector_transform, _ = self.transformation_matrices
         tri_func = vector_transform.T.dot(linear_func)
-        tri_func = tri_func.reshape((num_tri, 3))
+        tri_func = tri_func.reshape((num_tri, 3))  # num tri, node number
 
         if not int_weight:
             tri_func /= 2*self.mesh.polygon_areas[:, None]
@@ -123,29 +123,29 @@ class LinearTriangleBasis(AbstractBasis):
             nodes = self.mesh.nodes
         points_per_tri = len(integration_rule)
 
-        r = np.empty((num_tri, points_per_tri, 3), self.mesh.nodes.dtype)
-        vector_func = np.zeros((num_tri, points_per_tri, 3), tri_func.dtype)
-        scalar_func = np.zeros((num_tri, points_per_tri), tri_func.dtype)
+        xi_eta = integration_rule.points
+        xi_eta_zeta = np.hstack((xi_eta,
+                                1.0 - xi_eta[:, :1] - xi_eta[:, 1:2]))
 
-        for tri_count, node_nums in enumerate(self.mesh.polygons):
-            for point_count, ((xi, eta), w) in enumerate(integration_rule):
-                # Barycentric coordinates of the observer
-                zeta = 1.0 - eta - xi
+        if int_weight:
+            weights = integration_rule.weights  # points per tri
+        else:
+            weights = np.ones_like(integration_rule.weights)
+        tri_nodes = nodes[self.mesh.polygons]  # num tri, node num, x/y/z
 
-                if not int_weight:
-                    w = 1
+        # Expand to num tri, points per tri, node number, x/y/z
+        # Final array is num tri, points per tri, x/y/z
+        r = np.sum(tri_nodes[:, None]*xi_eta_zeta[None, :, :, None], axis=2)
 
-                # Cartesian coordinates of the point
-                r[tri_count, point_count] = (xi*nodes[node_nums][0] +
-                                             eta*nodes[node_nums][1] +
-                                             zeta*nodes[node_nums][2])
+        # num tri, points per tri, num nodes
+        scalar_func = np.sum(tri_func[:, None, :]*weights[None, :, None], axis=2)
 
-                scalar_func[tri_count, point_count] = sum(tri_func[tri_count])*w
+        # num tri, points per tri, nodes per tri, x/y/z
+        rho = r[:, :, None] - tri_nodes[:, None]
 
-                for node_count in range(3):
-                    # Vector rho within the observer triangle
-                    rho = r[tri_count, point_count] - nodes[node_nums][node_count]
-                    vector_func[tri_count, point_count] += rho*tri_func[tri_count, node_count]*w
+        # Expand as rho, reduce to num tri, points per tri, x/y/z
+        vector_func = np.sum(rho*tri_func[:, None, :, None] *
+                             weights[None, :, None, None], axis=2)
 
         if flatten:
             r = r.reshape((num_tri*points_per_tri, 3))
