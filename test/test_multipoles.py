@@ -80,7 +80,8 @@ def pec_sphere_multipoles(plot=False):
     else:
         return {'name': 'pec_sphere_multipoles',
                 'results': {'k0r': k0r, 'extinction': extinction,
-                            'a_e': a_e, 'a_m': a_m}}
+                            'a_e': a_e, 'a_m': a_m},
+                'rtol': {'a_e': 1e-6, 'a_m': 1e-6}}
 
 
 # The following boilerplate code is needed to generate an actual test from

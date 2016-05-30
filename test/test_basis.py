@@ -41,7 +41,6 @@ def test_interpolate_rwg(plot=False, write_reference=False, skip_asserts=False):
     "Interpolate an RWG basis function over a triangle"
 
     sim = Simulation()
-    mesh_tol = 0.5e-3
     srr = sim.load_mesh(osp.join(mesh_dir, 'SRR.msh'))
 
     basis = DivRwgBasis(srr)
@@ -64,8 +63,8 @@ def test_interpolate_rwg(plot=False, write_reference=False, skip_asserts=False):
                                            'rwg_basis_func.txt'))
 
     if not skip_asserts:
-        assert_allclose(r, r_ref)
-        assert_allclose(basis_func, basis_func_ref)
+        assert_allclose(r, r_ref, rtol=1e-6)
+        assert_allclose(basis_func, basis_func_ref, rtol=1e-6)
 
     if plot:
         plt.figure(figsize=(6, 6))
@@ -79,7 +78,6 @@ def test_interpolate_loop_star(plot=False, write_reference=False,
     "Interpolate loop and star basis functions"
 
     sim = Simulation()
-    mesh_tol = 4e-3
     mesh = sim.load_mesh(osp.join(tests_location, 'input', 'test_basis',
                                   'rectangle.msh'))
 
@@ -114,8 +112,8 @@ def test_interpolate_loop_star(plot=False, write_reference=False,
                                            'loop_star_basis_func.txt'))
 
     if not skip_asserts:
-        assert_allclose(r, r_ref)
-        assert_allclose(basis_func, basis_func_ref)
+        assert_allclose(r, r_ref, rtol=1e-6)
+        assert_allclose(basis_func, basis_func_ref, rtol=1e-6)
 
     if plot:
         plt.figure(figsize=(6, 6))
@@ -127,5 +125,5 @@ def test_interpolate_loop_star(plot=False, write_reference=False,
 
 
 if __name__ == "__main__":
-    test_interpolate_rwg(plot=True, skip_asserts=True)
-    test_interpolate_loop_star(plot=True, skip_asserts=True)
+    test_interpolate_rwg(plot=True)#, skip_asserts=True)
+    test_interpolate_loop_star(plot=True) #, skip_asserts=True)
