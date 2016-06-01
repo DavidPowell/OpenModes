@@ -25,6 +25,7 @@ from openmodes.parts import Part
 import numbers
 import collections
 import six
+import warnings
 
 
 def part_ranges_lowest(parent_part, basis_container):
@@ -249,6 +250,8 @@ class LookupArray(np.ndarray):
                     elif isinstance(entry, slice) and entry == slice(None):
                         # If slicing the whole dimension, metadata can be kept
                         sub_lookup.append(self.lookup[entry_num])
+                    elif isinstance(entry, collections.Iterable):
+                        warnings.warn("Indexing LookupArray with iterable is unreliable")
                     else:
                         # In all other cases metadata is lost
                         sub_lookup.append(None)

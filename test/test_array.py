@@ -21,6 +21,7 @@ import os.path as osp
 from openmodes.array import LookupArray
 import openmodes
 import numpy as np
+import pytest
 
 
 def test_indexing():
@@ -58,6 +59,23 @@ def test_indexing():
     assert(np.all(V["E", group1] == V["E"][group1]))
     assert(np.all(V["E", srr1] == -4.7+22j))
     assert(np.all(V["E", srr2].imag == 22))
+
+
+def test_list_indexing():
+    "List mucks up LookupArrays, which is now warned about"
+
+    sim = openmodes.Simulation()
+    mesh = sim.load_mesh(osp.join(openmodes.geometry_dir, "SRR.geo"))
+    srr1 = sim.place_part(mesh)
+    srr2 = sim.place_part(mesh)
+
+    res = LookupArray((sim.operator.unknowns, (sim.parts, sim.basis_container),
+                      ('modes',), (srr2, sim.basis_container)),
+                     dtype=np.complex128)
+
+    with pytest.warns(UserWarning):
+        res[0, :, 0, [2]]
+
 
 if __name__ == "__main__":
     test_indexing()
