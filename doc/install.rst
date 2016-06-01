@@ -153,6 +153,12 @@ Downloading the Source
 ----------------------
 The source is available on `GitHub <https://github.com/DavidPowell/OpenModes>`_
 
+Runnings Tests
+--------------
+In the ``test`` folder are several test files, designed to run with
+the `pytest <http://pytest.org>`_ framework. After installing the ``pytest`` package, 
+run ``py.test`` from this folder.
+
 Building the Documentation
 --------------------------
 
