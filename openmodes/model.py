@@ -18,8 +18,10 @@
 #-----------------------------------------------------------------------------
 "Fit scalar models to numerically calculated impedance data"
 
+from __future__ import division
 import numpy as np
 from openmodes.impedance import ImpedanceMatrixLA, EfieImpedanceMatrixLA
+from openmodes.modes import SplitModes
 
 
 class ModelMutualWeight(object):
@@ -102,3 +104,42 @@ class EfieModelMutualWeight(ModelMutualWeight):
         Z_full.matrices['S'][part_o, part_o] = np.diag(s_o*(s-s_o))
         Z_full.matrices['L'][part_o, part_o] = 0.0
         # TODO: derivatives
+
+
+class ModelSplit(ModelMutualWeight):
+    "A model of modes which have been split into real and imaginary parts"
+    def __init__(self, modes):
+        if not isinstance(modes, SplitModes):
+            modes = modes.split_real_imag()
+        super(ModelSplit, self).__init__(modes)
+
+    def impedance_self(self, s, part_o, Z_full):
+        "Self impedance of one part"
+        s_o = self.modes.s[0, part_o]
+        num_modes = len(s_o)//2
+        s_r = s_o[:num_modes]
+        s_i = s_o[num_modes:]
+        Z_self = np.diag(s_r + (s_i**2 - s_r**2)/s)*0.5
+        Z_mutual = np.diag(s_i - 2*s_r*s_i/s)*0.5
+        Z_full.matrices['Z'][part_o, part_o] = np.vstack((np.hstack((Z_self, Z_mutual)),
+                                                          np.hstack((Z_mutual, -Z_self))))
+
+
+class EfieModelSplit(EfieModelMutualWeight):
+    "A model of modes which have been split into real and imaginary parts"
+    def __init__(self, modes):
+        if not isinstance(modes, SplitModes):
+            modes = modes.split_real_imag()
+        super(EfieModelSplit, self).__init__(modes)
+
+    def impedance_self(self, s, part_o, Z_full):
+        "Self impedance of one part"
+        s_o = self.modes.s[0, part_o]
+        num_modes = len(s_o)//2
+        s_r = s_o[:num_modes]
+        s_i = s_o[num_modes:]
+        Z_self = np.diag(s_r*s + (s_i**2 - s_r**2))*0.5
+        Z_mutual = np.diag(s_i*s - 2*s_r*s_i)*0.5
+        Z_full.matrices['S'][part_o, part_o] = np.vstack((np.hstack((Z_self, Z_mutual)),
+                                                          np.hstack((Z_mutual, -Z_self))))
+        Z_full.matrices['L'][part_o, part_o] = 0.0
