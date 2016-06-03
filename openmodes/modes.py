@@ -129,9 +129,11 @@ class Modes(object):
         # for now, criteria is just a list of mode numbers
         new = {}
         for part, original in self.modes_of_parts.items():
-            try:
+            if isinstance(criteria, dict):
                 part_criteria = criteria[part]
-            except:
+            elif isinstance(criteria, LookupArray):
+                part_criteria = criteria[:, part][0]
+            else:
                 part_criteria = criteria
 
             new[part] = {}
@@ -165,7 +167,57 @@ class Modes(object):
                                          original['vl'][complex_poles, :],
                                          original['vl'][complex_poles, :].conj()))
 
-        return Modes(self.parent_part, new, self.operator, self.orig_container)
+        return ConjugateModes(self.parent_part, new, self.operator,
+                              self.orig_container)
+
+    def split_real_imag(self):
+        """Create a new set of basis currents by splitting the real and
+        imaginary currents of each mode"""
+
+        new = {}
+        for part, original in self.modes_of_parts.items():
+            # first attempt for a single part
+            real_poles = is_real_pole(original['s'])
+            complex_poles = np.logical_not(real_poles)
+
+            new[part] = {}
+            new[part]['s'] = np.hstack((original['s'][real_poles].real,
+                                        original['s'][complex_poles].real,
+                                        np.zeros_like(original['s'][real_poles].imag),
+                                        original['s'][complex_poles].imag))
+
+            new[part]['vr'] = np.hstack((original['vr'][:, real_poles].real,
+                                         original['vr'][:, complex_poles].real,
+                                         np.zeros_like(original['vr'][:, real_poles].imag),
+                                         original['vr'][:, complex_poles].imag))
+
+            new[part]['vl'] = np.vstack((original['vl'][real_poles, :].real,
+                                         original['vl'][complex_poles, :].real,
+                                         np.zeros_like(original['vl'][real_poles, :].imag),
+                                         original['vl'][complex_poles, :].imag))
+
+        return SplitModes(self.parent_part, new, self.operator,
+                          self.orig_container)
+
+
+class ConjugateModes(Modes):
+    "A class holding modes along with their complex conjugates"
+
+    def add_conjugates(self):
+        raise ValueError("Conjugate modes already added")
+
+    def split_real_imag(self):
+        raise ValueError("Cannot split conjugated modes")
+
+
+class SplitModes(Modes):
+    "A class holding modes by splitting them into real and imaginary parts"
+
+    def add_conjugates(self):
+        raise ValueError("Cannote conjugate split modes")
+
+    def split_real_imag(self):
+        raise ValueError("Modes already split")
 
 
 def match_degenerate_modes(modes, threshold=1e-2):
