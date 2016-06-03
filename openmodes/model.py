@@ -39,6 +39,8 @@ class ModelMutualWeight(object):
         self.macro_container = modes.macro_container
         self.symmetric = modes.operator.reciprocal
         self.impedance_class = ImpedanceMatrixLA
+        self.vl = self.modes.vl
+        self.vr = self.modes.vr
 
     def impedance_self(self, s, part_o, Z_full):
         "Self impedance of one part"
@@ -48,8 +50,8 @@ class ModelMutualWeight(object):
 
     def impedance_mutual(self, s, part_o, part_s, Z_full):
         "Impedance between two parts, by weighting matrix"
-        vl = self.modes.vl[:, part_o, :, part_o]
-        vr = self.modes.vr[:, part_s, :, part_s]
+        vl = self.vl[:, part_o, :, part_o]
+        vr = self.vr[:, part_s, :, part_s]
         z_weighted = self.modes.operator.impedance(s, part_o, part_s).weight(vr, vl)
 
         # If the model has the same impedance class as the full matrix,
