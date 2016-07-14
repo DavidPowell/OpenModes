@@ -23,7 +23,7 @@ import numpy as np
 import scipy.linalg as la
 from numpy.testing import assert_allclose
 
-from openmodes.eig import eig_newton_bordered
+from openmodes.eig import eig_newton_bordered, eig_newton
 
 
 def test_bordered(print_output=False):
@@ -110,7 +110,106 @@ def test_bordered(print_output=False):
     print("Right eigenvector relative value:", (vr[:, 0]/result['vr']))
     print("Left eigenvector relative value:", (vl[:, 0]/result['vl']))
     print("Normalisation of eigenvector:", np.dot(result['vr'], result['vl']))
-    
+
+
+def test_newton(print_output=False):
+    "Test Newton iteration for the linear eigenvalue problem"
+
+    np.random.seed(9322)
+
+    size = 10
+    M = np.random.rand(size, size)
+
+    # first test a symmetric matrix
+    M_sym = M + M.T
+
+    w, vr = la.eig(M_sym)
+
+    # Create an intial estimate by adding noise to the exact results
+    w_0 = w[0]*1.2
+    vr_0 = vr[:, 0].copy()
+    vr_0 = vr_0*(1.3+0.4j) + np.random.rand(size)*0.2
+
+    func = lambda x: M_sym - x*np.eye(size)
+    result = eig_newton(func, w_0, vr_0, lambda_tol=1e-10)
+
+    assert_allclose(w[0], result['eigval'])
+    amax = np.argmax(vr[:, 0])
+    ratio = vr[amax, 0]/result['eigvec'][amax]
+    assert_allclose(vr[:, 0], ratio*result['eigvec'])
+    assert_allclose(np.dot(result['eigvec'], result['eigvec_left']), -np.ones(1))
+
+    print("Symmetric real matrix")
+    print("Eigenvalue error:", abs((w[0]-result['eigval'])/w[0]))
+    print("Right eigenvector relative value:", abs(vr[:, 0]/result['eigvec']))
+    print("Normalisation of eigenvector:", np.dot(result['eigvec'], result['eigvec_left']))
+    print()
+
+    # Now solve asymmetric problem
+    w, vl, vr = la.eig(M, left=True)
+
+    # Create an intial estimate by adding noise to the exact results
+    w_0 = w[0]*1.2
+    vr_0 = vr[:, 0].copy()
+    vr_0 = vr_0*(1.3+0.4j) + np.random.rand(size)*0.2
+    vl_0 = vl[:, 0].copy()*(0.6+0.1j) + np.random.rand(size)*0.2
+
+    func = lambda x: M - x*np.eye(size)
+    result = eig_newton(func, w_0, vr_0, y_0=vl_0, lambda_tol=1e-10, weight='rayleigh asymmetric')
+    assert_allclose(w[0], result['eigval'])
+    amax = np.argmax(vr[:, 0])
+    ratio = vr[amax, 0]/result['eigvec'][amax]
+    assert_allclose(vr[:, 0], ratio*result['eigvec'])
+    amax = np.argmax(vl[:, 0])
+    ratio_l = vl[amax, 0]/result['eigvec_left'][amax]
+    assert_allclose(vl[:, 0], ratio_l*result['eigvec_left'])
+    assert_allclose(np.dot(result['eigvec'], result['eigvec_left']), -np.ones(1))
+
+    print("Asymmetric real matrix")
+    print("Eigenvalue error:", abs((w[0]-result['eigval'])/w[0]))
+    print("Right eigenvector relative value:", abs(vr[:, 0]/result['eigvec']))
+    print("Left eigenvector relative value:", abs(vl[:, 0]/result['eigvec_left']))
+    print("Normalisation of eigenvector:", np.dot(result['eigvec'], result['eigvec_left']))
+    print()
+
+    # Now solve for a complex matrix
+    np.random.seed(412985)
+    M_complex = np.random.rand(size, size)+1j*np.random.rand(size, size)
+
+    w, vl, vr = la.eig(M_complex, left=True)
+    vl = vl.conjugate()
+    vl /= (np.diag(vl.T.dot(vr)))
+
+    # verify the particular notation for left and right eigs
+    M_recons = vr.dot(np.diag(w).dot(vl.T))
+    # verify the accuracy of the reconstruction
+    print("Asymmetric complex matrix")
+    print("Error in matrix reconstruction",
+          np.max(np.abs((M_complex-M_recons)/M_complex)))
+
+    # Create an intial estimate by adding noise to the exact results
+    w_0 = w[0]*1.2
+    vr_0 = vr[:, 0].copy()
+    vr_0 = vr_0*(1.3+0.4j) + np.random.rand(size)*0.2
+    vl_0 = vl[:, 0].copy()
+
+    func = lambda x: M_complex - x*np.eye(size)
+    result = eig_newton(func, w_0, vr_0, y_0=vl_0, weight='rayleigh asymmetric', lambda_tol=1e-10)
+    assert_allclose(w[0], result['eigval'])
+    amax = np.argmax(vr[:, 0])
+    ratio = vr[amax, 0]/result['eigvec'][amax]
+    assert_allclose(vr[:, 0], ratio*result['eigvec'])
+    amax = np.argmax(vl[:, 0])
+    ratio_l = vl[amax, 0]/result['eigvec_left'][amax]
+    assert_allclose(vl[:, 0], ratio_l*result['eigvec_left'])
+    assert_allclose(np.dot(result['eigvec'], result['eigvec_left']), -np.ones(1))
+
+    print("Eigenvalue error:", abs((w[0]-result['eigval'])/w[0]))
+    print("Right eigenvector relative value:", (vr[:, 0]/result['eigvec']))
+    print("Left eigenvector relative value:", (vl[:, 0]/result['eigvec_left']))
+    print("Normalisation of eigenvector:", np.dot(result['eigvec'], result['eigvec_left']))
+
 
 if __name__ == "__main__":
-    test_bordered(print_output=True)
+    test_bordered()
+    test_newton()
