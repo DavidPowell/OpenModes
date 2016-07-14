@@ -8,16 +8,18 @@ If (!Exists(outer_radius))
     outer_radius = 4e-3;
 EndIf
 
-lc = 2e-3;
+If (!Exists(mesh_tol))
+    mesh_tol = 2e-3;
+EndIf
 
 p = newp-1;
 
 // define all points on the face
-Point(p+1) = {0, 0, 0, lc};
-Point(p+2) = {-inner_radius, 0, 0, lc};
-Point(p+3) = {inner_radius, 0, 0, lc};
-Point(p+4) = {-outer_radius, 0, 0, lc};
-Point(p+5) = {outer_radius, 0, 0, lc};
+Point(p+1) = {0, 0, 0, mesh_tol};
+Point(p+2) = {-inner_radius, 0, 0, mesh_tol};
+Point(p+3) = {inner_radius, 0, 0, mesh_tol};
+Point(p+4) = {-outer_radius, 0, 0, mesh_tol};
+Point(p+5) = {outer_radius, 0, 0, mesh_tol};
 
 l = newl-1;
 
