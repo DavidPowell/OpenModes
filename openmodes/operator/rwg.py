@@ -43,11 +43,15 @@ def impedance_curl_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
     if self_impedance:
         # calculate self impedance
 
-        singular_terms = singular_impedance_rwg(basis_o, operator="MFIE",
-                                                tangential_form=tangential_form,
+        singular_terms = singular_impedance_rwg(basis_o,
                                                 num_terms=num_singular_terms,
                                                 rel_tol=singularity_accuracy,
                                                 normals=normals)
+
+        if tangential_form:
+            singular_terms = singular_terms["T_MFIE"]
+        else:
+            singular_terms = singular_terms["N_MFIE"]
 
         if np.any(np.isnan(singular_terms[0])):
             raise ValueError("NaN returned in singular impedance terms")
@@ -90,7 +94,7 @@ def impedance_curl_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
 
 
 def impedance_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
-                self_impedance, epsilon, mu, num_singular_terms,
+                normals, self_impedance, epsilon, mu, num_singular_terms,
                 singularity_accuracy, frequency_derivatives=False):
     """Calculates the impedance matrix corresponding to the equation:
     fm . (I + grad grad) G . fn
@@ -109,10 +113,11 @@ def impedance_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
     if (self_impedance):
         # calculate self impedance
 
-        singular_terms = singular_impedance_rwg(basis_o, operator="EFIE",
-                                                tangential_form=True,
+        singular_terms = singular_impedance_rwg(basis_o,
                                                 num_terms=num_singular_terms,
-                                                rel_tol=singularity_accuracy)
+                                                rel_tol=singularity_accuracy,
+                                                normals=normals)
+        singular_terms = singular_terms["T_EFIE"]
         if (np.any(np.isnan(singular_terms[0])) or
                 np.any(np.isnan(singular_terms[1]))):
             raise ValueError("NaN returned in singular impedance terms")

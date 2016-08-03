@@ -82,10 +82,12 @@ class EfieOperator(Operator):
         eps = self.background_material.epsilon_r(s)
         mu = self.background_material.epsilon_r(s)
 
+        normals = basis_o.mesh.surface_normals
+
         if isinstance(basis_o, LinearTriangleBasis):
             res = rwg.impedance_G(s, self.integration_rule, basis_o,
                                   part_o.nodes, basis_s, part_s.nodes,
-                                  part_o == part_s, eps, mu,
+                                  normals, part_o == part_s, eps, mu,
                                   self.num_singular_terms,
                                   self.singularity_accuracy, True)
         else:
@@ -158,7 +160,7 @@ class MfieOperator(Operator):
             self.sources = ("nxH",)
 
         self.extinction_fields = ("E",)
-        self.frequency_derivatives = False
+        self.frequency_derivatives = True
 
         logging.info("Creating MFIE operator, tangential form: %s"
                      % str(tangential_form))
@@ -314,7 +316,7 @@ class CfieOperator(Operator):
         if isinstance(basis_o, LinearTriangleBasis):
             L, S = rwg.impedance_G(s, self.integration_rule, basis_o,
                                    part_o.nodes, basis_s, part_s.nodes,
-                                   part_o == part_s, eps, mu,
+                                   normals, part_o == part_s, eps, mu,
                                    self.num_singular_terms,
                                    self.singularity_accuracy)
 

@@ -22,6 +22,7 @@ quantities for both EFIE and MFIE may be calculated simultaneously"""
 
 import logging
 import numpy as np
+import hashlib
 from openmodes.core import face_integrals_yla_oijala
 from openmodes.basis import LinearTriangleBasis
 
@@ -127,8 +128,7 @@ from openmodes.integration import DunavantRule
 rule = DunavantRule(20)
 
 
-def singular_impedance_rwg(basis, operator, tangential_form, num_terms,
-                           rel_tol, normals=None):
+def singular_impedance_rwg(basis, num_terms, rel_tol, normals):
     """Precalculate the singular impedance terms for an object
 
     Parameters
@@ -136,10 +136,6 @@ def singular_impedance_rwg(basis, operator, tangential_form, num_terms,
     basis: LinearTriangleBasis object
         The basis functions representing the object for which to calculate the
         singularities
-    operator: string
-        The operator form, either "EFIE" or "MFIE"
-    tangential_form: boolean
-        If True, the T form operator is taken, otherwise the N form
     num_terms: integer
         The number of singular terms to extract
     rel_tol: float
@@ -149,8 +145,9 @@ def singular_impedance_rwg(basis, operator, tangential_form, num_terms,
 
     Returns
     -------
-    singular_terms : SingularSparse object
-        The sparse array of singular impedance terms
+    singular_terms : dictionary of SingularSparse object
+        Each key "T_EFIE", "T_MFIE" and "N_MFIE" has a value withthe sparse
+        array of singular impedance terms for that operator
     """
 
     if not isinstance(basis, LinearTriangleBasis):
@@ -159,7 +156,8 @@ def singular_impedance_rwg(basis, operator, tangential_form, num_terms,
     # Check if this part's singularities have previously been calculated
     # Note that higher accuracy calculations will not be used if a lower
     # accuracy is requested. This avoids non-deterministic behaviour.
-    unique_id = ("RWG", operator, tangential_form, basis.id, rel_tol)
+    normals_hash = hashlib.sha1(normals).hexdigest()
+    unique_id = ("RWG", basis.id, rel_tol, normals_hash, num_terms)
     if unique_id in cached_singular_terms:
         return cached_singular_terms[unique_id]
 
@@ -170,27 +168,14 @@ def singular_impedance_rwg(basis, operator, tangential_form, num_terms,
     nodes = np.ascontiguousarray(basis.mesh.nodes, dtype=np.float64)
     num_faces = len(polygons)
 
-    nodes_c = np.ascontiguousarray(nodes, dtype=np.float64)
-    polygons_c = np.ascontiguousarray(polygons)
+    singular_terms = {"T_EFIE": MultiSparse([(np.float64, (num_terms,)),  # phi
+                                             (np.float64, (num_terms, 3, 3))]),  # A
+                      "T_MFIE": MultiSparse([(np.float64, (num_terms, 3, 3))]),  # A
+                      "N_MFIE": MultiSparse([(np.float64, (num_terms, 3, 3))]),  # A
+                      }
 
-    # Choose what to store based on the operator for which the singularities
-    # are to be calculated, including T vs N form
-    if operator == "EFIE" and tangential_form:
-        singular_terms = MultiSparse([(np.float64, (num_terms,)),        # phi
-                                      (np.float64, (num_terms, 3, 3))])  # A
-    elif operator == "EFIE":
-        raise NotImplementedError
-    elif operator == "MFIE":
-        singular_terms = MultiSparse([(np.float64, (num_terms, 3, 3))])  # A
-    else:
-        raise ValueError("Don't know how to handle singularities for operator "
-                         "%s with tangential_form=%s" %
-                         (operator, tangential_form))
-
-    logging.info("Integrating singular terms for basis function %s, with "
-                 "operator type %s, tangential_form %s, %d terms, "
-                 "relative tolerance %e" % (basis, operator, tangential_form,
-                                            num_terms, rel_tol))
+    logging.info("Integrating singular terms for basis function %s, with %d "
+                 "terms, relative tolerance %e" % (basis, num_terms, rel_tol))
 
     # find the neighbouring triangles (including self terms) to integrate
     # singular part
@@ -200,26 +185,18 @@ def singular_impedance_rwg(basis, operator, tangential_form, num_terms,
             sharing_triangles = sharing_triangles.union(sharing_nodes[node])
         # find any neighbouring elements which are touching
         for q in sharing_triangles:  # source
-            if operator == "MFIE":
-                # The self triangle terms are not evaluated for MFIE
-                if q == p:
-                    continue
-                normal = normals[p]
-            else:
-                # normals are not supplied for EFIE
-                normal = None
-            # at least one node is shared
+            # at least one node is shared between p and q
+            normal = normals[p]
             res = face_integrals_yla_oijala(nodes[polygons[q]], rule.points, rule.weights,
-                                          nodes[polygons[p]], normal_o=normal)
-            if operator == "MFIE":
-                if tangential_form:
-                    singular_terms[p, q] = (res[3],)
-                else:
-                    singular_terms[p, q] = (res[2],)
-            else:
-                singular_terms[p, q] = (res[1], res[0])
+                                            nodes[polygons[p]], normal_o=normal)
+            if q != p:
+                # The self triangle terms are not evaluated for MFIE
+                singular_terms["T_MFIE"][p, q] = (res[3],)
+                singular_terms["N_MFIE"][p, q] = (res[2],)
+            singular_terms["T_EFIE"][p, q] = (res[1], res[0])
 
     # Arrays are currently put into fortran order, under the assumption
     # that they will mostly be used by fortran routines.
-    cached_singular_terms[unique_id] = singular_terms.to_csr(order='F')
+    cached_singular_terms[unique_id] = {k: v.to_csr(order='F')
+                                        for k, v in singular_terms.items()}
     return cached_singular_terms[unique_id]

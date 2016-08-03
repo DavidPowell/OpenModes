@@ -124,7 +124,7 @@ class TOperator(Operator):
             if is_self_term:
                 res = rwg.impedance_G(s, self.integration_rule, basis_o,
                                       part_o.nodes, basis_s, part_s.nodes,
-                                      is_self_term, eps_i, mu_i,
+                                      -normals, is_self_term, eps_i, mu_i,
                                       self.num_singular_terms,
                                       self.singularity_accuracy)
                 L_i = res[0]/c_i*eta_0
@@ -142,10 +142,10 @@ class TOperator(Operator):
                 matrix_names += ('L_i', 'S_i', 'K_i')
 
             res = rwg.impedance_G(s, self.integration_rule, basis_o,
-                                       part_o.nodes, basis_s, part_s.nodes,
-                                       is_self_term, eps_o, mu_o,
-                                       self.num_singular_terms,
-                                       self.singularity_accuracy)
+                                  part_o.nodes, basis_s, part_s.nodes,
+                                  normals, is_self_term, eps_o, mu_o,
+                                  self.num_singular_terms,
+                                  self.singularity_accuracy)
 
             # This scaling ensures that this operator has the same definition
             # as cursive D defined by Yla-Oijala, Radio Science 2005.
