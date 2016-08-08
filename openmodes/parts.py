@@ -169,15 +169,7 @@ class MultiPart(Part):
         """Note that location is essentially meaningless in this case"""
         super(MultiPart, self).__init__(location)
         self.children = children or []
-
-    @property
-    def unique_id(self):
-        """The unique_id of a composite part should combined those of its child
-        parts and their mutual position"""
-        # TODO: Find some way of matching duplicated multi-parts. Currently
-        # they are treated as always different, which may result in
-        # unnecessary recalculation, but should yield correct results.
-        return uuid.uuid4().bytes
+        self.unique_id = uuid.uuid4()
 
     def clear(self):
         "Clear all child parts from this part"
