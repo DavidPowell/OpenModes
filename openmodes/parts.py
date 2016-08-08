@@ -172,9 +172,12 @@ class MultiPart(Part):
 
     @property
     def unique_id(self):
-        """The unique_id of a composite part is just the concatenation of that
-        of its child parts"""
-        return ("MultiPart",)+tuple(part.unique_id for part in self.children)
+        """The unique_id of a composite part should combined those of its child
+        parts and their mutual position"""
+        # TODO: Find some way of matching duplicated multi-parts. Currently
+        # they are treated as always different, which may result in
+        # unnecessary recalculation, but should yield correct results.
+        return uuid.uuid4().bytes
 
     def clear(self):
         "Clear all child parts from this part"
@@ -252,12 +255,6 @@ class CompositePart(MultiPart):
     """
     def __init__(self, location=None):
         super(CompositePart, self).__init__(location)
-
-    @property
-    def unique_id(self):
-        """The unique_id of a composite part is just the concatenation of that
-        of its child parts"""
-        return ("CompositePart",)+tuple(part.unique_id for part in self.children)
 
     def add_part(self, part):
         "Add a part to this part, and become its parent part"
