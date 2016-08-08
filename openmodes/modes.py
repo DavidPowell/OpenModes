@@ -33,7 +33,7 @@ def is_real_pole(s):
     return abs(s.imag) < 1e-3*abs(s.real)
 
 
-class Modes(object):
+class AbstractModes(object):
     """A class for holding a set of modes, enabling a matrix or vector to be
     easily projected onto them"""
 
@@ -141,7 +141,10 @@ class Modes(object):
             new[part]['vr'] = original['vr'][:, part_criteria]
             new[part]['vl'] = original['vl'][part_criteria, :]
 
-        return Modes(self.parent_part, new, self.operator, self.orig_container)
+        return self.__class__(self.parent_part, new, self.operator, self.orig_container)
+
+
+class Modes(AbstractModes):
 
     def add_conjugates(self):
         """Create a new set of modes including the conjugate poles, with the
@@ -200,24 +203,12 @@ class Modes(object):
                           self.orig_container)
 
 
-class ConjugateModes(Modes):
+class ConjugateModes(AbstractModes):
     "A class holding modes along with their complex conjugates"
 
-    def add_conjugates(self):
-        raise ValueError("Conjugate modes already added")
 
-    def split_real_imag(self):
-        raise ValueError("Cannot split conjugated modes")
-
-
-class SplitModes(Modes):
+class SplitModes(AbstractModes):
     "A class holding modes by splitting them into real and imaginary parts"
-
-    def add_conjugates(self):
-        raise ValueError("Cannote conjugate split modes")
-
-    def split_real_imag(self):
-        raise ValueError("Modes already split")
 
 
 def match_degenerate_modes(modes, threshold=1e-2):
