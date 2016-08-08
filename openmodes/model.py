@@ -36,7 +36,7 @@ class ModelMutualWeight(object):
             The modes object from which to create
         """
         self.modes = modes
-        self.parts = list(modes.modes_of_parts.keys())
+        self.parts = modes.parts
         self.parent_part = modes.parent_part
         self.macro_container = modes.macro_container
         self.symmetric = modes.operator.reciprocal

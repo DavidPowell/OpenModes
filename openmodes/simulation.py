@@ -267,31 +267,22 @@ class Simulation(Identified):
             modes = np.arange(modes)
 
         iter_wrap = self.__iter_wrap("Contour Integration")
+        estimate = self.operator.estimate_poles
 
         if isinstance(parts, collections.Iterable):
-            logging.info("Estimating poles of multiple parts")
             # a list of parts was given
+            logging.info("Estimating poles of multiple parts")
             res = {}
-            cache = {}
             for part in parts:
-                if part.unique_id in cache:
-                    # If an identical part's modes have already been calculated
-                    # then reuse them
-                    res[part] = cache[part.unique_id]
-                    logging.info("Retrieving part from cache")
-                else:
+                # Only calculate parts which are different by their unique_id
+                if part.unique_id not in res:
                     if previous_result is None:
                         previous = None
                     else:
-                        previous = previous_result.modes_of_parts[part]
-                    res[part] = self.operator.estimate_poles(contour,
-                                                             part,
-                                                             threshold,
-                                                             previous,
-                                                             cauchy_integral,
-                                                             modes,
-                                                             iter_wrap=iter_wrap)
-                    cache[part.unique_id] = res[part]
+                        previous = previous_result.modes_of_parts[part.unique_id]
+                    res[part.unique_id] = estimate(contour, part, threshold,
+                                                   previous, cauchy_integral,
+                                                   modes, iter_wrap=iter_wrap)
 
             # Find the parent part it it already exists, otherwise create a
             # MultiPart to hold the various parts
@@ -304,14 +295,14 @@ class Simulation(Identified):
             logging.info("Estimating poles of a single part")
             if previous_result is not None:
                 previous_result = previous_result.modes_of_parts[parts]
-            res = {parts: self.operator.estimate_poles(contour, parts,
-                                                threshold, previous_result,
-                                                cauchy_integral, modes,
-                                                iter_wrap=iter_wrap)}
+            res = {parts.unique_id: estimate(contour, parts, threshold,
+                                             previous_result, cauchy_integral,
+                                             modes, iter_wrap=iter_wrap)}
             parent_part = parts
+            parts = [parts]
            
                                      
-        return Modes(parent_part, res, self.operator, self.basis_container)
+        return Modes(parent_part, parts, res, self.operator, self.basis_container)
 
     def refine_poles(self, estimates, rel_tol=1e-8, max_iter=40):
         """Refine the location of poles by iterative search
@@ -332,18 +323,14 @@ class Simulation(Identified):
         iter_wrap = self.__iter_wrap("Refining modes")
         # Multiple parts have been estimated
         refined = {}
-        cache = {}
-        for part, estimate in estimates.modes_of_parts.items():
-            if part.unique_id in cache:
-                # If an identical part's modes have already been calculated
-                # then reuse them
-                refined[part] = cache[part.unique_id]
-            else:
-                # Otherwise call self recursively
-                refined[part] = self.operator.refine_poles(estimate, part, rel_tol, max_iter, iter_wrap)
-                cache[part.unique_id] = refined[part]
+        for part in estimates.parts:
+            uid = part.unique_id
+            if uid not in refined:
+                refined[uid] = self.operator.refine_poles(estimates.modes_of_parts[uid],
+                                                          part, rel_tol, max_iter, iter_wrap)
 
-        return Modes(estimates.parent_part, refined, self.operator, self.basis_container)
+        return Modes(estimates.parent_part, estimates.parts, refined,
+                     self.operator, self.basis_container)
 
     def empty_array(self, part=None, extra_dims=()):
         """

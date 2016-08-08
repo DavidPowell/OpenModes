@@ -651,14 +651,14 @@ class MacroBasis(AbstractBasis):
         """
         super(MacroBasis, self).__init__()
         self.part = part
-        modes = kwargs['modes_of_parts'][part]
+        modes = kwargs['modes_of_parts'][part.unique_id]
         self.vr = modes['vr']
         self.vl = modes['vl']
 
     @classmethod
     def unique_key(cls, part, args):
         # Note: does not capture identical groups of parts
-        return (cls, part.id, frozenset(args.items()))
+        return (cls, part.unique_id, frozenset(args.items()))
 
     def __len__(self):
         "The length is the number of solution vectors considered"

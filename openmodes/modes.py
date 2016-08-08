@@ -37,14 +37,16 @@ class AbstractModes(object):
     """A class for holding a set of modes, enabling a matrix or vector to be
     easily projected onto them"""
 
-    def __init__(self, parent_part, modes_of_parts, operator,
+    def __init__(self, parent_part, parts, modes_of_parts, operator,
                  orig_container, macro_container=None):
         """
         parent_part: Part
             The Part containing all parts for which modes are defined, but no
             other parts.
+        parts: list
+            All the parts for which modes have been explicitly calculated
         modes_of_parts: dictionary
-            keys are Parts
+            keys are unique_ids of parts
             values are dictionaries, with elements
                 's': array of freqs, 'vl', 'vr', arrays of left and right
                 eigenvectors. Note that these should be simple 2D numpy arrays,
@@ -61,23 +63,24 @@ class AbstractModes(object):
         self.operator = operator
         self.orig_container = orig_container
         self.modes_of_parts = modes_of_parts
+        self.parts = parts
 
         # a container for the macro basis functions
         if macro_container is None:
             macro_container = BasisContainer(MacroBasis, global_args = {'modes_of_parts': modes_of_parts})
-            macro_container.lowest_parts = set(modes_of_parts.keys())
+            macro_container.lowest_parts = set(parts)
 
         self.macro_container = macro_container
 
     def __len__(self):
-        return sum(len(modes['s']) for modes in self.modes_of_parts.values())
+        return sum(len(self.modes_of_parts[part.unique_id]['s']) for part in self.parts)
 
     @cached_property
     def s(self):
         res = LookupArray((('modes',), (self.parent_part, self.macro_container)),
                          dtype=np.complex128)
-        for part, modes in self.modes_of_parts.items():
-            res[:, part] = modes['s']
+        for part in self.parts:
+            res[:, part] = self.modes_of_parts[part.unique_id]['s']
         return res
 
     @cached_property
@@ -89,8 +92,8 @@ class AbstractModes(object):
                          dtype=np.complex128)
         res[:] = 0.0
 
-        for part, modes in self.modes_of_parts.items():
-            res[:, part, :, part] = modes['vr'].reshape(res[:, part, :, part].shape)
+        for part in self.parts:
+            res[:, part, :, part] = self.modes_of_parts[part.unique_id]['vr'].reshape(res[:, part, :, part].shape)
         return res
 
     @cached_property
@@ -101,8 +104,8 @@ class AbstractModes(object):
                          dtype=np.complex128)
         res[:] = 0.0
 
-        for part, modes in self.modes_of_parts.items():
-            res[:, part, :, part] = modes['vl'].reshape(res[:, part, :, part].shape)
+        for part in self.parts:
+            res[:, part, :, part] = self.modes_of_parts[part.unique_id]['vl'].reshape(res[:, part, :, part].shape)
 
         return res
 
@@ -111,16 +114,16 @@ class AbstractModes(object):
 
         # TODO: implement for an intermediate level sub-part for which modes
         # were not calculated directly, only of its children.
-        sub_modes = {part: self.modes_of_parts[part]}
-        return Modes(part, sub_modes, self.operator,
-                     self.orig_container, self.macro_container)
+        sub_modes = {part.unique_id: self.modes_of_parts[part.unique_id]}
+        return self.__class__(part, [part], sub_modes, self.operator,
+                              self.orig_container, self.macro_container)
 
     def select(self, criteria):
         """Select a sub-set of modes based on the given criteria
 
         Parameters
         ----------
-        criteria: list, of dict(Part, list)
+        criteria: list, of dict(unique_id, list)
             Typically this will be a list of desired mode numbers
             If there are multiple parts, then this can instead be a dictionary
             with different criteria per Part.
@@ -128,20 +131,21 @@ class AbstractModes(object):
 
         # for now, criteria is just a list of mode numbers
         new = {}
-        for part, original in self.modes_of_parts.items():
+        for part_id, original in self.modes_of_parts.items():
             if isinstance(criteria, dict):
-                part_criteria = criteria[part]
+                part_criteria = criteria[part_id]
             elif isinstance(criteria, LookupArray):
-                part_criteria = criteria[:, part][0]
+                part_criteria = criteria[:, part_id][0]
             else:
                 part_criteria = criteria
 
-            new[part] = {}
-            new[part]['s'] = original['s'][part_criteria]
-            new[part]['vr'] = original['vr'][:, part_criteria]
-            new[part]['vl'] = original['vl'][part_criteria, :]
+            new[part_id] = {}
+            new[part_id]['s'] = original['s'][part_criteria]
+            new[part_id]['vr'] = original['vr'][:, part_criteria]
+            new[part_id]['vl'] = original['vl'][part_criteria, :]
 
-        return self.__class__(self.parent_part, new, self.operator, self.orig_container)
+        return self.__class__(self.parent_part, self.parts, new, self.operator,
+                              self.orig_container)
 
 
 class Modes(AbstractModes):
@@ -152,25 +156,25 @@ class Modes(AbstractModes):
         poles have already been added"""
 
         new = {}
-        for part, original in self.modes_of_parts.items():
+        for part_id, original in self.modes_of_parts.items():
             # first attempt for a single part
             real_poles = is_real_pole(original['s'])
             complex_poles = np.logical_not(real_poles)
 
-            new[part] = {}
-            new[part]['s'] = np.hstack((original['s'][real_poles].real,
-                                        original['s'][complex_poles],
-                                        original['s'][complex_poles].conj()))
+            new[part_id] = {}
+            new[part_id]['s'] = np.hstack((original['s'][real_poles].real,
+                                           original['s'][complex_poles],
+                                           original['s'][complex_poles].conj()))
 
-            new[part]['vr'] = np.hstack((original['vr'][:, real_poles],
-                                         original['vr'][:, complex_poles],
-                                         original['vr'][:, complex_poles].conj()))
+            new[part_id]['vr'] = np.hstack((original['vr'][:, real_poles],
+                                            original['vr'][:, complex_poles],
+                                            original['vr'][:, complex_poles].conj()))
 
-            new[part]['vl'] = np.vstack((original['vl'][real_poles, :],
-                                         original['vl'][complex_poles, :],
-                                         original['vl'][complex_poles, :].conj()))
+            new[part_id]['vl'] = np.vstack((original['vl'][real_poles, :],
+                                            original['vl'][complex_poles, :],
+                                            original['vl'][complex_poles, :].conj()))
 
-        return ConjugateModes(self.parent_part, new, self.operator,
+        return ConjugateModes(self.parent_part, self.parts, new, self.operator,
                               self.orig_container)
 
     def split_real_imag(self):
@@ -178,28 +182,36 @@ class Modes(AbstractModes):
         imaginary currents of each mode"""
 
         new = {}
-        for part, original in self.modes_of_parts.items():
+        for part_id, original in self.modes_of_parts.items():
             # first attempt for a single part
             real_poles = is_real_pole(original['s'])
             complex_poles = np.logical_not(real_poles)
 
-            new[part] = {}
-            new[part]['s'] = np.hstack((original['s'][real_poles].real,
-                                        original['s'][complex_poles].real,
-                                        np.zeros_like(original['s'][real_poles].imag),
-                                        original['s'][complex_poles].imag))
+            nan_modes = np.empty_like(original['s'])
+            nan_modes[:] = np.nan
 
-            new[part]['vr'] = np.hstack((original['vr'][:, real_poles].real,
-                                         original['vr'][:, complex_poles].real,
-                                         np.zeros_like(original['vr'][:, real_poles].imag),
-                                         original['vr'][:, complex_poles].imag))
+            # Resonant frequencies are stored with the same indices as the
+            # real parts of the eigenvectors. The length of 's' is double what
+            # it needs to be, to keep size consistent. However, these values
+            # of 's' should never be accessed, and are set to NaN to throw an
+            # error if they are ever used.
+            new[part_id] = {}
+            new[part_id]['s'] = np.hstack(((original['s'][real_poles].real,
+                                            original['s'][complex_poles].real,
+                                            np.zeros_like(original['s'][real_poles].imag),
+                                            original['s'][complex_poles].imag)))
 
-            new[part]['vl'] = np.vstack((original['vl'][real_poles, :].real,
-                                         original['vl'][complex_poles, :].real,
-                                         np.zeros_like(original['vl'][real_poles, :].imag),
-                                         original['vl'][complex_poles, :].imag))
+            new[part_id]['vr'] = np.hstack((original['vr'][:, real_poles].real,
+                                            original['vr'][:, complex_poles].real,
+                                            np.zeros_like(original['vr'][:, real_poles].imag),
+                                            original['vr'][:, complex_poles].imag))
 
-        return SplitModes(self.parent_part, new, self.operator,
+            new[part_id]['vl'] = np.vstack((original['vl'][real_poles, :].real,
+                                            original['vl'][complex_poles, :].real,
+                                            np.zeros_like(original['vl'][real_poles, :].imag),
+                                            original['vl'][complex_poles, :].imag))
+
+        return SplitModes(self.parent_part, self.parts, new, self.operator,
                           self.orig_container)
 
 
