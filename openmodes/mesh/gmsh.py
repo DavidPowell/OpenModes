@@ -38,7 +38,7 @@ import logging
 from openmodes.helpers import MeshError
 
 # the minimum version of gmsh required
-MIN_VERSION = (2, 8, 4)
+MIN_VERSION = (2, 11, 0)
 
 try:
     gmsh_path = os.environ['GMSH_PATH']
@@ -55,7 +55,7 @@ def mesh_geometry(filename, dirname, mesh_tol=None, binary=True,
     ----------
     filename : string
         the name of the file to be meshed
-    dirname : string, optional
+    dirname : string
         The location in which to create the mesh file
     mesh_tol : number, optional
         override the maximum mesh tolerance distance of all edges
@@ -315,7 +315,7 @@ def read_mesh(filename, returned_elements=("edges", "triangles")):
 
 def check_installed():
     "Check if a supported version of gmsh is installed"
-    call_options = [gmsh_path, '--version']
+    call_options = [gmsh_path, '-info']
 
     try:
         proc = subprocess.Popen(call_options, stderr=subprocess.PIPE,
@@ -323,12 +323,9 @@ def check_installed():
     except OSError:
         raise MeshError("gmsh not found")
 
-    ver = tuple([int(x) for x in proc.stderr.readline().split(".")])
+    version_string = proc.stderr.readline().split(":")[1].strip()
+    ver = tuple([int(x) for x in version_string.split(".")])
 
     if ver < MIN_VERSION:
         raise MeshError(("gmsh version %d.%d.%d found, " +
             "but version %d.%d.%d required") % (ver+MIN_VERSION))
-
-if __name__ == "__main__":
-    file_name = mesh_geometry("geometry/asymmetric_ring.geo", 0.4e-3)
-    print(read_mesh(file_name))

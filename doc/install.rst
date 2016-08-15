@@ -18,7 +18,7 @@ Quick Install Instructions
    Python versions 3.3 and 3.4 should work, but these python versions do not
    have pre-compiled windows binaries.
 
-2. Install `gmsh`_ **version 2.8.4 or later**
+2. Install `gmsh`_ **version 2.11.0 or later**
 
 3. Ensure that the location of the gmsh executable is added to the
    PATH environment variable, so running the following on the command-line
