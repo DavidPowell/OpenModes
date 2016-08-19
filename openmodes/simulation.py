@@ -528,10 +528,12 @@ class Simulation(Identified):
             basis = self.basis_container[part]
 
             points, current_J = basis.interpolate_function(solution["J", part].simple_view(),
-                                                           int_weight=True, integration_rule=self.integration_rule)
+                                                           int_weight=True, integration_rule=self.integration_rule,
+                                                           nodes=part.nodes)
             try:
                 points, current_M = basis.interpolate_function(solution["M", part].simple_view(),
-                                                               int_weight=True, integration_rule=self.integration_rule)
+                                                               int_weight=True, integration_rule=self.integration_rule,
+                                                               nodes=part.nodes)
             except KeyError:
                 current_M = np.zeros_like(current_J)
 
