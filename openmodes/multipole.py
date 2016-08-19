@@ -63,7 +63,9 @@ def multipole_fixed(max_l, points):
         P_lmp = P_lmp.T
         dP_lmp = dP_lmp.T
 
+        # Comes from http://dlmf.nist.gov/14.9, eq 14.9.13
         # Calculate negative values of m from positive
+        # Does some relation apply to derivatives??
         P_lmn, dP_lmn = scipy.special.lpmn(-max_l, max_l, ct_n)
         P_neg = (-1)**m_pos*factorial(l-m_pos)/factorial(l+m_pos)
         P_lmn = P_neg*P_lmp
