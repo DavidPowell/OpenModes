@@ -114,7 +114,6 @@ def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0,
     """
 
     num_l = max_l + 1
-    num_m = 2*max_l + 1
     num_points = len(points)
 
     l = np.arange(num_l)[:, None]
@@ -134,9 +133,7 @@ def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0,
 
     # spherical Bessel functions must be calculated per point
     for n in range(num_points):
-        jl_n, djl_n = scipy.special.sph_jn(max_l+1, k*r[n])
-        jl[n] = jl_n[:, None]
-        djl[n] = djl_n[:, None]
+        jl[n, :, 0], djl[n, :, 0] = scipy.special.sph_jn(max_l, k*r[n])
 
     ll = l[None, 1:]
     # Riccati Bessel function plus its second derivative
