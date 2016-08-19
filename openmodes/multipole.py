@@ -128,7 +128,7 @@ def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0,
         (r, theta, phi, r_hat, theta_hat, phi_hat, P_lm, exp_imp, tau_lm,
          pi_lm) = multipole_fixed(max_l, points)
 
-    jl = np.empty((num_points, num_l+1, 1))
+    jl = np.empty((num_points, num_l, 1))
     djl = np.empty_like(jl)
 
     # spherical Bessel functions must be calculated per point
@@ -138,11 +138,11 @@ def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0,
     ll = l[None, 1:]
     # Riccati Bessel function plus its second derivative
     ric_plus_second = np.zeros((num_points, num_l, 1))
-    ric_plus_second[:, 1:] = ll*(ll+1)/(2*ll+1)*(jl[:, :-2]+jl[:, 2:])
+    ric_plus_second[:, 1:] = ll*(ll+1)*jl[:, 1:]/(k*r[:, None, None])
 
     # First derivative, divided by kr
     ric_der = np.zeros_like(ric_plus_second)
-    ric_der[:, 1:] = ((ll+1)*jl[:, :-2]-ll*jl[:, 2:])/(2*ll+1)
+    ric_der[:, 1:] = jl[:, 1:]/(k*r[:, None, None]) + djl[:, 1:]
 
     # components of current
     J_r = np.sum(r_hat*current, axis=1)[:, None, None]
@@ -157,8 +157,8 @@ def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0,
     # and values with |m| > l should be ignored
     a_e = np.sum(exp_imp*(ric_plus_second*P_lm*J_r +
                  ric_der*(tau_lm*J_theta - 1j*pi_lm*J_phi) +
-                 jl[:, :-1]*(1j*pi_lm*M_theta + tau_lm*M_phi)), axis=0)
-    a_m = np.sum(exp_imp*(jl[:, :-1]*(1j*pi_lm*J_theta + tau_lm*J_phi) +
+                 jl*(1j*pi_lm*M_theta + tau_lm*M_phi)), axis=0)
+    a_m = np.sum(exp_imp*(jl*(1j*pi_lm*J_theta + tau_lm*J_phi) +
                  ric_plus_second*P_lm*M_r +
                  ric_der*(tau_lm*M_theta - 1j*pi_lm*M_phi)), axis=0)
 
