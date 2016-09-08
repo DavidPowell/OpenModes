@@ -381,15 +381,18 @@ class Simulation(Identified):
         if part is None:
             if solution is None:
                 part = part or self.parts
+                basis_container = None
             else:
                 # Use the parent part of the provided solution
                 try:
                     part = solution.lookup[1][2]
+                    basis_container = solution.lookup[1][1]
                 except IndexError:
                     part = solution.lookup[0][2]
+                    basis_container = solution.lookup[0][1]
 
         if output_format == 'vtk':
-            write_vtk(part, filename, solution, self.basis_container)
+            write_vtk(part, filename, solution, basis_container)
             return
 
         if solution is None:
@@ -398,7 +401,7 @@ class Simulation(Identified):
             charges = currents = centres = None
         else:
             parts_list, charges, currents, centres = preprocess(
-                    part, solution, self.basis_container,
+                    part, solution, basis_container,
                     compress_scalars, compress_separately)
 
         output_format = output_format.lower()
