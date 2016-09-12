@@ -32,21 +32,25 @@ def inc_slice(s, inc):
     return slice(s.stop, s.stop+inc)
 
 
-def cached_property(f):
-    """Wrap a function which represents some property that is expensive to
-    calculate but is likely to be reused."""
+class cached_property(object):
+    """
+    A property that is only computed once per instance and then replaces itself
+    with an ordinary attribute. Deleting the attribute resets the property.
 
-    f.cache = {}
+    Taken from https://github.com/pydanny/cached-property/blob/master/cached_property.py
+    Original source: https://github.com/bottlepy/bottle/commit/fa7733e075da0d790d809aa3d2f53071897e6f76
+    Copyright under MIT License
+    """
 
-    @functools.wraps(f)
-    def caching_wrapper(*args, **kwargs):
-        key = str(args) + str(kwargs)
-        # print key
-        if key not in f.cache:
-            f.cache[key] = f(*args, **kwargs)
-        return f.cache[key]
+    def __init__(self, func):
+        self.__doc__ = getattr(func, '__doc__')
+        self.func = func
 
-    return property(caching_wrapper)
+    def __get__(self, obj, cls):
+        if obj is None:
+            return self
+        value = obj.__dict__[self.func.__name__] = self.func(obj)
+        return value
 
 
 class MeshError(Exception):
