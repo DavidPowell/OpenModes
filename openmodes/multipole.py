@@ -175,16 +175,17 @@ def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0,
     return a_e, a_m
 
 
-def far_fields(a_e, a_m, theta, phi):
+def far_fields(a_e, a_m, theta, phi, k):
     """Calculate far fields from the multipole decomposition
 
     Excludes the r dependent terms
 
     From Jackson sections 3.5, 9.6, 9.9
+    Coordinate convention is given on Jackson, page 96
 
     Parameters
     ----------
-    a_e, a_m: ndarray(max_l, 2*max_l+1)
+    a_e, a_m: ndarray(max_l+1, 2*max_l+1)
         The multipole coefficients
     theta, phi: scalar
         polar angles of observation
@@ -226,15 +227,18 @@ def far_fields(a_e, a_m, theta, phi):
     # As the calculations include invalid combinations of l and m,
     # warnings should be suppressed for these calculations.
     with np.errstate(invalid='ignore'):
-        Y_lm_p = np.sqrt((l-m)*(l+m+1))*np.roll(Y_lm, -1, axis=1)
-        Y_lm_m = np.sqrt((l+m)*(l-m+1))*np.roll(Y_lm, 1, axis=1)
-        X = np.stack((0.5*(Y_lm_p+Y_lm_m), -0.5j*(Y_lm_p-Y_lm_m), m*Y_lm),
+        Lp_Y_lm = np.sqrt((l-m)*(l+m+1))*np.roll(Y_lm, -1, axis=1)
+        Lm_Y_lm = np.sqrt((l+m)*(l-m+1))*np.roll(Y_lm, 1, axis=1)
+        X = np.stack((0.5*(Lp_Y_lm+Lm_Y_lm), -0.5j*(Lp_Y_lm-Lm_Y_lm), m*Y_lm),
                      axis=-1) / np.sqrt(l*(l+1))[:, :, None]
 
     H = np.zeros(3, np.complex128)
-    for l in range(1, max_l+1):
+
+    # redefining l to be integer instead of range
+    for l in range(1, num_l):
         for m in range(-l, l+1):
-            H += (1j)**(l+1)*(a_e[l, m]*X[l, m] + a_m[l, m]*np.cross(r_hat, X[l, m]))
+            H += (-1j)**(l+1)*(a_e[l, m]*X[l, m] + a_m[l, m]*np.cross(r_hat, X[l, m]))/k*np.sqrt(np.pi*(2*l+1))
+
     E = eta_0*np.cross(H, r_hat)
     return E, H
 
