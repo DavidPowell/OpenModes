@@ -91,6 +91,9 @@ def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0,
     for optical nanomaterials,” New Journal of Physics,
     vol. 14, no. 9, pp. 093033–093033, Jun. 2012.
 
+    Formulas have been modified to incorporate the factor of sqrt(2l+1)
+    into the multipole coefficients.
+
     Parameters
     ----------
     max_l : integer
@@ -168,7 +171,7 @@ def spherical_multipoles(max_l, k, points, current, current_M, eta=eta_0,
     with np.errstate(invalid='ignore', divide='ignore'):
         common_factor = (np.sqrt(eta)*k**2/(2*np.pi) *
                          np.sqrt(factorial(l-m)/factorial(l+m)) /
-                         np.sqrt(l*(l+1)))
+                         np.sqrt(l*(l+1))*np.sqrt(2*l+1))
         a_e *= (1j)**(l-1)*common_factor
         a_m *= (1j)**(l-1)*common_factor
 
@@ -237,7 +240,7 @@ def far_fields(a_e, a_m, theta, phi, k):
     # redefining l to be integer instead of range
     for l in range(1, num_l):
         for m in range(-l, l+1):
-            H += (-1j)**(l+1)*(a_e[l, m]*X[l, m] + a_m[l, m]*np.cross(r_hat, X[l, m]))/k*np.sqrt(np.pi*(2*l+1))
+            H += (-1j)**(l+1)*(a_e[l, m]*X[l, m] + a_m[l, m]*np.cross(r_hat, X[l, m]))/k*np.sqrt(np.pi)
 
     E = eta_0*np.cross(H, r_hat)
     return E, H
