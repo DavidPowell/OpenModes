@@ -64,16 +64,29 @@ def pec_sphere_multipoles(plot=False):
     if plot:
         plt.figure()
         plt.plot(k0r, extinction.real)
+        plt.plot(k0r, np.pi/k0r**2*sum(sum((2*l+1)*(np.abs(a_e[l, m])**2+np.abs(a_m[l, m])**2) for m in range(-l, l+1))
+                 for l in range(1, multipole_order+1)), 'x')
+        plt.plot(k0r, np.pi/k0r**2*sum(sum((2*l+1)*(-m*a_e[l, m].real-a_m[l, m].real) for m in range(-l, l+1))
+                 for l in range(1, multipole_order+1)), '+')
         plt.xlabel('$k_{0}r$')
-        plt.title("Total extinction")
+        plt.title("Total extinction vs multipole extinction and scattering")
         plt.show()
 
         plt.figure()
-        for l in range(multipole_order+1):
+        for l in range(1, multipole_order+1):
             for m in range(-l, l+1):
                 plt.plot(k0r, np.pi/k0r**2*(2*l+1)*np.abs(a_e[l, m])**2)
                 plt.plot(k0r, np.pi/k0r**2*(2*l+1)*np.abs(a_m[l, m])**2, '--')
         plt.title("Multipole contributions to scattering")
+        plt.xlabel('$k_{0}r$')
+        plt.show()
+
+        plt.figure()
+        for l in range(1, multipole_order+1):
+            for m in (-1, 1):
+                plt.plot(k0r, -np.pi/k0r**2*(2*l+1)*m*a_e[l, m].real)
+                plt.plot(k0r, -np.pi/k0r**2*(2*l+1)*a_m[l, m].real, '--')
+        plt.title("Multipole contributions to extinction")
         plt.xlabel('$k_{0}r$')
         plt.show()
 
