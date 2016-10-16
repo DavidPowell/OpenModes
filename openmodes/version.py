@@ -30,6 +30,7 @@ Based on public domain code from Douglas Creager
 """
 
 from subprocess import Popen, PIPE
+import os.path as osp
 
 # THIS MUST BE UPDATED MANUALLY FOR NON-GIT
 RELEASE_VERSION = "1.1.0"
@@ -37,8 +38,9 @@ RELEASE_VERSION = "1.1.0"
 
 def version_git():
     try:
+        openmodes_path = osp.normpath(osp.join(osp.dirname(osp.realpath(__file__)), ".."))
         p = Popen(['git', 'describe', '--abbrev=%d' % 4], stdout=PIPE,
-                  stderr=PIPE, universal_newlines=True)
+                  stderr=PIPE, universal_newlines=True, cwd=openmodes_path)
         p.stderr.close()
         line = p.stdout.readlines()[0]
         return line.strip()
