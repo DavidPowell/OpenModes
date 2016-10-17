@@ -1,6 +1,16 @@
 What's new in OpenModes
 =======================
 
+**Release 1.2.0**
+
+October 2016
+
+- Multipole decomposition is now fully implemented, with the correct phase of multipole coefficients
+- Multipole moments can now be used to calculate extinction, total scattering cross section and scattering pattern
+- Saving results to a pickle file and reloading for post-processing is now more convenient and reliable.
+- gmsh 2.11.0 is now required, as features introduced in this version are used in included geometries
+- Move to the py.test testing framework, since nose is unmaintained
+
 **Release 1.1.0**
 
 May 2016

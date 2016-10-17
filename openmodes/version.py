@@ -33,7 +33,7 @@ from subprocess import Popen, PIPE
 import os.path as osp
 
 # THIS MUST BE UPDATED MANUALLY FOR NON-GIT
-RELEASE_VERSION = "1.1.0"
+RELEASE_VERSION = "1.2.0"
 
 
 def version_git():
