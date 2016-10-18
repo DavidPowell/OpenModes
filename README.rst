@@ -9,9 +9,13 @@ of open resonators such as meta-atoms (the building blocks of metamaterials),
 Using these modes, broadband models of these elements can be created, enabling
 excitation, coupling between them and scattering to be solved easily.
 
-The technique implemented in this code is described in a `published
-paper <http://dx.doi.org/10.1103/PhysRevB.90.075108>`_, also available as
-an `arXiv preprint <http://arxiv.org/abs/1405.3759>`_.
+The techniques used in this package, and the scientific results obtained, are described in the
+following publications and presentations:
+
+- *Interference between the modes of an all-dielectric meta-atom*, `arXiv preprint <https://arxiv.org/abs/1610.04980>`_
+- *Resonant dynamics of arbitrarily shaped meta-atoms*, `published paper <http://dx.doi.org/10.1103/PhysRevB.90.075108>`_ or
+  `arXiv preprint <http://arxiv.org/abs/1405.3759>`_
+- *Modes in open metamaterial and nanophotonic systems*, `web presentation <http://people.physics.anu.edu.au/~dap124/aip2014/>`_.
 
 Requires the python packages numpy, scipy and matplotlib, and the free meshing
 program gmsh. See the `documentation <http://openmodes.readthedocs.org/en/latest/>`_ 
