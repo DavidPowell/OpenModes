@@ -14,9 +14,9 @@ References
 The techniques used in this package, and the scientific results obtained, are described in the
 following publications and presentations:
 
-- *Interference between the modes of an all-dielectric meta-atom*, `arXiv preprint <https://arxiv.org/abs/1610.04980>`_
-- *Resonant dynamics of arbitrarily shaped meta-atoms*, `published paper <http://dx.doi.org/10.1103/PhysRevB.90.075108>`_ or
-  `arXiv preprint <http://arxiv.org/abs/1405.3759>`_
+- *Interference between the modes of an all-dielectric meta-atom*, `2016 arXiv preprint <https://arxiv.org/abs/1610.04980>`_
+- *Resonant dynamics of arbitrarily shaped meta-atoms*, `2014 published paper <http://dx.doi.org/10.1103/PhysRevB.90.075108>`_ or
+  `2014 arXiv preprint <http://arxiv.org/abs/1405.3759>`_
 - *Modes in open metamaterial and nanophotonic systems*, `web presentation <http://people.physics.anu.edu.au/~dap124/aip2014/>`_.
 
 -------------
@@ -30,8 +30,8 @@ Installation
 ------------
 
 Requires the python packages numpy, scipy and matplotlib, and the free meshing
-program gmsh. See the `documentation <http://openmodes.readthedocs.io/en/latest/install.html>`_ 
-for full installation instructions and requirements.
+program gmsh. See the `installation instructions <http://openmodes.readthedocs.io/en/latest/install.html>`_ 
+for full requirements.
 
 The source is available on `GitHub <https://github.com/DavidPowell/OpenModes>`_,
 and binary packages are available from the `Python Package Index <https://pypi.python.org/pypi/OpenModes>`_.
