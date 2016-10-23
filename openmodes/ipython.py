@@ -21,10 +21,10 @@
 from six.moves import StringIO
 import os.path as osp
 try:
-    from ipywidgets import FloatProgress
+    from ipywidgets import FloatProgress, HBox, Label
 except ImportError:
     # retain deprecated import for IPython 3 compatibility
-    from IPython.html.widgets import FloatProgress
+    from IPython.html.widgets import FloatProgress, HBox, Label
 from IPython.display import HTML, display
 import numpy as np
 import uuid
@@ -177,7 +177,7 @@ def matplotlib_defaults():
     rcp['figure.edgecolor'] = 'white'
 
 
-def progress_iterator(orig_iterator, **kwargs):
+def progress_iterator(orig_iterator, description):
     """Wrap an iterator so that a progress bar is displayed
 
     Parameters
@@ -185,12 +185,12 @@ def progress_iterator(orig_iterator, **kwargs):
     orig_iterator: iterator
         The original iterator. It must implement the __len__ operation so that
         its length can be calculated in advance.
-    kwargs: additional arguments
-        Any additional arguments will be passed to the float widget.
-        In particular, description will give a text label for the bar.
+    description: string
+        Description will give a text label for the bar.
     """
-    widget = FloatProgress(min=0, max=len(orig_iterator)-1, **kwargs)
+    progress_widget = FloatProgress(min=0, max=len(orig_iterator)-1)
+    widget = HBox([Label(description), progress_widget])
     display(widget)
     for count, val in enumerate(orig_iterator):
         yield val
-        widget.value = count
+        progress_widget.value = count        
