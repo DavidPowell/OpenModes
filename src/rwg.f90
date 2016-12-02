@@ -1199,7 +1199,7 @@ end subroutine face_unit_integral
 
 subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_singular, degree_singular, nodes, triangle_nodes, &
                                 triangle_areas, gamma_0, xi_eta, weights, normals, T_form, Z_precalc, &
-                                indices_precalc, indptr_precalc, Z_face, Z_face_dgamma)
+                                indices_precalc, indptr_precalc, extract_singular, Z_face, Z_face_dgamma)
     ! Calculate the face to face interaction terms used to build the impedance matrix
     !
     ! As per Rao, Wilton, Glisson, IEEE Trans AP-30, 409 (1982)
@@ -1232,6 +1232,8 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
     real(WP), intent(in), dimension(0:num_singular-1, 0:degree_singular-1, 3, 3) :: Z_precalc
     integer, intent(in), dimension(0:num_singular-1) :: indices_precalc
     integer, intent(in), dimension(0:num_triangles) :: indptr_precalc
+    ! f2py optional :: extract_singular = degree_singular
+    integer, intent(in) :: extract_singular
 
     complex(WP), intent(out), dimension(0:num_triangles-1, 0:2, 0:num_triangles-1, 0:2) :: Z_face, Z_face_dgamma
     
@@ -1257,19 +1259,19 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
             elseif (any(triangle_nodes(p, :) == triangle_nodes(q, :))) then
                 ! triangles have one or two common nodes, perform singularity extraction
                 call face_integral_MFIE(num_integration, xi_eta, weights, nodes_q, &
-                                    num_integration, xi_eta, weights, nodes_p, gamma_0, normals(p, :), T_form, 1, I_Z, I_Z_dgamma)
+                                    num_integration, xi_eta, weights, nodes_p, gamma_0, normals(p, :), T_form, extract_singular, I_Z, I_Z_dgamma)
                 ! the singular components are pre-calculated
                 index_singular = scr_index(p, q, indices_precalc, indptr_precalc)
 
 
-                if (degree_singular > 0) then
+                if (extract_singular > 0) then
                     I_Z = I_Z - Z_precalc(index_singular, 0, :, :)
                 end if
 
-!                ! The R term
-!                if (degree_singular > 1) then
-!                    I_Z = I_Z - Z_precalc(index_singular, 1, :, :)*gamma_0**2/2
-!                end if
+                ! The R term
+                if (extract_singular > 1) then
+                    I_Z = I_Z - Z_precalc(index_singular, 1, :, :)*gamma_0**2/2
+                end if
 
                 I_Z = I_Z/4.0/pi
         
