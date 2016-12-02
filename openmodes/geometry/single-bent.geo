@@ -1,7 +1,8 @@
-// a single pair of co-planar triangles, representing one RWG basis function
+// a single pair of bent triangles, representing one RWG basis function
 
 width = 1e-3;
 height = 2e-3;
+lift = 0.5e-3;
 
 lc = 2e-3;
 
@@ -9,7 +10,7 @@ p = newp-1;
 
 // define all points on the face
 Point(p+1) = {-0.5*width, 0, 0, lc};
-Point(p+2) = { 0, -0.5*height, 0, lc};
+Point(p+2) = { 0, -0.5*height, lift, lc};
 Point(p+3) = { 0.5*width,  0, 0, lc};
 Point(p+4) = {0,  0.5*height, 0, lc};
 
