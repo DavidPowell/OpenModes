@@ -1259,7 +1259,8 @@ subroutine Z_MFIE_faces_self(num_nodes, num_triangles, num_integration, num_sing
             elseif (any(triangle_nodes(p, :) == triangle_nodes(q, :))) then
                 ! triangles have one or two common nodes, perform singularity extraction
                 call face_integral_MFIE(num_integration, xi_eta, weights, nodes_q, &
-                                    num_integration, xi_eta, weights, nodes_p, gamma_0, normals(p, :), T_form, extract_singular, I_Z, I_Z_dgamma)
+                                    num_integration, xi_eta, weights, nodes_p, gamma_0, normals(p, :), &
+                                    T_form, extract_singular, I_Z, I_Z_dgamma)
                 ! the singular components are pre-calculated
                 index_singular = scr_index(p, q, indices_precalc, indptr_precalc)
 

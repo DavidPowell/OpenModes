@@ -40,6 +40,12 @@ if not numpy_installed or (parse_version(numpy.__version__) < parse_version('1.1
 
 from numpy.distutils.core import Extension, setup
 
+import platform
+
+if platform.system() == 'Darwin':
+    os.environ["CC"] = "gcc-7"
+    os.environ["CXX"] = "gcc-7"
+
 # Ideally would like to perform static linking under mingw32 to avoid
 # packaging a whole bunch of dlls. However, static linking is not supported
 # for the openmp libraries.

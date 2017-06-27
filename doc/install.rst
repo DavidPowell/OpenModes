@@ -116,9 +116,17 @@ The fix is relatively simple to apply to your own local copy of numpy, see the
 Mac OSX
 -------
 
-This code has not been tested for Mac OSX, but there is no known reason why it should
-not work. All required packages should be available from the MacPorts project, or
-by installing Anaconda.
+The code compiles under Mac OSX, but it requires GCC to be installed instead of XCode.
+Current versions of XCode include a version of Clang which lacks OpenMP support. According
+to `user feedback <https://github.com/DavidPowell/OpenModes/issues/2>`_, it is possible to
+compile via the following steps.
+
+* Install python3 and required python libraries
+* Install gmsh (Homebrew: brew install homebrew/science/gmsh)
+* Manually install GCC(Homebrew: brew install gcc)
+* prepend /usr/local/bin to PATH
+
+setup.py has been modified to call gcc-7 under OSX.
 
 Manual Install for Windows
 --------------------------
