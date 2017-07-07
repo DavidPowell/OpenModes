@@ -14,7 +14,8 @@ References
 The techniques used in this package, and the scientific results obtained, are described in the
 following publications and presentations:
 
-- *Interference between the modes of an all-dielectric meta-atom*, `2016 arXiv preprint <https://arxiv.org/abs/1610.04980>`_
+- *Interference between the modes of an all-dielectric meta-atom*, `2017 paper <http://dx.doi.org/10.1103/PhysRevApplied.7.034006>`_
+  or `2016 arXiv preprint <https://arxiv.org/abs/1610.04980>`_
 - *Resonant dynamics of arbitrarily shaped meta-atoms*, `2014 published paper <http://dx.doi.org/10.1103/PhysRevB.90.075108>`_ or
   `2014 arXiv preprint <http://arxiv.org/abs/1405.3759>`_
 - *Modes in open metamaterial and nanophotonic systems*, `web presentation <http://people.physics.anu.edu.au/~dap124/aip2014/>`_.
@@ -40,7 +41,6 @@ and binary packages are available from the `Python Package Index <https://pypi.p
 Author
 ------
 
-This program was written by David Powell, a researcher at the Nonlinear
-Physics Centre at the Australian National University. Contact details are available
-on my `web page <http://wwwrsphysse.anu.edu.au/nonlinear/people/DavidPowell.shtml>`_.
+This program was written by David Powell, a Senior Lecturer with the School of Engineering and
+Information Technology at the University of New South Wales, Canberra Campus.
 

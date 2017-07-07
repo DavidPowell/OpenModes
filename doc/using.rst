@@ -19,8 +19,9 @@ See `GitHub <https://github.com/features>`_ for an explanation of these terms.
 Support
 -------
 If you have a question about using or installing this software, or you think you
-have found a bug, then please contact me via the email details on my 
-`web page <http://wwwrsphysse.anu.edu.au/nonlinear/people/DavidPowell.shtml>`_.
+have found a bug, then please search through the project's 
+`GitHub Issue Tracker <https://github.com/DavidPowell/OpenModes/issues?utf8=%E2%9C%93&q=is%3Aissue>`_
+to see if any other users have had similar problems. If not, please raise a new issue.
 I will endeavour to answer all questions when I can spare the time, but this
 will be assisted if you make your question as clear as possible, and explain in
 detail how to reproduce any problem you are having.
@@ -28,12 +29,12 @@ detail how to reproduce any problem you are having.
 Citing
 ------
 It is expected that the major users of this software would be researchers in an
-academic environment. Any academic publication which uses this software is
-requested to cite the paper describing the methods used:
+academic environment. The following papers describe the scientific methods used
+in the code, and would most likey be relevant citations for any academic work
+which uses it:
 
-`D. A. Powell, "Resonant dynamics of arbitrarily shaped meta-atoms,"
-Phys. Rev. B, vol. 90, no. 7, p. 075108, Aug. 2014
-<http://dx.doi.org/10.1103/PhysRevB.90.075108>`_.
+- *Interference between the modes of an all-dielectric meta-atom*, `2017 paper <http://dx.doi.org/10.1103/PhysRevApplied.7.034006>`_
+  or `2016 arXiv preprint <https://arxiv.org/abs/1610.04980>`_
+- *Resonant dynamics of arbitrarily shaped meta-atoms*, `2014 published paper <http://dx.doi.org/10.1103/PhysRevB.90.075108>`_ or
+  `2014 arXiv preprint <http://arxiv.org/abs/1405.3759>`_
 
-A preprint of this paper is also available on the `arxiv open access
-repository <http://arxiv.org/abs/1405.3759>`_.

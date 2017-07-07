@@ -4,7 +4,9 @@ Acknowledgements
 Organisational Support
 ----------------------
 
-David Powell, the author of this software, is employed by the `Nonlinear Physics Centre <http://physics.anu.edu.au/nonlinear>`_
+David Powell, the author of this software, is employed by the `School of Engineering and Information Technology <https://www.unsw.adfa.edu.au/school-of-engineering-and-information-technology/>`_ at the University of New South Wales
+Canberra Campus, located at the Australian Defence Force Academy. Much of the work done on this code was conducted during
+his previous position at the `Nonlinear Physics Centre <http://physics.anu.edu.au/nonlinear>`_
 of the `Australian National University <http://www.anu.edu.au/>`_. This Centre is
 one of the nodes of the `CUDOS Centre of Excellence <http://cudos.org.au/>`_, which
 has a `Metamaterials Project <http://cudos.org.au/research/projects/functional_metamaterials.shtml>`_.

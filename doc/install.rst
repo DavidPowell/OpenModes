@@ -14,11 +14,11 @@ Quick Install Instructions
    You can install Anaconda without administrator access, and
    it is available for Windows, Linux and Mac OSX.
    
-   *Python 3.5 is recommended*, and Python 2.7 will continue to be supported.
-   Python versions 3.3 and 3.4 should work, but these python versions do not
+   *Python 3.6 is recommended*, and Python 2.7 will continue to be supported.
+   Python versions 3.3 to 3.5 should work, but these python versions do not
    have pre-compiled windows binaries.
 
-2. Install `gmsh`_ **version 2.11.0 or later**
+2. Install `gmsh`_ **version 3.0.x or later**
 
 3. Ensure that the location of the gmsh executable is added to the
    PATH environment variable, so running the following on the command-line
@@ -36,7 +36,7 @@ Upgrading to a Newer Version
 ----------------------------
 
 If you are using windows and are using the recommended Anaconda distribution,
-please upgrade your Anaconda distribution to python 3.5, if you haven't already.
+please upgrade your Anaconda distribution to python 3.6, if you haven't already.
 If you need to upgrade your python distribution, then just perform a fresh install
 of OpenModes as normal.
 
@@ -52,10 +52,10 @@ Detailed Requirements
 ---------------------
 The following software packages are the absolute minimum to run OpenModes:
 
-- python 2.7, or any version after 3.3 (3.5 recommended)
+- python 2.7, or any version after 3.3 (3.6 recommended)
 - numpy (1.10.0 or later)
 - scipy
-- `gmsh`_ (2.8.4 or later)
+- `gmsh`_ (3.x recommended, 2.8.4 or later required)
 - matplotlib (or some other package to plot the results)
 - jinja2 (for 3D plots in the notebook)
 - six (used to write code suited to both python 2/3)
