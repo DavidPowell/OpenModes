@@ -91,35 +91,6 @@ dunavant = Extension(name='openmodes.dunavant',
                      sources=[osp.join('src', 'dunavant.pyf'),
                               osp.join('src', 'dunavant.f90')])
 
-# This code ensures that cython is only run if the 'OPENMODES_CYTHON'
-# environment variable is declared
-if 'OPENMODES_CYTHON' in os.environ:
-    from Cython.Build import cythonize
-else:
-    def cythonize(extensions, **_ignore):
-        "Dummy version in case cython is not installed"
-        for extension in extensions:
-            sources = []
-            for sfile in extension.sources:
-                path, ext = os.path.splitext(sfile)
-                if ext in ('.pyx', '.py'):
-                    if extension.language == 'c++':
-                        ext = '.cpp'
-                    else:
-                        ext = '.c'
-                    sfile = path + ext
-                sources.append(sfile)
-            extension.sources[:] = sources
-        return extensions
-
-# Cython sources
-taylor_duffy = cythonize([Extension(name='openmodes.taylor_duffy',
-                         sources=[osp.join('src', 'scuff', filename) for
-                                  filename in ["taylor_duffy.pyx",
-                                               "TaylorDuffy.cc",
-                                               "pcubature.c"]],
-                         language="c++")])
-
 from numpy.distutils.command.build_ext import build_ext
 
 
@@ -179,7 +150,7 @@ setup(name='OpenModes',
                                   osp.join("external", "three.js", "*"),
                                   osp.join("templates", "*"),
                                   osp.join("static", "*")]},
-      ext_modules=[dunavant, core]+taylor_duffy,
+      ext_modules=[dunavant, core],
       version=__version__,
       install_requires=['numpy >= 1.10.0', 'scipy', 'matplotlib', 'jinja2',
                         'six', 'ipywidgets'],

@@ -16,11 +16,6 @@ Incorporated Software
   for symmetric integration rules over triangles, written
   by John Burkardt, and distributed under the GNU LGPL license.
 
-* The code incorporates `routines for singular integrals <http://homerreid.dyndns.org/scuff-EM/SingularIntegrals/>`_
-  written by M. T. Homer Reid, and distributed under the GNU GPL v2 license. This code forms part of the
-  `scuff-EM <http://homerreid.dyndns.org/scuff-EM>`_ MOM solver. Currently these routines are not
-  used by default, but served as an invaluable reference for debugging purposes.
-  
 * The automated extraction of version numbers from the git repository was written by
   `Douglas Creager <http://dcreager.net/2010/02/10/setuptools-git-version-numbers/>`_.
 
