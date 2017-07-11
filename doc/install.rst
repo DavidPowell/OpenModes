@@ -14,11 +14,13 @@ Quick Install Instructions
    You can install Anaconda without administrator access, and
    it is available for Windows, Linux and Mac OSX.
    
-   *Python 3.6 is recommended*, and Python 2.7 will continue to be supported.
-   Python versions 3.3 to 3.5 should work, but these python versions do not
+   *Python 3.6 is recommended*. Python versions 2.7 and 3.3 to 3.5
+   should work, but these python versions do not
    have pre-compiled windows binaries.
 
 2. Install `gmsh`_ **version 3.0.x or later**
+
+   Some of the example geometries use features of gmsh which are not present in earlier versions.
 
 3. Ensure that the location of the gmsh executable is added to the
    PATH environment variable, so running the following on the command-line

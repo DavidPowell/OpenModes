@@ -45,6 +45,6 @@ The :doc:`examples` give an overview of OpenModes' capabilities, and can be view
    install
    examples
    features
-   using 
+   using
+   maths
    thanks
-   
