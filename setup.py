@@ -133,8 +133,11 @@ redist_data = []
 if osp.exists(redist_path):
     redist_data.append(redist_path)
 
-with open('README.rst') as description_file:
-    long_description = description_file.read()
+try:
+    import pypandoc
+    long_description = pypandoc.convert('README.md', 'rst')
+except(IOError, ImportError):
+    long_description = open('README.md').read()
 
 # run the script to find the version
 exec(open(osp.join("openmodes", "version.py")).read())
