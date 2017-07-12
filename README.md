@@ -25,21 +25,19 @@ obtained, are described in the following publications and presentations:
 Documentation
 -------------
 
-Documentation is hosted on [Read the
-Docs](http://openmodes.readthedocs.io/en/latest/)
+Documentation is hosted on [Read the Docs](http://openmodes.readthedocs.io/en/latest/)
 
 Installation
 ------------
 
-Requires the python packages numpy, scipy and matplotlib, and the free
-meshing program gmsh. See the [installation
-instructions](http://openmodes.readthedocs.io/en/latest/install.html)
-for full requirements.
+A [docker image](https://hub.docker.com/r/davidpowell/openmodes/) is available which contains
+the OpenModes, all required packages, the Jupyter web-based notebook interface and example notebooks.
 
-The source is available on
-[GitHub](https://github.com/DavidPowell/OpenModes), and binary packages
-are available from the [Python Package
-Index](https://pypi.python.org/pypi/OpenModes).
+See the [installation instructions](http://openmodes.readthedocs.io/en/latest/install.html)
+for full details of how to install OpenModes via docker, or directly onto your machine.
+
+The source is available on [GitHub](https://github.com/DavidPowell/OpenModes), and binary packages
+are available from the [Python Package Index](https://pypi.python.org/pypi/OpenModes).
 
 Author
 ------

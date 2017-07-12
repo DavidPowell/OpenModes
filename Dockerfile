@@ -51,5 +51,8 @@ RUN mv Index.ipynb "** Start Here **.ipynb"
 RUN jupyter trust *.ipynb
 
 WORKDIR /home/jovyan/work
+VOLUME /home/jovyan/work
 
 USER root
+
+CMD ["start-notebook.sh", "--NotebookApp.token=''"]

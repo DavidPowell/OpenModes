@@ -2,10 +2,10 @@ Installation Instructions
 =========================
 
 OpenModes is a package for the `Python <http://www.python.org/>`_ language, and the
-instructions here include the easiest way to install it.
+instructions here include several methods to install it, starting from the easiest.
 
-Quick Install Instructions
---------------------------
+Windows Python Package (Quick Option 1)
+---------------------------------------
 
 1. Download the **64 bit** version of the `Anaconda`_ 
    python distribution, which includes all the required python 
@@ -34,6 +34,28 @@ Quick Install Instructions
 
 If installation was successful, the next step is to try the examples, see the :doc:`getting started <gettingstarted>` section.
 
+Docker Image (Quick Option 2)
+-----------------------------
+
+Docker is a container system (similar to a virtual machine), allowing you to install
+OpenModes and all its dependencies in one package.
+
+1. Download `Docker Toolbox <https://www.docker.com/products/docker-toolbox>`_ for Windows or Mac as appropriate
+
+2. Run the installed 'Kitematic' application.
+
+3. Click on `+New` and enter the image name `davidpowell/openmodes`
+
+4. After the image has been downloaded and installed, click on the icon next
+   to the web preview button to open the example notebooks in your web browser.
+   
+To get the best performance, you should change the docker settings to give access
+to all CPUs and increase the allocated memory. By default the docker image will only be
+accessible from your local machine. If you make it accessible over a network please
+enable the `security features of the Jupyter notebook
+<http://jupyter-notebook.readthedocs.io/en/latest/security.html>`_.
+
+
 Upgrading to a Newer Version
 ----------------------------
 
@@ -57,7 +79,7 @@ The following software packages are the absolute minimum to run OpenModes:
 - python 2.7, or any version after 3.3 (3.6 recommended)
 - numpy (1.10.0 or later)
 - scipy
-- `gmsh`_ (3.x recommended, 2.8.4 or later required)
+- `gmsh`_ (3.x or later)
 - matplotlib (or some other package to plot the results)
 - jinja2 (for 3D plots in the notebook)
 - six (used to write code suited to both python 2/3)
