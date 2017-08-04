@@ -38,7 +38,7 @@ import logging
 from openmodes.helpers import MeshError
 
 # the minimum version of gmsh required
-MIN_VERSION = (2, 11, 0)
+MIN_VERSION = (3, 0, 0)
 
 try:
     gmsh_path = os.environ['GMSH_PATH']
