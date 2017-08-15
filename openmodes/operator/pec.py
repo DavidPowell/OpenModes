@@ -39,13 +39,14 @@ class EfieOperator(Operator):
 
     def __init__(self, integration_rule, basis_container, background_material,
                  tangential_form=True, num_singular_terms=2,
-                 singularity_accuracy=1e-5):
+                 singularity_accuracy=1e-5,
+                 impedance_class=None):
         self.basis_container = basis_container
         self.background_material = background_material
         self.integration_rule = integration_rule
         self.num_singular_terms = num_singular_terms
         self.singularity_accuracy = singularity_accuracy
-        self.impedance_class = EfieImpedanceMatrixLA
+        self.impedance_class = impedance_class or EfieImpedanceMatrixLA
 
         self.tangential_form = tangential_form
         self.unknowns = ("J",)
@@ -128,7 +129,8 @@ class MfieOperator(Operator):
     """
     def __init__(self, integration_rule, basis_container, background_material,
                  tangential_form=False, num_singular_terms=2,
-                 singularity_accuracy=1e-5):
+                 singularity_accuracy=1e-5,
+                 impedance_class=None):
         """
         Parameters
         ----------
@@ -145,7 +147,7 @@ class MfieOperator(Operator):
         self.integration_rule = integration_rule
         self.num_singular_terms = num_singular_terms
         self.singularity_accuracy = singularity_accuracy
-        self.impedance_class = ImpedanceMatrixLA
+        self.impedance_class = impedance_class or ImpedanceMatrixLA
 
         self.tangential_form = tangential_form
 
@@ -217,7 +219,8 @@ class CfieOperator(Operator):
     reciprocal = False
 
     def __init__(self, integration_rule, basis_container, background_material,
-                 alpha=0.5, num_singular_terms=2, singularity_accuracy=1e-5):
+                 alpha=0.5, num_singular_terms=2, singularity_accuracy=1e-5,
+                 impedance_class=None):
         """
         Parameters
         ----------
@@ -236,7 +239,7 @@ class CfieOperator(Operator):
         self.num_singular_terms = num_singular_terms
         self.singularity_accuracy = singularity_accuracy
         self.alpha = alpha
-        self.impedance_class = CfieImpedanceMatrixLA
+        self.impedance_class = impedance_class or CfieImpedanceMatrixLA
 
         self.unknowns = ("J",)
         self.sources = ("E+nxH",)

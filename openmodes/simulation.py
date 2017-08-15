@@ -53,6 +53,7 @@ class Simulation(Identified):
     def __init__(self, integration_rule=DunavantRule(5),
                  basis_class=LoopStarBasis,
                  operator_class=EfieOperator,
+                 impedance_class=None,
                  name=None,
                  basis_args=dict(),
                  background_material=FreeSpace,
@@ -65,6 +66,8 @@ class Simulation(Identified):
         basis_class : type
             The class representing the type of basis function which will be
             used
+        impedance_class : type
+            The class representing the type of impedance matrix
         operator_class : type
             The class representing the operator equation to be solved
         name : string, optional
@@ -94,7 +97,8 @@ class Simulation(Identified):
         self.basis_container = BasisContainer(basis_class, basis_args)
         self.operator = operator_class(integration_rule=integration_rule,
                                        basis_container=self.basis_container,
-                                       background_material=background_material)
+                                       background_material=background_material,
+                                       impedance_class=impedance_class)
 
         self.multipole_cache = {}
         self.notebook = notebook

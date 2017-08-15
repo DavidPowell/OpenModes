@@ -39,7 +39,8 @@ class TOperator(Operator):
 
     def __init__(self, integration_rule, basis_container,
                  background_material, num_singular_terms=2,
-                 singularity_accuracy=1e-5):
+                 singularity_accuracy=1e-5,
+                 impedance_class=None):
         """
         Parameters
         ----------
@@ -62,7 +63,7 @@ class TOperator(Operator):
         self.unknowns = ("J", "M")
         self.sources = ("E", "H")
         self.extinction_fields = ("E", "H")
-        self.impedance_class = PenetrableImpedanceMatrixLA
+        self.impedance_class = impedance_class or PenetrableImpedanceMatrixLA
         self.frequency_derivatives = False
 
     def impedance(self, s, parent_o, parent_s, metadata=None):
