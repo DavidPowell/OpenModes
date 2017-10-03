@@ -149,11 +149,14 @@ class ImpedanceMatrixLA(object):
 
     def weight(self, vr, vl):
         "Weight the impedance matrix by right and left vectors"
-        new_matrices = {'Z': vl.dot(self.val().dot(vr)).simple_view()}
-        new_der = {'Z': vl.dot(self.frequency_derivative().dot(vr)).simple_view()}
+        new_matrices = {name: np.dot(vl.simple_view(), np.dot(mat, vr.simple_view()))
+                        for name, mat in self.matrices.items()}
+        new_der = {name: np.dot(vl.simple_view(), np.dot(mat, vr.simple_view()))
+                   for name, mat in self.der.items()}
         macro_container = vr.lookup[3][1]
-        return ImpedanceMatrixLA(self.part_o, self.part_s, macro_container,
-                                 ('modes',), ('modes',), self.md, new_matrices, new_der)
+        return self.__class__(self.part_o, self.part_s, macro_container,
+                              ('modes',), ('modes',), self.md, new_matrices,
+                              new_der)
 
 
 class EfieImpedanceMatrixLA(ImpedanceMatrixLA):
@@ -176,17 +179,6 @@ class EfieImpedanceMatrixLA(ImpedanceMatrixLA):
                 self.md['s']*self.der['L'] -
                 self.matrices['S']/self.md['s']**2 +
                 self.der['S']/self.md['s'])
-
-    def weight(self, vr, vl):
-        "Weight the impedance matrix by right and left vectors"
-        new_matrices = {name: np.dot(vl.simple_view(), np.dot(mat, vr.simple_view()))
-                        for name, mat in self.matrices.items()}
-        new_der = {name: np.dot(vl.simple_view(), np.dot(mat, vr.simple_view()))
-                   for name, mat in self.der.items()}
-        macro_container = vr.lookup[3][1]
-        return self.__class__(self.part_o, self.part_s, macro_container,
-                              ('modes',), ('modes',), self.md, new_matrices,
-                              new_der)
 
 
 class CfieImpedanceMatrixLA(ImpedanceMatrixLA):
