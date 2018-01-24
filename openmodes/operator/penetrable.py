@@ -188,11 +188,13 @@ class PMCHWTOperator(TOperator):
 
     def __init__(self, integration_rule, basis_container,
                  background_material,
-                 num_singular_terms=2, singularity_accuracy=1e-5):
+                 num_singular_terms=2, singularity_accuracy=1e-5,
+                 impedance_class=None):
         super(PMCHWTOperator, self).__init__(integration_rule, basis_container,
                                              background_material,
                                              num_singular_terms,
-                                             singularity_accuracy)
+                                             singularity_accuracy,
+                                             impedance_class)
 
     def weights_o(self, s):
         "Weights for outer EFIE and MFIE problems"
@@ -215,11 +217,13 @@ class CTFOperator(TOperator):
 
     def __init__(self, integration_rule, basis_container,
                  background_material,
-                 num_singular_terms=2, singularity_accuracy=1e-5):
+                 num_singular_terms=2, singularity_accuracy=1e-5,
+                 impedance_class=None):
         super(CTFOperator, self).__init__(integration_rule, basis_container,
                                           background_material,
                                           num_singular_terms,
-                                          singularity_accuracy)
+                                          singularity_accuracy,
+                                          impedance_class)
 
     def weights_o(self, s):
         "Weights for outer EFIE and MFIE problems"
