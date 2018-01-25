@@ -82,6 +82,10 @@ def impedance_curl_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
     if np.any(np.isnan(Z_faces)):
         raise ValueError("NaN returned in impedance matrix")
 
+    if np.any(np.isnan(Z_dgamma_faces)):
+        raise ValueError("NaN returned in impedance matrix derivative")
+
+
     Z = transform_o.dot(transform_s.dot(Z_faces.reshape(num_faces_o*3,
                                                         num_faces_s*3,
                                                         order='C').T).T)
@@ -146,6 +150,9 @@ def impedance_G(s, integration_rule, basis_o, nodes_o, basis_s, nodes_s,
 
     if np.any(np.isnan(A_faces)) or np.any(np.isnan(phi_faces)):
         raise ValueError("NaN returned in impedance matrix")
+
+    if np.any(np.isnan(A_dgamma_faces)) or np.any(np.isnan(phi_dgamma_faces)):
+        raise ValueError("NaN returned in impedance matrix derivative")
 
     L = transform_L_o.dot(transform_L_s.dot(A_faces.reshape(num_faces_o*3,
                                                             num_faces_s*3,
