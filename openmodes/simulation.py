@@ -479,7 +479,7 @@ class Simulation(Identified):
                                              parameters=parameters)
 
         logging.info("Loading mesh %s" % meshed_name)
-        raw_mesh = gmsh.read_mesh(meshed_name)
+        raw_mesh = gmsh.read_mesh_meshio(meshed_name)
 
         if delete_dir:
             shutil.rmtree(mesh_dir)
