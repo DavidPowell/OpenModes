@@ -1,6 +1,21 @@
 What's new in OpenModes
 =======================
 
+**Release 1.3.0**
+
+November 2019
+
+- Fixes to enable compilation under MacOS
+- Updated documents, including mathematical details
+- Additional geometries, cylinder with hole and test pair of non-coplanar triangles
+- Now recommend Python 3.7 (windows binaries provided) and gmsh 4.x
+- Removed unused singularity integration code
+- Fixed some failing tests
+- Fixes for compatibility with scipy 1.0
+- Use meshio to robustly read gmsh mesh files
+- Update instructions to install gmsh using conda
+- Simplified installation instructions, by using gmsh from conda-forge
+
 **Release 1.2.0**
 
 October 2016
