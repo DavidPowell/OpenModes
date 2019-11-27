@@ -251,7 +251,9 @@ class LookupArray(np.ndarray):
                         # If slicing the whole dimension, metadata can be kept
                         sub_lookup.append(self.lookup[entry_num])
                     elif isinstance(entry, collections.Iterable):
-                        warnings.warn("Indexing LookupArray with iterable is unreliable")
+                        # TODO: find a better solution to avoid this probelm
+                        # warnings.warn("Indexing LookupArray with iterable is unreliable")
+                        pass
                     else:
                         # In all other cases metadata is lost
                         sub_lookup.append(None)
