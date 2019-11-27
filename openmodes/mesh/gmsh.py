@@ -339,7 +339,11 @@ def read_mesh_meshio(filename):
     import meshio
 
     mesh = meshio.read(filename, file_format='gmsh')
+
+    # check whether multiple physical objects are defined
     if 'gmsh:physical' in mesh.cell_data['triangle']:
+        triangle_physical = mesh.cell_data['triangle']['gmsh:physical']
+        if not np.all(triangle_physical == triangle_physical[0]):
         raise NotImplementedError('Multiple physical objects in one mesh not yet implemented')
 
     # eliminate points which are not part of the object
