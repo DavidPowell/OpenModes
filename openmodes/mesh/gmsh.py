@@ -34,6 +34,7 @@ import numpy as np
 from collections import defaultdict
 import re
 import logging
+import tempfile
 
 from openmodes.helpers import MeshError
 
@@ -352,12 +353,17 @@ def check_installed():
     call_options = [gmsh_path, '-info']
 
     try:
-        proc = subprocess.Popen(call_options, stderr=subprocess.PIPE,
-                                universal_newlines=True)
+        # Workaround for different versions of gmsh, 3.x writes to stderr,
+        # 4.x writes to stdout, but only if redirected to a file
+        with tempfile.TemporaryFile() as out:
+            proc = subprocess.run(call_options, stdout=out, stderr=out,
+                                    universal_newlines=True, encoding='utf-8')
+            out.seek(0)
+            version_string = out.readline().decode('utf-8').split(":")[1].strip()
+
     except OSError:
         raise MeshError("gmsh not found")
 
-    version_string = proc.stderr.readline().split(":")[1].strip()
     ver = tuple([int(x) for x in version_string.split(".")])
 
     if ver < MIN_VERSION:
