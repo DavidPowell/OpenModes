@@ -44,3 +44,5 @@ src/*module.c
 src/*f2pywrappers*
 junk/
 RELEASE-VERSION
+.vscode/settings.json
+*.code-workspace
