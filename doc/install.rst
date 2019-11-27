@@ -4,38 +4,24 @@ Installation Instructions
 OpenModes is a package for the `Python <http://www.python.org/>`_ language, and the
 instructions here include several methods to install it, starting from the easiest.
 
-Windows Python Package (Quick Option 1)
----------------------------------------
+Windows Pre-compiled Package (Recommended Option)
+-------------------------------------------------
 
-1. Download the **64 bit** version of the `Anaconda`_ 
-   python distribution, which includes all the required python 
-   libraries.
-  
-   You can install Anaconda without administrator access, and
-   it is available for Windows, Linux and Mac OSX.
-   
-   *Python 3.6 is recommended*. Python versions 2.7 and 3.3 to 3.5
-   should work, but these python versions do not
-   have pre-compiled windows binaries.
+1. Download the 64 bit version of the `Anaconda`_ 
+   Python 3.7 distribution.
 
-2. Install `gmsh`_ **version 3.0.x or later**
+2. At the Anaconda command prompt, install gmsh
 
-   Some of the example geometries use features of gmsh which are not present in earlier versions.
+   ``conda install -c conda-forge gmsh``
 
-3. Ensure that the location of the gmsh executable is added to the
-   PATH environment variable, so running the following on the command-line
-   does not give an error:
-
-   ``gmsh --version``
-   
-4. From the anaconda command-line, OpenModes can be installed with the command 
+3. From the Anaconda command prompt, OpenModes can be installed with the command 
 
    ``pip install openmodes``.
 
 If installation was successful, the next step is to try the examples, see the :doc:`getting started <gettingstarted>` section.
 
-Docker Image (Quick Option 2)
------------------------------
+Docker Image
+------------
 
 Docker is a container system (similar to a virtual machine), allowing you to install
 OpenModes and all its dependencies in one package.
@@ -76,7 +62,7 @@ Detailed Requirements
 ---------------------
 The following software packages are the absolute minimum to run OpenModes:
 
-- python 2.7, or any version after 3.3 (3.6 recommended)
+- python version at least 3.3 (3.7 recommended)
 - numpy (1.10.0 or later)
 - scipy
 - `gmsh`_ (3.x or later)
@@ -86,13 +72,13 @@ The following software packages are the absolute minimum to run OpenModes:
 
 Strongly recommended packages
 
-- Jupyter notebook (formerly IPython) is used for the examples, and it allows inline 3D plots
+- Jupyter notebook (or Jupyter lab) is used for the examples, and it allows inline 3D plots
 - dill (an alternative to pickle, required for saving many of the objects used by OpenModes)
 
 Other packages which may be useful
 
 - spyder (a GUI for editing python)
-- `Mayavi`_ (Python 2 only, can produce 3D plots in a GUI window)
+- `Mayavi`_ (can produce 3D plots in a GUI window)
 - ViSit or `ParaView`_ (3D plotting software to view vtk files)
 
 OpenModes contains some core routines which are optimised using fortran.
@@ -201,7 +187,7 @@ In order to build the documentation, the following packages are required
 
 At a system command prompt, enter the ``doc`` directory and type ``make html``.
 
-.. _Anaconda: http://docs.continuum.io/anaconda/install.html
-.. _gmsh: http://geuz.org/gmsh/
+.. _Anaconda: https://www.anaconda.com/distribution/
+.. _gmsh: http://gmsh.info/
 .. _mayavi: http://docs.enthought.com/mayavi/mayavi/
 .. _Paraview: http://www.paraview.org/
