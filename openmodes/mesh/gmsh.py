@@ -312,6 +312,40 @@ def read_mesh(filename, returned_elements=("edges", "triangles")):
 
     return tuple(return_vals)
 
+def read_mesh_meshio(filename):
+    """Read a gmsh binary mesh file using the meshio library
+
+    Parameters
+    ----------
+    filename : string
+        the full name of the gmesh meshed file
+
+    Returns
+    -------
+    list of:
+        raw_mesh : dict
+            Containing the following
+            nodes : ndarray
+                all nodes referred to by this geometric entity
+            triangles : ndarray
+                the indices of nodes belonging to each triangle
+
+    Node references are set to be zero based indexing as per python standard
+
+    Any geometric elements which are not part of the final mesh are pruned.
+    """
+
+    import meshio
+
+    mesh = meshio.read(filename, file_format='gmsh')
+    if 'gmsh:physical' in mesh.cell_data['triangle']:
+        raise NotImplementedError('Multiple physical objects in one mesh not yet implemented')
+
+    # eliminate points which are not part of the object
+    mesh.prune()
+
+    return [{'nodes': mesh.points, 'triangles': mesh.cells['triangle']}]
+
 
 def check_installed():
     "Check if a supported version of gmsh is installed"
