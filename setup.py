@@ -17,9 +17,6 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------------
 
-import ez_setup
-ez_setup.use_setuptools()
-
 import setuptools
 
 from distutils.util import get_platform
@@ -62,13 +59,15 @@ fcompiler_dependent_options = {
     # gnu gfortran (including under mingw)
     'gnu95': {
         # -O3 is most desireable, but generate NaNs under mingw32
-        'extra_f90_compile_args': ["-g", "-fimplicit-none", "-fopenmp", "-O1"],
+        'extra_f90_compile_args': ["-g", "-fimplicit-none", "-fopenmp", "-O3"],
         'libraries': ["gomp"]
      },
 
     'intel': {
-              # -O3 also causes NaNs under intel fortran
-              'extra_f90_compile_args': ['-openmp', '-O2'],
+              # Currently ifort gives NaNs in impedance matrix derivative 
+              # on -O2, but not on -O3. To be investigated!
+              #'extra_f90_compile_args': ['/debug', '-openmp', '-O3', '/fpe:0', '/fp:precise']#, '/traceback'],
+              'extra_f90_compile_args': ['-openmp', '-O2', '/fpe:0', '/fp:fast=2']#, '/traceback'],
               #'extra_link_args' : ['-openmp']
               #'extra_f77_compile_args' : ['-openmp', '-O3'],
               #'extra_compile_args' : ['-openmp', '-O3', '-static'],
@@ -156,7 +155,7 @@ setup(name='OpenModes',
       ext_modules=[dunavant, core],
       version=__version__,
       install_requires=['numpy >= 1.10.0', 'scipy >= 0.18.0', 'matplotlib', 'jinja2',
-                        'six', 'ipywidgets'],
+                        'six', 'ipywidgets', 'meshio', 'dill'],
       long_description=long_description,
       platforms="Windows, Linux",
       classifiers=[
