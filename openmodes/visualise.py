@@ -201,7 +201,7 @@ def plot_mayavi(parts, scalar_function=None, vector_function=None,
                           vectors[:, 0], vectors[:, 1], vectors[:, 2],
                           color=(0, 0, 0), opacity=0.75, line_width=1.0)
 
-        mlab.view(distance='auto')
+        mlab.view(0)
     if filename is None:
         mlab.show()
     else:
