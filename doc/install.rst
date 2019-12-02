@@ -26,27 +26,26 @@ Docker Image
 Docker is a container system (similar to a virtual machine), allowing you to install
 OpenModes and all its dependencies in one package.
 
-1. Download `Docker Toolbox <https://www.docker.com/products/docker-toolbox>`_ for Windows or Mac as appropriate
+1. Download `Docker Desktop <https://www.docker.com/products/docker-desktop>`_ for Windows or Mac as appropriate
 
-2. Run the installed 'Kitematic' application.
+2. From the docker command line, type ``docker run -p 8888:8888 davidpowell/openmodes``
 
-3. Click on `+New` and enter the image name `davidpowell/openmodes`
+3. Open your web browser to `<http://localhost:8888>`_.
 
-4. After the image has been downloaded and installed, click on the icon next
-   to the web preview button to open the example notebooks in your web browser.
-   
-To get the best performance, you should change the docker settings to give access
-to all CPUs and increase the allocated memory. By default the docker image will only be
-accessible from your local machine. If you make it accessible over a network please
-enable the `security features of the Jupyter notebook
-<http://jupyter-notebook.readthedocs.io/en/latest/security.html>`_.
+-  Under Windows and Mac, docker runs in a virtual machine, with relatively low CPU and memory
+   limits. These can be increased at Docker Desktop -> Settings -> Advanced. You will need to restart
+   the docker image for these settings to take effect.
+
+-  By default the docker image will only be accessible from your local machine. If you make
+   it accessible over a network be sure to enable the `security features of the Jupyter notebook
+   <http://jupyter-notebook.readthedocs.io/en/latest/security.html>`_.
 
 
 Upgrading to a Newer Version
 ----------------------------
 
 If you are using windows and are using the recommended Anaconda distribution,
-please upgrade your Anaconda distribution to python 3.6, if you haven't already.
+please upgrade your Anaconda distribution to python 3.7, if you haven't already.
 If you need to upgrade your python distribution, then just perform a fresh install
 of OpenModes as normal.
 
@@ -69,11 +68,13 @@ The following software packages are the absolute minimum to run OpenModes:
 - matplotlib (or some other package to plot the results)
 - jinja2 (for 3D plots in the notebook)
 - six (used to write code suited to both python 2/3)
+- meshio (to read the gmsh mesh)
 
 Strongly recommended packages
 
 - Jupyter notebook (or Jupyter lab) is used for the examples, and it allows inline 3D plots
 - dill (an alternative to pickle, required for saving many of the objects used by OpenModes)
+- ipywidgets (to view 3D inline plots)
 
 Other packages which may be useful
 
