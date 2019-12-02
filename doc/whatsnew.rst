@@ -1,6 +1,13 @@
 What's new in OpenModes
 =======================
 
+**Release 1.3.2**
+
+December 2019
+
+- Updated Docker file now provided to simplify installation
+- Bug fixes
+
 **Release 1.3.0**
 
 November 2019
