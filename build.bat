@@ -1,5 +1,6 @@
 @echo off
 del build /q /s
 del openmodes\*.pyd
-python setup.py build_ext --inplace -c mingw32
+python setup.py clean
+python setup.py develop --no-deps
 
